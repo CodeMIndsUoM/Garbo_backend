@@ -1,4 +1,4 @@
-src/main/java/com/garbo/smartwaste/
+src/main/java/com/garbo/
 ├── api/                        # ADAPTER LAYER (External Interface)
 │   ├── controller/             # REST Endpoints (Auth, Bin, Route, Citizen)
 │   ├── dto/                    # Request/Response objects (Data Transfer Objects)
