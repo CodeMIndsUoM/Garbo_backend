@@ -3,6 +3,7 @@ package com.garbo.core.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.persistence.Id;
+import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import lombok.AllArgsConstructor;
@@ -19,6 +20,7 @@ import java.time.LocalDateTime;
 public class Admin {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "emp_id")
     private Long empId;
     private String email;
     private String password;
