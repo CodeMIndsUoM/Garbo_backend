@@ -1,23 +1,19 @@
 package com.garbo.core.entity;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
+import jakarta.persistence.PrimaryKeyJoinColumn;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "fieldMentors")
-public class FieldMentor {
-    @Id
-    private Long empId;
-    private String email;
-    private String password;
-    private LocalDateTime createdAt;
-    private LocalDateTime lastLoginAt;
+@Table(name = "field_mentors")
+@PrimaryKeyJoinColumn(name = "emp_id")
+public class FieldMentor extends User {
+    private String assignedZone;
+    private String workShift;
+    private boolean onDuty;
+    private double rewardPoints;
 }
