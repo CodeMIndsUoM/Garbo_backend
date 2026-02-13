@@ -5,21 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6981acdf-9774-45fc-8d27-498cc0c37b92" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/BinCollectorController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/UserController.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/core/entity/BinCollector.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/core/entity/User.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/core/repository/BinCollectorRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/core/repository/CitizenRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/core/repository/ThirdPartyCollecter.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/core/repository/UserRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/core/service/BinCollectorService.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/garbo/core/service/UserService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dbnavigator.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dbnavigator.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/AdminController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/AdminController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/BinCollectorController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/BinCollectorController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/CitizenController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/CitizenController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/SuperAdminController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/SuperAdminController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/ThirdPartyCollectorController.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/garbo/api/controller/ThirdPartyCollectorController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/garbo/core/repository/ThirdPartyCollecter.java" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,6 +40,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "Spring Boot.Main.executor": "Run",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
     "git-widget-placeholder": "ashen",
     "junie.onboarding.icon.badge.shown": "true",
