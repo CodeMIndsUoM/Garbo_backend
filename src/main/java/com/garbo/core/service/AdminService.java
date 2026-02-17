@@ -19,9 +19,11 @@ public class AdminService {
         this.adminRepo = adminRepo;
         this.userRepository = userRepository;
     }
+
     public Admin saveAdmin(Admin admin) {
         return this.adminRepo.save(admin);
     }
+
     public Optional<Admin> login(String email, String password) {
         Optional<User> userOpt = userRepository.findFirstByEmailAndPasswordOrderByEmpIdAsc(email, password);
         if (userOpt.isPresent()) {
@@ -30,6 +32,7 @@ public class AdminService {
         }
         return Optional.empty();
     }
+
     public List<Admin> getAllAdmins() {
         return this.adminRepo.findAll();
     }
