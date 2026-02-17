@@ -25,7 +25,7 @@ public class AdminController {
             return ResponseEntity.status(500).body(java.util.Map.of("success", false, "message", "Failed to create admin"));
         }
     }
-    
+
     @PostMapping("/login")
     public ResponseEntity<?> loginAdmin(@RequestBody java.util.Map<String, String> payload) {
         String email = payload.get("email");

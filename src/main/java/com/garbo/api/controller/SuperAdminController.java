@@ -39,9 +39,9 @@ public class SuperAdminController {
         Optional<SuperAdmin> superAdminOpt = superAdminService.login(email, password);
         if (superAdminOpt.isPresent()) {
             return ResponseEntity.ok().body(Map.of(
-                "success", true, 
-                "data", superAdminOpt.get(),
-                "role", "superadmin"
+                    "success", true,
+                    "data", superAdminOpt.get(),
+                    "role", "superadmin"
             ));
         } else {
             return ResponseEntity.status(401).body(Map.of("success", false, "message", "Invalid credentials"));
