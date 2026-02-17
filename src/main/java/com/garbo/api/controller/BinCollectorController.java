@@ -1,4 +1,4 @@
-package com.garbo.api.controller;
+﻿package com.garbo.api.controller;
 
 import com.garbo.core.service.BinCollectorService;
 import org.springframework.web.bind.annotation.RequestMapping;
