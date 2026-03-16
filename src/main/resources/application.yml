@@ -4,8 +4,8 @@ spring:
   datasource:
     url: jdbc:postgresql://ep-solitary-water-a1k4fpoz-pooler.ap-southeast-1.aws.neon.tech/GarboDB1_dev?sslmode=require&channelBinding=require
     driver-class-name: org.postgresql.Driver
-    username: neondb_owner
-    password: npg_HeskrVL7l0Pj
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
