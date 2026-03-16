@@ -3,34 +3,21 @@ package com.garbo.core.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import jakarta.persistence.Id;
-import jakarta.persistence.Column;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import lombok.AllArgsConstructor;
+import jakarta.persistence.PrimaryKeyJoinColumn;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
 @Entity
 @Table(name = "admins")
-public class Admin {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "emp_id")
-    private Long empId;
-    private String email;
-    private String password;
-    private String council;
-    private LocalDateTime createdAt;
-    private LocalDateTime lastLoginAt;
-    public String getEmail() {
-        return email;
-    }
+@PrimaryKeyJoinColumn(name = "emp_id")
+public class Admin extends User {
+    private String designation;
+    private String department;
+    private String workShift;
+    private boolean canCreateUsers;
+    private boolean canDeleteUsers;
 }
 
  */

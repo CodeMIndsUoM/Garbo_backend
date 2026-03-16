@@ -1,76 +1,78 @@
 package com.garbo.api.controller;
 
-import com.garbo.core.entity.Admin;
-import com.garbo.core.service.AdminService;
+import com.garbo.infrastructure.config.security.CustomUserDetailsService;
+import com.garbo.infrastructure.config.security.JwtUtil;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
 
-    private final AdminService adminService;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService userDetailsService;
 
-    public AuthController(AdminService adminService) {
-        this.adminService = adminService;
+    public AuthController(AuthenticationManager authenticationManager,
+            JwtUtil jwtUtil,
+            CustomUserDetailsService userDetailsService) {
+        this.authenticationManager = authenticationManager;
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
     }
 
-    /**
-     * Unified login endpoint using admins table only.
-     * Determines user role based on emp_id:
-     * - emp_id 1-100: SuperAdmin
-     * - emp_id 101-500: Admin
-     */
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> payload) {
-        String email = payload.get("email");
-        String password = payload.get("password");
+    public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String password = request.get("password");
 
-        if (email == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of(
-                "success", false,
-                "message", "Email and password are required"
-            ));
+        System.out.println("AuthController.login called for email=" + email);
+        try {
+            java.nio.file.Files.writeString(java.nio.file.Paths.get("auth-attempt.log"),
+                    java.time.Instant.now() + " - " + email + System.lineSeparator(),
+                    java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.APPEND);
+        } catch (Exception ex) {
+            System.out.println("Failed to write auth log: " + ex.getMessage());
         }
 
-        // Login using admins table
-        Optional<Admin> admin = adminService.login(email, password);
-        if (admin.isPresent()) {
-            Long empId = admin.get().getEmpId();
-            Map<String, Object> response = new HashMap<>();
-            Map<String, Object> data = new HashMap<>();
-            
-            // Determine role based on emp_id
-            if (empId >= 1 && empId <= 100) {
-                // SuperAdmin (emp_id 1-100)
-                response.put("success", true);
-                response.put("role", "superadmin");
-                data.put("empId", empId);
-                data.put("email", admin.get().getEmail());
-                data.put("council", admin.get().getCouncil());
-                response.put("data", data);
-                return ResponseEntity.ok(response);
-            } else if (empId >= 101 && empId <= 500) {
-                // Admin (emp_id 101-500)
-                response.put("success", true);
-                response.put("role", "admin");
-                data.put("empId", empId);
-                data.put("email", admin.get().getEmail());
-                data.put("council", admin.get().getCouncil());
-                response.put("data", data);
-                return ResponseEntity.ok(response);
-            }
-        }
+        try {
+            // Authenticate with Spring Security
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password));
 
-        // Invalid credentials or emp_id out of range
-        return ResponseEntity.status(401).body(Map.of(
-            "success", false,
-            "message", "Invalid email or password"
-        ));
+            System.out.println("AuthenticationManager.authenticate succeeded for " + email);
+
+            // Load full user entity via CustomUserDetailsService
+            var userDetails = userDetailsService.loadUserByUsername(email);
+            // Make sure your CustomUserDetailsService sets the role properly
+            String role = userDetails.getAuthorities().stream()
+                    .findFirst()
+                    .map(auth -> auth.getAuthority())
+                    .orElse("UNKNOWN");
+
+            // Generate JWT
+            String token = jwtUtil.generateToken(email, role);
+
+            // Prepare response
+            Map<String, String> response = new HashMap<>();
+            response.put("token", token);
+            response.put("role", role);
+            response.put("email", email);
+
+            return ResponseEntity.ok(response);
+
+        } catch (AuthenticationException e) {
+            // Invalid credentials
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Invalid email or password");
+            return ResponseEntity.status(401).body(error);
+        }
     }
 }
