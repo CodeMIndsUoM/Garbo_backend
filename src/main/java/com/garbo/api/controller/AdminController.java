@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/admins")
 public class AdminController {
 
     final private AdminService adminService;
@@ -25,7 +25,7 @@ public class AdminController {
             return ResponseEntity.status(500).body(java.util.Map.of("success", false, "message", "Failed to create admin"));
         }
     }
-    
+
     @PostMapping("/login")
     public ResponseEntity<?> loginAdmin(@RequestBody java.util.Map<String, String> payload) {
         String email = payload.get("email");
@@ -49,11 +49,4 @@ public class AdminController {
             return ResponseEntity.status(500).body(java.util.Map.of("success", false, "message", "Failed to fetch admins"));
         }
     }
-
-//    @GetMapping("/{empId}")
-//    public Optional<Admin> getAdminById(@PathVariable Long empId) {
-//        System.out.println("getting success");
-//        System.out.println(adminService.getAdminById(empId));
-//        return adminService.getAdminById(empId);
-//    }
 }
