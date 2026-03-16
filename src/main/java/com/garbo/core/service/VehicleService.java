@@ -7,6 +7,7 @@ import com.garbo.core.repository.VehicleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,8 +32,10 @@ public class VehicleService {
     }
 
     public Vehicle updateVehicle(Long id, Vehicle updatedVehicle) {
+        Objects.requireNonNull(id, "id");
         Vehicle existing = vehicleRepository.findByIdAndIsActiveTrue(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+        Objects.requireNonNull(existing, "existing");
 
         // Uniqueness check for vehicle code if changed
         if (updatedVehicle.getVehicleCode() != null && !existing.getVehicleCode().equals(updatedVehicle.getVehicleCode())) {
@@ -62,10 +65,11 @@ public class VehicleService {
     }
 
     public void deleteVehicle(Long id) {
-        Vehicle existing = vehicleRepository.findByIdAndIsActiveTrue(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
-        existing.setIsActive(false);
-        vehicleRepository.save(existing);
+        Objects.requireNonNull(id, "id");
+        Vehicle existing = vehicleRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found with id: " + id));
+        Objects.requireNonNull(existing, "existing");
+        vehicleRepository.delete(existing);
     }
 
     @Transactional(readOnly = true)
