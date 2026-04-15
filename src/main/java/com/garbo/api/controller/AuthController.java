@@ -1,5 +1,7 @@
 package com.garbo.api.controller;
 
+import com.garbo.core.entity.User;
+import com.garbo.core.repository.UserRepository;
 import com.garbo.infrastructure.config.security.CustomUserDetailsService;
 import com.garbo.infrastructure.config.security.JwtUtil;
 import org.springframework.http.ResponseEntity;
@@ -19,13 +21,16 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
+    private final UserRepository userRepository;
 
     public AuthController(AuthenticationManager authenticationManager,
             JwtUtil jwtUtil,
-            CustomUserDetailsService userDetailsService) {
+            CustomUserDetailsService userDetailsService,
+            UserRepository userRepository) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/login")
@@ -60,11 +65,21 @@ public class AuthController {
             // Generate JWT
             String token = jwtUtil.generateToken(email, role);
 
+            // Look up the user entity to get empId
+            User user = userRepository.findFirstByEmailIgnoreCase(email)
+                    .orElse(null);
+
+            System.out.println("User lookup result: " + (user != null ? "found empId=" + user.getEmpId() + " name=" + user.getEmpName() : "NOT FOUND"));
+
             // Prepare response
-            Map<String, String> response = new HashMap<>();
+            Map<String, Object> response = new HashMap<>();
             response.put("token", token);
             response.put("role", role);
             response.put("email", email);
+            if (user != null) {
+                response.put("empId", user.getEmpId());
+                response.put("empName", user.getEmpName());
+            }
 
             return ResponseEntity.ok(response);
 
