@@ -14,4 +14,6 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
     List<Bin> findByIsActiveTrue();
 
     List<Bin> findByCouncilAndIsActiveTrue(String council);
+public interface BinRepository extends JpaRepository<Bin, String> {
+    List<Bin> findByAssignedToEmpId(Long empId);
 }
