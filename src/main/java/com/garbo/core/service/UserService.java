@@ -3,6 +3,7 @@ package com.garbo.core.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.garbo.core.entity.User;
@@ -10,12 +11,8 @@ import com.garbo.core.repository.UserRepository;
 
 @Service
 public class UserService {
-
-    private final UserRepository userRepo;
-
-    public UserService(UserRepository userRepo) {
-        this.userRepo = userRepo;
-    }
+    @Autowired
+    private UserRepository userRepo;
 
     public User saveUser(User user) {
         return this.userRepo.save(user);
