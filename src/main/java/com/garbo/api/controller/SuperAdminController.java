@@ -3,6 +3,7 @@ package com.garbo.api.controller;
 import com.garbo.core.entity.SuperAdmin;
 import com.garbo.core.service.SuperAdminService;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,12 +13,8 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/superadmins")
 public class SuperAdminController {
-
-    private final SuperAdminService superAdminService;
-
-    public SuperAdminController(SuperAdminService superAdminService) {
-        this.superAdminService = superAdminService;
-    }
+    @Autowired
+    private SuperAdminService superAdminService;
 
     @PostMapping
     public ResponseEntity<?> createSuperAdmin(@RequestBody SuperAdmin superAdmin) {
