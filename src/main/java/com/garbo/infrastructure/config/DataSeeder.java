@@ -1,6 +1,9 @@
 package com.garbo.infrastructure.config;
 
+import com.garbo.core.entity.BinCollector;
+import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.FieldMentor;
+import com.garbo.core.entity.ThirdPartyCollector;
 import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.repository.UserRepository;
 import jakarta.persistence.EntityManager;
@@ -31,6 +34,80 @@ public class DataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
+        seedMobileTestUsers();
+        seedFieldMentorDemoUser();
+        assignBinsToSasindu();
+    }
+
+    private void seedMobileTestUsers() {
+        seedCitizen();
+        seedBinCollector();
+        seedThirdPartyCollector();
+    }
+
+    private void seedCitizen() {
+        if (userRepository.findFirstByEmailIgnoreCase("citizen.test@garbo.com").isPresent()) {
+            System.out.println("Citizen test user already exists, skipping seed.");
+            return;
+        }
+
+        Citizen citizen = new Citizen();
+        citizen.setEmpName("Citizen Test User");
+        citizen.setEmail("citizen.test@garbo.com");
+        citizen.setPassword(passwordEncoder.encode("Citizen123"));
+        citizen.setRole("CITIZEN");
+        citizen.setPhone("0770000001");
+        citizen.setAddress("Colombo 05");
+        citizen.setArea("Colombo");
+        citizen.setReportCount(0);
+        userRepository.save(citizen);
+        System.out.println("Seeded citizen test user: citizen.test@garbo.com");
+    }
+
+    private void seedBinCollector() {
+        if (userRepository.findFirstByEmailIgnoreCase("collector.test@garbo.com").isPresent()) {
+            System.out.println("Bin collector test user already exists, skipping seed.");
+            return;
+        }
+
+        BinCollector collector = new BinCollector();
+        collector.setEmpName("Collection Team Test User");
+        collector.setEmail("collector.test@garbo.com");
+        collector.setPassword(passwordEncoder.encode("Collector123"));
+        collector.setRole("BIN_COLLECTOR");
+        collector.setPhone("0770000002");
+        collector.setAssignedZone("Zone A");
+        collector.setTeam("Collection Team A");
+        collector.setWorkShift("Morning");
+        collector.setOnDuty(true);
+        collector.setCompletedCollections(0);
+        collector.setMissedCollections(0);
+        collector.setRewardPoints(0);
+        userRepository.save(collector);
+        System.out.println("Seeded bin collector test user: collector.test@garbo.com");
+    }
+
+    private void seedThirdPartyCollector() {
+        if (userRepository.findFirstByEmailIgnoreCase("thirdparty.test@garbo.com").isPresent()) {
+            System.out.println("Third-party collector test user already exists, skipping seed.");
+            return;
+        }
+
+        ThirdPartyCollector thirdPartyCollector = new ThirdPartyCollector();
+        thirdPartyCollector.setEmpName("Third Party Test User");
+        thirdPartyCollector.setEmail("thirdparty.test@garbo.com");
+        thirdPartyCollector.setPassword(passwordEncoder.encode("ThirdParty123"));
+        thirdPartyCollector.setRole("THIRD_PARTY_COLLECTOR");
+        thirdPartyCollector.setPhone("0770000003");
+        thirdPartyCollector.setNIC("199012345678");
+        thirdPartyCollector.setCompany("Garbo Partner Logistics");
+        thirdPartyCollector.setContractId("TPC-001");
+        thirdPartyCollector.setCompletedRequests(0);
+        userRepository.save(thirdPartyCollector);
+        System.out.println("Seeded third-party collector test user: thirdparty.test@garbo.com");
+    }
+
+    private void seedFieldMentorDemoUser() {
         // Only seed if this user doesn't already exist
         if (userRepository.findFirstByEmailIgnoreCase("sasindu@gmail.com").isEmpty()) {
             // Fix the PostgreSQL sequence to avoid duplicate key conflicts
@@ -58,9 +135,6 @@ public class DataSeeder implements CommandLineRunner {
         } else {
             System.out.println("Field mentor sasindu@gmail.com already exists, skipping seed.");
         }
-
-        // Assign 5 bins to Sasindu if not already assigned
-        assignBinsToSasindu();
     }
 
     private void assignBinsToSasindu() {
