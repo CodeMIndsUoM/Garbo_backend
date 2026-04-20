@@ -26,6 +26,8 @@ public class BinService {
         bin.setLng(dto.getLng());
         bin.setFillLevel(dto.getFillLevel());
         bin.setPriority(dto.getPriority());
+        String zone = dto.getZone() == null || dto.getZone().isBlank() ? "unassigned" : dto.getZone();
+        bin.setZone(zone);
         Bin saved = binRepository.save(bin);
         eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
         return saved;
@@ -33,7 +35,7 @@ public class BinService {
 
     //  Remove bin
     public void deleteBin(Long id) {
-        binRepository.deleteById(id);
+        binRepository.deleteByIdNative(id);
         eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
     }
 
@@ -49,11 +51,15 @@ public class BinService {
     }
 
     //  Update bin priority
-    public Bin updatePriority(Long id, String priority) {
-        Bin bin = getBinById(id);
-        bin.setPriority(priority);
-        Bin saved = binRepository.save(bin);
-        eventPublisher.publishEvent(new BinChangedEvent("UPDATED", saved.getId()));
-        return saved;
-    } 
+    public void updatePriority(Long id, String priority) {
+        binRepository.updatePriorityNative(id, priority);
+        eventPublisher.publishEvent(new BinChangedEvent("UPDATED", id));
+    }
+
+    //  Update bin zone
+    public void updateZone(Long id, String zone) {
+        String safeZone = zone == null || zone.isBlank() ? "unassigned" : zone;
+        binRepository.updateZoneNative(id, safeZone);
+        eventPublisher.publishEvent(new BinChangedEvent("UPDATED", id));
+    }
 }

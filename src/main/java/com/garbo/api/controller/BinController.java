@@ -71,8 +71,23 @@ public class BinController {
             @RequestParam String priority
     ) {
         try {
-            Bin updated = service.updatePriority(id, priority);
-            return ResponseEntity.ok(BinMapper.toDTO(updated));
+            service.updatePriority(id, priority);
+            return ResponseEntity.ok("{\"message\": \"Priority updated\"}");
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}/zone")
+    public ResponseEntity<?> updateZone(
+            @PathVariable Long id,
+            @RequestParam String zone
+    ) {
+        try {
+            service.updateZone(id, zone);
+            return ResponseEntity.ok("{\"message\": \"Zone updated\"}");
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

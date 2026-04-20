@@ -18,4 +18,6 @@ public class Bin {
     private int fillLevel;
 
     private String priority;
+
+    private String zone;
 }
