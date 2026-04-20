@@ -335,6 +335,14 @@ public class CollectionRequestService {
         return OfferDto.from(offer);
     }
 
+    @Transactional
+    public int expireStalePendingOffers() {
+        Instant cutoff = Instant.now().minus(7, ChronoUnit.DAYS);
+        List<CollectionOffer> staleOffers = offerRepository.findByStatusAndCreatedAtBefore(OfferStatus.PENDING, cutoff);
+        staleOffers.forEach(offer -> offer.setStatus(OfferStatus.WITHDRAWN));
+        return staleOffers.size();
+    }
+
     private boolean canViewRequest(User viewer, CollectionRequest request) {
         if (request.getCitizen().getEmpId().equals(viewer.getEmpId())) {
             return true;

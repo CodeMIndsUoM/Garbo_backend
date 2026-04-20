@@ -1,7 +1,3 @@
--- Flyway V1 for the collection request module.
--- Keep this file name stable once applied to a shared database.
--- Future schema changes should go in new versioned files under db/migration.
-
 CREATE TABLE IF NOT EXISTS collection_requests (
     id BIGSERIAL PRIMARY KEY,
     citizen_id BIGINT NOT NULL,
