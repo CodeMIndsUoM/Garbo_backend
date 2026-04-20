@@ -1,0 +1,94 @@
+package com.garbo.infrastructure.storage;
+
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import com.garbo.api.exception.CollectionException;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.Map;
+
+@Service
+public class CloudinaryUploadService {
+    private static final long MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
+
+    private final String cloudName;
+    private final String apiKey;
+    private final String apiSecret;
+
+    public CloudinaryUploadService(
+            @Value("${cloudinary.cloud-name:}") String cloudName,
+            @Value("${cloudinary.api-key:}") String apiKey,
+            @Value("${cloudinary.api-secret:}") String apiSecret) {
+        this.cloudName = cloudName;
+        this.apiKey = apiKey;
+        this.apiSecret = apiSecret;
+    }
+
+    public String uploadCompletionPhoto(MultipartFile file, Long offerId) {
+        if (!isConfigured()) {
+            throw new CollectionException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Cloudinary is not configured on backend",
+                    "CLOUDINARY_NOT_CONFIGURED");
+        }
+
+        validateImageFile(file);
+
+        Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(
+                "cloud_name", cloudName,
+                "api_key", apiKey,
+                "api_secret", apiSecret,
+                "secure", true
+        ));
+
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    file.getBytes(),
+                    ObjectUtils.asMap(
+                            "folder", "garbo/collection-completions",
+                            "resource_type", "image",
+                            "public_id", "offer-" + offerId + "-" + System.currentTimeMillis()));
+
+            Object secureUrl = result.get("secure_url");
+            if (secureUrl == null || secureUrl.toString().isBlank()) {
+                throw new CollectionException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Image upload failed: secure URL not returned",
+                        "UPLOAD_FAILED");
+            }
+            return secureUrl.toString();
+        } catch (IOException ex) {
+            throw new CollectionException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Image upload failed",
+                    "UPLOAD_FAILED");
+        }
+    }
+
+    private boolean isConfigured() {
+        return !isBlank(cloudName) && !isBlank(apiKey) && !isBlank(apiSecret);
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private void validateImageFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new CollectionException(HttpStatus.BAD_REQUEST, "Completion photo is required", "VALIDATION_ERROR");
+        }
+
+        if (file.getSize() > MAX_FILE_BYTES) {
+            throw new CollectionException(HttpStatus.BAD_REQUEST, "Image file must be 10MB or smaller", "VALIDATION_ERROR");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new CollectionException(HttpStatus.BAD_REQUEST, "Only image files are allowed", "VALIDATION_ERROR");
+        }
+    }
+}
