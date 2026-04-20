@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -57,8 +57,18 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // allow CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // allow login POST explicitly
+                        // allow login endpoints without JWT
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/admin/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/superadmin/login").permitAll()
+                        // allow bin operations for dashboard map interaction
+                        .requestMatchers(HttpMethod.GET, "/api/bins/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/bins/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/bins/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/bins/**").permitAll()
+                        // allow Spring error endpoint to return real status/details
+                        .requestMatchers("/error").permitAll()
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated() // all others need JWT

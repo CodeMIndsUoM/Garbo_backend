@@ -9,4 +9,5 @@ public class BinDTO {
     private double lng;
     private int fillLevel;
     private String priority;
+    private String zone;
 }

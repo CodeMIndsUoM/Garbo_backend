@@ -7,10 +7,12 @@ public class BinMapper {
 
     public static BinDTO toDTO(Bin bin) {
         BinDTO dto = new BinDTO();
+        dto.setId(bin.getId());
         dto.setLat(bin.getLat());
         dto.setLng(bin.getLng());
         dto.setFillLevel(bin.getFillLevel());
         dto.setPriority(bin.getPriority());
+        dto.setZone(bin.getZone());
         return dto;
     }
 
@@ -21,6 +23,7 @@ public class BinMapper {
         bin.setLng(dto.getLng());
         bin.setFillLevel(dto.getFillLevel());
         bin.setPriority(dto.getPriority());
+        bin.setZone(dto.getZone());
         return bin;
     }
 }
