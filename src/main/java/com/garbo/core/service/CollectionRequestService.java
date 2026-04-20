@@ -23,10 +23,12 @@ import com.garbo.core.repository.CollectionOfferRepository;
 import com.garbo.core.repository.CollectionRequestRepository;
 import com.garbo.core.repository.ThirdPartyCollectorRepository;
 import com.garbo.core.repository.UserRepository;
+import com.garbo.infrastructure.storage.CloudinaryUploadService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -42,17 +44,20 @@ public class CollectionRequestService {
     private final CitizenRepository citizenRepository;
     private final ThirdPartyCollectorRepository collectorRepository;
     private final UserRepository userRepository;
+    private final CloudinaryUploadService cloudinaryUploadService;
 
     public CollectionRequestService(CollectionRequestRepository requestRepository,
                                     CollectionOfferRepository offerRepository,
                                     CitizenRepository citizenRepository,
                                     ThirdPartyCollectorRepository collectorRepository,
-                                    UserRepository userRepository) {
+                                    UserRepository userRepository,
+                                    CloudinaryUploadService cloudinaryUploadService) {
         this.requestRepository = requestRepository;
         this.offerRepository = offerRepository;
         this.citizenRepository = citizenRepository;
         this.collectorRepository = collectorRepository;
         this.userRepository = userRepository;
+        this.cloudinaryUploadService = cloudinaryUploadService;
     }
 
     @Transactional
@@ -329,6 +334,46 @@ public class CollectionRequestService {
         offer.setCompletionLat(dto.latitude());
         offer.setCompletionLng(dto.longitude());
         offer.setCompletionNotes(blankToNull(dto.notes()));
+        offer.setCompletedAt(Instant.now());
+        offer.setStatus(OfferStatus.COMPLETED);
+        offer.getRequest().setStatus(RequestStatus.COMPLETED);
+        return OfferDto.from(offer);
+    }
+
+    @Transactional
+    public OfferDto completeOfferWithPhoto(
+            Long offerId,
+            MultipartFile photo,
+            Double weightKg,
+            Double latitude,
+            Double longitude,
+            String notes) {
+        User viewer = currentUser();
+        CollectionOffer offer = getOffer(offerId);
+        requireCollectorOwner(viewer, offer);
+
+        if (offer.getStatus() != OfferStatus.IN_PROGRESS) {
+            throw conflict("Only in-progress offers can be completed");
+        }
+        if (photo == null || photo.isEmpty()) {
+            throw badRequest("Completion photo is required");
+        }
+        if (latitude == null || longitude == null) {
+            throw badRequest("Completion latitude and longitude are required");
+        }
+        validateCoordinates(latitude, longitude, true);
+        if (offer.getRequest().getWasteType().isWeightRequiredAtCompletion()
+                && (weightKg == null || weightKg <= 0)) {
+            throw badRequest("Weight is required for this waste type");
+        }
+
+        String uploadedPhotoUrl = cloudinaryUploadService.uploadCompletionPhoto(photo, offerId);
+
+        offer.setCompletionPhotoUrl(uploadedPhotoUrl);
+        offer.setCompletionWeightKg(weightKg);
+        offer.setCompletionLat(latitude);
+        offer.setCompletionLng(longitude);
+        offer.setCompletionNotes(blankToNull(notes));
         offer.setCompletedAt(Instant.now());
         offer.setStatus(OfferStatus.COMPLETED);
         offer.getRequest().setStatus(RequestStatus.COMPLETED);

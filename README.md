@@ -77,3 +77,23 @@ SELECT installed_rank, version, description, script, success
 FROM flyway_schema_history
 ORDER BY installed_rank;
 ```
+
+## Backend-Managed Image Upload (Cloudinary)
+
+Third-party collector completion photos are uploaded by backend, not by the Flutter app.
+
+Set these environment variables before running backend:
+
+```bash
+export CLOUDINARY_CLOUD_NAME=your_cloud_name
+export CLOUDINARY_API_KEY=your_api_key
+export CLOUDINARY_API_SECRET=your_api_secret
+```
+
+Then start backend normally:
+
+```bash
+mvn spring-boot:run
+```
+
+This allows all team members to run mobile app without passing Cloudinary Dart defines.
