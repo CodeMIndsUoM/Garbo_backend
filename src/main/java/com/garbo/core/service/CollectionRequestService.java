@@ -36,8 +36,8 @@ import java.util.List;
 
 @Service
 public class CollectionRequestService {
-    private static final List<OfferStatus> ACTIVE_OFFER_STATUSES =
-            List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED, OfferStatus.IN_PROGRESS);
+    private static final List<OfferStatus> ACTIVE_OFFER_STATUSES = List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED,
+            OfferStatus.IN_PROGRESS);
 
     private final CollectionRequestRepository requestRepository;
     private final CollectionOfferRepository offerRepository;
@@ -47,11 +47,11 @@ public class CollectionRequestService {
     private final CloudinaryUploadService cloudinaryUploadService;
 
     public CollectionRequestService(CollectionRequestRepository requestRepository,
-                                    CollectionOfferRepository offerRepository,
-                                    CitizenRepository citizenRepository,
-                                    ThirdPartyCollectorRepository collectorRepository,
-                                    UserRepository userRepository,
-                                    CloudinaryUploadService cloudinaryUploadService) {
+            CollectionOfferRepository offerRepository,
+            CitizenRepository citizenRepository,
+            ThirdPartyCollectorRepository collectorRepository,
+            UserRepository userRepository,
+            CloudinaryUploadService cloudinaryUploadService) {
         this.requestRepository = requestRepository;
         this.offerRepository = offerRepository;
         this.citizenRepository = citizenRepository;
@@ -88,13 +88,20 @@ public class CollectionRequestService {
     }
 
     @Transactional(readOnly = true)
+    public String uploadCitizenRequestPhoto(Long citizenId, MultipartFile photo) {
+        requireCurrentUser(citizenId);
+        return cloudinaryUploadService.uploadRequestPhoto(photo, citizenId);
+    }
+
+    @Transactional(readOnly = true)
     public List<RequestSummaryDto> listCitizenRequests(Long citizenId, RequestStatus status) {
         requireCurrentUser(citizenId);
         List<CollectionRequest> requests = status == null
                 ? requestRepository.findByCitizen_EmpIdOrderByCreatedAtDesc(citizenId)
                 : requestRepository.findByCitizen_EmpIdAndStatusOrderByCreatedAtDesc(citizenId, status);
         return requests.stream()
-                .map(request -> RequestSummaryDto.from(request, offerRepository.findByRequest_IdOrderByCreatedAtDesc(request.getId()).size()))
+                .map(request -> RequestSummaryDto.from(request,
+                        offerRepository.findByRequest_IdOrderByCreatedAtDesc(request.getId()).size()))
                 .toList();
     }
 
@@ -205,7 +212,10 @@ public class CollectionRequestService {
         collectorRepository.findById(collectorId)
                 .orElseThrow(() -> notFound("Collector not found"));
         return requestRepository.findOpenFeedNear(lat, lng).stream()
-                .map(request -> RequestSummaryDto.from(request, offerRepository.findByRequest_IdOrderByCreatedAtDesc(request.getId()).size()))
+                .filter(request -> !offerRepository.existsByRequest_IdAndCollector_EmpIdAndStatusNot(
+                        request.getId(), collectorId, OfferStatus.WITHDRAWN))
+                .map(request -> RequestSummaryDto.from(request,
+                        offerRepository.findByRequest_IdOrderByCreatedAtDesc(request.getId()).size()))
                 .toList();
     }
 
@@ -222,7 +232,7 @@ public class CollectionRequestService {
     public List<OfferDto> listActiveJobs(Long collectorId) {
         requireCurrentUser(collectorId);
         return offerRepository.findByCollector_EmpIdAndStatusInOrderByCreatedAtDesc(
-                        collectorId, List.of(OfferStatus.ACCEPTED, OfferStatus.IN_PROGRESS))
+                collectorId, List.of(OfferStatus.ACCEPTED, OfferStatus.IN_PROGRESS))
                 .stream()
                 .map(OfferDto::from)
                 .toList();
@@ -239,7 +249,8 @@ public class CollectionRequestService {
         }
         ThirdPartyCollector collector = collectorRepository.findById(collectorId)
                 .orElseThrow(() -> notFound("Collector not found"));
-        offerRepository.findFirstByRequest_IdAndCollector_EmpIdAndStatusIn(requestId, collectorId, ACTIVE_OFFER_STATUSES)
+        offerRepository
+                .findFirstByRequest_IdAndCollector_EmpIdAndStatusIn(requestId, collectorId, ACTIVE_OFFER_STATUSES)
                 .ifPresent(existing -> {
                     throw conflict("Collector already has an active offer for this request");
                 });
@@ -289,7 +300,8 @@ public class CollectionRequestService {
         request.setStatus(RequestStatus.OPEN);
         request.setAcceptedOfferId(null);
 
-        for (CollectionOffer rejected : offerRepository.findByRequest_IdAndStatus(request.getId(), OfferStatus.REJECTED)) {
+        for (CollectionOffer rejected : offerRepository.findByRequest_IdAndStatus(request.getId(),
+                OfferStatus.REJECTED)) {
             rejected.setStatus(OfferStatus.PENDING);
         }
         return OfferDto.from(offer);
@@ -395,9 +407,10 @@ public class CollectionRequestService {
         if ("THIRD_PARTY_COLLECTOR".equals(viewer.getRole())) {
             return request.getStatus() == RequestStatus.OPEN
                     || offerRepository.findFirstByRequest_IdAndCollector_EmpIdAndStatusIn(
-                    request.getId(), viewer.getEmpId(), List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED,
-                            OfferStatus.REJECTED, OfferStatus.WITHDRAWN, OfferStatus.CANCELLED,
-                            OfferStatus.IN_PROGRESS, OfferStatus.COMPLETED)).isPresent();
+                            request.getId(), viewer.getEmpId(), List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED,
+                                    OfferStatus.REJECTED, OfferStatus.WITHDRAWN, OfferStatus.CANCELLED,
+                                    OfferStatus.IN_PROGRESS, OfferStatus.COMPLETED))
+                            .isPresent();
         }
         return false;
     }
@@ -418,7 +431,8 @@ public class CollectionRequestService {
             throw new CollectionException(HttpStatus.UNAUTHORIZED, "Authentication is required", "UNAUTHORIZED");
         }
         return userRepository.findFirstByEmailIgnoreCase(authentication.getName())
-                .orElseThrow(() -> new CollectionException(HttpStatus.UNAUTHORIZED, "Authenticated user not found", "UNAUTHORIZED"));
+                .orElseThrow(() -> new CollectionException(HttpStatus.UNAUTHORIZED, "Authenticated user not found",
+                        "UNAUTHORIZED"));
     }
 
     private void requireCurrentUser(Long expectedUserId) {

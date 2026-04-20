@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Map;
 
 @Service
@@ -29,6 +30,26 @@ public class CloudinaryUploadService {
     }
 
     public String uploadCompletionPhoto(MultipartFile file, Long offerId) {
+        return uploadImage(
+                file,
+                "garbo/collection-completions",
+                "offer-" + offerId + "-",
+                "Completion photo is required");
+    }
+
+    public String uploadRequestPhoto(MultipartFile file, Long citizenId) {
+        return uploadImage(
+                file,
+                "garbo/request-photos",
+                "citizen-" + citizenId + "-",
+                "Request photo is required");
+    }
+
+    private String uploadImage(
+            MultipartFile file,
+            String folder,
+            String publicIdPrefix,
+            String missingPhotoMessage) {
         if (!isConfigured()) {
             throw new CollectionException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
@@ -36,22 +57,21 @@ public class CloudinaryUploadService {
                     "CLOUDINARY_NOT_CONFIGURED");
         }
 
-        validateImageFile(file);
+        validateImageFile(file, missingPhotoMessage);
 
         Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", cloudName,
                 "api_key", apiKey,
                 "api_secret", apiSecret,
-                "secure", true
-        ));
+                "secure", true));
 
         try {
             Map<?, ?> result = cloudinary.uploader().upload(
                     file.getBytes(),
                     ObjectUtils.asMap(
-                            "folder", "garbo/collection-completions",
+                            "folder", folder,
                             "resource_type", "image",
-                            "public_id", "offer-" + offerId + "-" + System.currentTimeMillis()));
+                            "public_id", publicIdPrefix + System.currentTimeMillis()));
 
             Object secureUrl = result.get("secure_url");
             if (secureUrl == null || secureUrl.toString().isBlank()) {
@@ -77,18 +97,39 @@ public class CloudinaryUploadService {
         return value == null || value.trim().isEmpty();
     }
 
-    private void validateImageFile(MultipartFile file) {
+    private void validateImageFile(MultipartFile file, String missingPhotoMessage) {
         if (file == null || file.isEmpty()) {
-            throw new CollectionException(HttpStatus.BAD_REQUEST, "Completion photo is required", "VALIDATION_ERROR");
+            throw new CollectionException(HttpStatus.BAD_REQUEST, missingPhotoMessage, "VALIDATION_ERROR");
         }
 
         if (file.getSize() > MAX_FILE_BYTES) {
-            throw new CollectionException(HttpStatus.BAD_REQUEST, "Image file must be 10MB or smaller", "VALIDATION_ERROR");
+            throw new CollectionException(HttpStatus.BAD_REQUEST, "Image file must be 10MB or smaller",
+                    "VALIDATION_ERROR");
         }
 
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
+        String fileName = file.getOriginalFilename();
+        if (!isAllowedImage(contentType, fileName)) {
             throw new CollectionException(HttpStatus.BAD_REQUEST, "Only image files are allowed", "VALIDATION_ERROR");
         }
+    }
+
+    private boolean isAllowedImage(String contentType, String fileName) {
+        if (contentType != null && contentType.toLowerCase(Locale.ROOT).startsWith("image/")) {
+            return true;
+        }
+
+        if (fileName == null) {
+            return false;
+        }
+
+        String lower = fileName.toLowerCase(Locale.ROOT);
+        return lower.endsWith(".jpg")
+                || lower.endsWith(".jpeg")
+                || lower.endsWith(".png")
+                || lower.endsWith(".heic")
+                || lower.endsWith(".heif")
+                || lower.endsWith(".webp")
+                || lower.endsWith(".gif");
     }
 }
