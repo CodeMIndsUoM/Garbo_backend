@@ -33,3 +33,47 @@ src/main/java/com/garbo/
 │
 └── Main.java  # Main Entry Point
 ```
+
+## Flyway Migrations
+
+Flyway migration files live in:
+
+```text
+src/main/resources/db/migration/
+```
+
+Current project rule:
+
+1. Keep schema history in backend code and commit it to Git.
+2. Use Flyway for schema changes and keep Hibernate on `ddl-auto=validate`.
+3. Add a new migration for every schema change.
+4. Do not edit or rename an old migration after it has run on a shared database.
+5. Keep demo/test users in `DataSeeder`, not in Flyway migrations.
+
+Naming convention:
+
+```text
+V1__create_collection_request_module.sql
+V2__add_collection_request_indexes.sql
+V3__add_offer_completion_fields.sql
+```
+
+Guidelines:
+
+- Use `V<number>__<short_clear_description>.sql`
+- Use lowercase words with underscores
+- Keep one logical schema change per file
+- Prefer clear names like `create_*`, `add_*`, `alter_*`, `drop_*`
+
+Recommended split:
+
+- Flyway: tables, columns, indexes, constraints
+- Seeder: demo users, sample records, local bootstrap data
+
+How to inspect migration status in PostgreSQL:
+
+```sql
+SELECT installed_rank, version, description, script, success
+FROM flyway_schema_history
+ORDER BY installed_rank;
+```
