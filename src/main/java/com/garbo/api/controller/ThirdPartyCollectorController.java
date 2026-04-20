@@ -7,6 +7,7 @@ import com.garbo.core.enums.OfferStatus;
 import com.garbo.core.service.CollectionRequestService;
 import com.garbo.core.service.ThirdPartyCollectorService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/thirdpartycollectors")
+@PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
 public class ThirdPartyCollectorController {
     @SuppressWarnings("unused")
     private final ThirdPartyCollectorService thirdPartyCollectorService;

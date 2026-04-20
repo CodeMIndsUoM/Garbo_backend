@@ -6,8 +6,10 @@ import com.garbo.core.dto.collection.RequestSummaryDto;
 import com.garbo.core.enums.RequestStatus;
 import com.garbo.core.service.CollectionRequestService;
 import com.garbo.core.service.CitizenService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,6 +22,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/citizens")
+@PreAuthorize("hasRole('CITIZEN')")
 public class CitizenController {
     @SuppressWarnings("unused")
     private final CitizenService citizenService;
@@ -34,7 +37,7 @@ public class CitizenController {
     @PostMapping("/{citizenId}/collection-requests")
     public ResponseEntity<ApiResponse<RequestSummaryDto>> createCollectionRequest(
             @PathVariable Long citizenId,
-            @RequestBody CreateRequestDto request) {
+            @Valid @RequestBody CreateRequestDto request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(collectionRequestService.createRequest(citizenId, request)));
     }

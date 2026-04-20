@@ -7,8 +7,10 @@ import com.garbo.core.dto.collection.OfferDto;
 import com.garbo.core.dto.collection.RequestDetailDto;
 import com.garbo.core.dto.collection.RequestSummaryDto;
 import com.garbo.core.service.CollectionRequestService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +40,7 @@ public class CollectionRequestController {
     }
 
     @PostMapping("/{requestId}/cancel")
+    @PreAuthorize("hasRole('CITIZEN')")
     public ResponseEntity<ApiResponse<RequestSummaryDto>> cancel(
             @PathVariable Long requestId,
             @RequestBody(required = false) CancelRequestDto request) {
@@ -45,9 +48,10 @@ public class CollectionRequestController {
     }
 
     @PostMapping("/{requestId}/offers")
+    @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
     public ResponseEntity<ApiResponse<OfferDto>> sendOffer(
             @PathVariable Long requestId,
-            @RequestBody CreateOfferDto request) {
+            @Valid @RequestBody CreateOfferDto request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(collectionRequestService.sendOffer(requestId, request)));
     }
