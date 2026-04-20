@@ -1,3 +1,4 @@
+```text
 src/main/java/com/garbo/
 ├── api/                        # ADAPTER LAYER (External Interface)
 │   ├── controller/             # REST Endpoints (Auth, Bin, Route, Citizen)
@@ -31,3 +32,4 @@ src/main/java/com/garbo/
 │   └── redis/                  # Leaderboard & Real-time caching logic
 │
 └── Main.java  # Main Entry Point
+```
