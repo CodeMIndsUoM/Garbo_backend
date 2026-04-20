@@ -7,6 +7,7 @@ import com.garbo.core.enums.RequestStatus;
 import com.garbo.core.service.CollectionRequestService;
 import com.garbo.core.service.CitizenService;
 import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,8 +18,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/citizens")
@@ -29,7 +32,7 @@ public class CitizenController {
     private final CollectionRequestService collectionRequestService;
 
     public CitizenController(CitizenService citizenService,
-                             CollectionRequestService collectionRequestService) {
+            CollectionRequestService collectionRequestService) {
         this.citizenService = citizenService;
         this.collectionRequestService = collectionRequestService;
     }
@@ -47,5 +50,13 @@ public class CitizenController {
             @PathVariable Long citizenId,
             @RequestParam(required = false) RequestStatus status) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listCitizenRequests(citizenId, status)));
+    }
+
+    @PostMapping(value = "/{citizenId}/request-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadRequestPhoto(
+            @PathVariable Long citizenId,
+            @RequestParam("photo") MultipartFile photo) {
+        String url = collectionRequestService.uploadCitizenRequestPhoto(citizenId, photo);
+        return ResponseEntity.ok(ApiResponse.success(Map.of("photoUrl", url)));
     }
 }
