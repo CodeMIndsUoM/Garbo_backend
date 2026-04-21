@@ -38,6 +38,11 @@ import java.util.List;
 public class CollectionRequestService {
     private static final List<OfferStatus> ACTIVE_OFFER_STATUSES = List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED,
             OfferStatus.IN_PROGRESS);
+    private static final List<OfferStatus> HIDEABLE_OFFER_STATUSES = List.of(
+            OfferStatus.REJECTED,
+            OfferStatus.WITHDRAWN,
+            OfferStatus.CANCELLED,
+            OfferStatus.COMPLETED);
 
     private final CollectionRequestRepository requestRepository;
     private final CollectionOfferRepository offerRepository;
@@ -223,9 +228,64 @@ public class CollectionRequestService {
     public List<OfferDto> listMyOffers(Long collectorId, OfferStatus status) {
         requireCurrentUser(collectorId);
         List<CollectionOffer> offers = status == null
-                ? offerRepository.findByCollector_EmpIdOrderByCreatedAtDesc(collectorId)
-                : offerRepository.findByCollector_EmpIdAndStatusOrderByCreatedAtDesc(collectorId, status);
+                ? offerRepository.findByCollector_EmpIdAndCollectorHiddenFalseOrderByCreatedAtDesc(collectorId)
+                : offerRepository.findByCollector_EmpIdAndStatusAndCollectorHiddenFalseOrderByCreatedAtDesc(
+                        collectorId,
+                        status);
         return offers.stream().map(OfferDto::from).toList();
+    }
+
+    @Transactional
+    public OfferDto hideOfferFromCollectorList(Long offerId) {
+        User viewer = currentUser();
+        CollectionOffer offer = getOffer(offerId);
+        requireCollectorOwner(viewer, offer);
+
+        if (!HIDEABLE_OFFER_STATUSES.contains(offer.getStatus())) {
+            throw conflict("Only rejected, withdrawn, cancelled, or completed offers can be removed from list");
+        }
+
+        offer.setCollectorHidden(true);
+        offer.setCollectorHiddenAt(Instant.now());
+        return OfferDto.from(offer);
+    }
+
+    @Transactional
+    public int hideOffersFromCollectorList(Long collectorId, List<OfferStatus> statuses) {
+        requireCurrentUser(collectorId);
+
+        List<OfferStatus> allowedStatuses;
+        if (statuses == null || statuses.isEmpty()) {
+            allowedStatuses = HIDEABLE_OFFER_STATUSES;
+        } else {
+            allowedStatuses = statuses.stream()
+                    .filter(HIDEABLE_OFFER_STATUSES::contains)
+                    .distinct()
+                    .toList();
+        }
+
+        if (allowedStatuses.isEmpty()) {
+            throw badRequest("No hideable statuses were provided");
+        }
+
+        List<CollectionOffer> collectorOffers = offerRepository.findByCollector_EmpIdOrderByCreatedAtDesc(collectorId);
+        Instant now = Instant.now();
+
+        List<CollectionOffer> offersToHide = collectorOffers.stream()
+                .filter(offer -> !offer.isCollectorHidden())
+                .filter(offer -> allowedStatuses.contains(offer.getStatus()))
+                .toList();
+
+        offersToHide.forEach(offer -> {
+            offer.setCollectorHidden(true);
+            offer.setCollectorHiddenAt(now);
+        });
+
+        if (!offersToHide.isEmpty()) {
+            offerRepository.saveAll(offersToHide);
+        }
+
+        return offersToHide.size();
     }
 
     @Transactional(readOnly = true)

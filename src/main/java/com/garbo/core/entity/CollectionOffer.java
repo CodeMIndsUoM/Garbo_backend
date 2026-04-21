@@ -85,6 +85,12 @@ public class CollectionOffer {
     @Column(name = "citizen_feedback", columnDefinition = "TEXT")
     private String citizenFeedback;
 
+    @Column(name = "collector_hidden", nullable = false)
+    private boolean collectorHidden = false;
+
+    @Column(name = "collector_hidden_at")
+    private Instant collectorHiddenAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -97,6 +103,7 @@ public class CollectionOffer {
         if (createdAt == null) createdAt = now;
         updatedAt = now;
         if (status == null) status = OfferStatus.PENDING;
+        collectorHidden = false;
     }
 
     @PreUpdate
