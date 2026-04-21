@@ -14,13 +14,10 @@ import java.time.Instant;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(
-        name = "collection_offers",
-        indexes = {
-                @Index(name = "idx_co_request", columnList = "request_id"),
-                @Index(name = "idx_co_collector_status", columnList = "collector_id, status")
-        }
-)
+@Table(name = "collection_offers", indexes = {
+        @Index(name = "idx_co_request", columnList = "request_id"),
+        @Index(name = "idx_co_collector_status", columnList = "collector_id, status")
+})
 public class CollectionOffer {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -100,9 +97,11 @@ public class CollectionOffer {
     @PrePersist
     protected void onCreate() {
         Instant now = Instant.now();
-        if (createdAt == null) createdAt = now;
+        if (createdAt == null)
+            createdAt = now;
         updatedAt = now;
-        if (status == null) status = OfferStatus.PENDING;
+        if (status == null)
+            status = OfferStatus.PENDING;
         collectorHidden = false;
     }
 
