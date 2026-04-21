@@ -52,6 +52,12 @@ public class OfferController {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.withdrawOffer(offerId)));
     }
 
+    @PostMapping("/{offerId}/hide")
+    @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
+    public ResponseEntity<ApiResponse<OfferDto>> hide(@PathVariable Long offerId) {
+        return ResponseEntity.ok(ApiResponse.success(collectionRequestService.hideOfferFromCollectorList(offerId)));
+    }
+
     @PostMapping("/{offerId}/cancel")
     public ResponseEntity<ApiResponse<OfferDto>> cancel(
             @PathVariable Long offerId,

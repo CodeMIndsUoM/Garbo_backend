@@ -13,9 +13,15 @@ public interface CollectionOfferRepository extends JpaRepository<CollectionOffer
 
     List<CollectionOffer> findByRequest_IdOrderByCreatedAtDesc(Long requestId);
 
-    List<CollectionOffer> findByCollector_EmpIdOrderByCreatedAtDesc(Long collectorId);
+        List<CollectionOffer> findByCollector_EmpIdOrderByCreatedAtDesc(Long collectorId);
+
+        List<CollectionOffer> findByCollector_EmpIdAndCollectorHiddenFalseOrderByCreatedAtDesc(Long collectorId);
 
     List<CollectionOffer> findByCollector_EmpIdAndStatusOrderByCreatedAtDesc(Long collectorId, OfferStatus status);
+
+    List<CollectionOffer> findByCollector_EmpIdAndStatusAndCollectorHiddenFalseOrderByCreatedAtDesc(
+            Long collectorId,
+            OfferStatus status);
 
     List<CollectionOffer> findByCollector_EmpIdAndStatusInOrderByCreatedAtDesc(Long collectorId,
             List<OfferStatus> statuses);
