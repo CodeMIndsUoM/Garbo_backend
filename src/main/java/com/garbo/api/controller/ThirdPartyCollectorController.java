@@ -27,7 +27,7 @@ public class ThirdPartyCollectorController {
     private final CollectionRequestService collectionRequestService;
 
     public ThirdPartyCollectorController(ThirdPartyCollectorService thirdPartyCollectorService,
-                                         CollectionRequestService collectionRequestService) {
+            CollectionRequestService collectionRequestService) {
         this.thirdPartyCollectorService = thirdPartyCollectorService;
         this.collectionRequestService = collectionRequestService;
     }

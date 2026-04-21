@@ -1,90 +1,122 @@
 # Garbo Backend
 
-Spring Boot backend for Garbo Smart Waste Management System.
+Spring Boot backend for the Garbo Smart Waste Management System.
 
-## 1) Prerequisites
+## Overview
 
-- Java 21
-- Maven 3.9+
-- PostgreSQL 14+ (or compatible)
+This service provides:
 
-## 2) First-Time Setup (New Team Member)
+- Authentication and role-based authorization (JWT + Spring Security)
+- Collection request and offer lifecycle APIs
+- Third-party collector workflows (feed, my offers, hide/clear rejected)
+- Backend-managed Cloudinary image uploads
+- Database schema management with Flyway migrations
 
-1. Create a local database.
-2. Copy environment template and fill values:
+## Tech Stack
+
+- Java 21+
+- Spring Boot 3.2.x
+- Spring Security (JWT)
+- Spring Data JPA (Hibernate)
+- PostgreSQL
+- Flyway
+- Maven
+
+## Project Structure
+
+```text
+src/main/java/com/garbo/
+├── api/
+│   ├── controller/               # REST endpoints
+│   └── exception/                # API exception handling
+├── common/
+│   └── config/                   # General app configs
+├── core/
+│   ├── dto/                      # DTOs + API response wrappers
+│   │   └── collection/
+│   ├── entity/                   # JPA entities
+│   ├── enums/                    # Domain enums
+│   ├── repository/               # Spring Data repositories
+│   └── service/                  # Business logic
+├── infrastructure/
+│   ├── config/
+│   │   └── security/             # SecurityConfig, JWT filter/util, user details
+│   └── storage/                  # Cloudinary upload service
+└── Main.java                     # Application entrypoint
+
+src/main/resources/
+├── application.yml               # Main runtime configuration
+└── db/migration/                 # Flyway SQL migration scripts
+```
+
+## Team Setup (First Time)
+
+1. Create a local PostgreSQL database.
+2. Configure DB values in `application.yml` (or your local profile).
+3. Create `.env` from template:
 
 ```bash
 cp .env.example .env
 ```
 
-3. Update `.env` with your real values:
+4. Add Cloudinary credentials in `.env`:
 
 ```env
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-4. Ensure `application.yml` points to your local PostgreSQL instance.
+## Run the Backend
 
-## 3) Run Backend
-
-Recommended (loads `.env` automatically):
+Recommended local start (loads `.env` automatically):
 
 ```bash
 ./run-local.sh
 ```
 
-Alternative:
+Alternative manual start:
 
 ```bash
-export CLOUDINARY_CLOUD_NAME=...
-export CLOUDINARY_API_KEY=...
-export CLOUDINARY_API_SECRET=...
 mvn spring-boot:run
 ```
 
-Backend base URL (default):
+Default API URL:
 
 ```text
 http://127.0.0.1:8081
 ```
 
-## 4) Flyway Migration Flow
+## Flyway Migrations
 
-Migration files are in:
+Migration location:
 
 ```text
 src/main/resources/db/migration/
 ```
 
-How migrations are applied:
-
-1. On backend startup, Flyway checks `flyway_schema_history`.
-2. Any migration file not yet recorded is executed in version order.
-3. Executed migrations are recorded and will not run again.
-
-Current relevant migrations:
+Current migrations:
 
 - `V1__create_collection_request_module.sql`
 - `V2__add_collector_hidden_to_offers.sql`
 
-### What changed in V2
+### How Flyway Applies Migrations
 
-`V2__add_collector_hidden_to_offers.sql` adds persistent hide support for collector My Jobs:
+On application startup:
+
+1. Flyway checks the `flyway_schema_history` table.
+2. New migration files not yet recorded are applied in version order.
+3. Applied versions are recorded and will not run again on the same DB.
+
+### What V2 Adds
+
+`V2__add_collector_hidden_to_offers.sql` adds persistence for collector-side hide/clear features:
 
 - `collection_offers.collector_hidden BOOLEAN NOT NULL DEFAULT FALSE`
 - `collection_offers.collector_hidden_at TIMESTAMP WITH TIME ZONE`
-- index `idx_co_collector_hidden (collector_id, collector_hidden, status, created_at)`
+- `idx_co_collector_hidden` index for efficient collector filtered reads
 
-This is the schema change used by:
-
-- single offer remove from list
-- bulk clear-all in rejected tab
-
-### Verify migration applied
-
-Run in PostgreSQL:
+### Verify Migration State
 
 ```sql
 SELECT installed_rank, version, description, script, success
@@ -92,18 +124,29 @@ FROM flyway_schema_history
 ORDER BY installed_rank;
 ```
 
-You should see `V2` with `success = true`.
+## Important Team Rules
 
-## 5) Team Notes
+- Never edit an already-applied migration file.
+- Create a new file for every schema change:
 
-- Do not edit old migration files after they are shared.
-- Add a new `V<number>__description.sql` for every schema change.
-- Keep `spring.jpa.hibernate.ddl-auto=validate` for migration safety.
-- Seed/demo users are handled by backend seeder code, not Flyway migration files.
+```text
+V<number>__short_description.sql
+```
 
-## 6) Useful Commands
+- Keep one logical schema change per migration.
+- Keep seed/test users in seeder logic, not Flyway scripts.
 
-Compile check:
+## Security Notes
+
+- Authentication is JWT Bearer token-based.
+- `SecurityConfig` enforces authentication for all non-auth endpoints.
+- `JwtAuthenticationFilter` skips `/api/auth/**` and validates Bearer tokens for other routes.
+
+If you get 401 unexpectedly after adding endpoints, restart the backend to ensure latest controller mappings are loaded.
+
+## Useful Commands
+
+Compile:
 
 ```bash
 mvn -DskipTests compile
@@ -113,4 +156,10 @@ Run tests:
 
 ```bash
 mvn test
+```
+
+Check listening port:
+
+```bash
+lsof -iTCP:8081 -sTCP:LISTEN -n -P
 ```
