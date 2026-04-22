@@ -1,6 +1,7 @@
 package com.garbo.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -10,6 +11,16 @@ public class OSRMClient {
 
     private static final String BASE =
             "http://router.project-osrm.org/table/v1/driving/";
+
+    private static final int CONNECT_TIMEOUT_MS = 8000;
+    private static final int READ_TIMEOUT_MS = 15000;
+
+    private static RestTemplate buildRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(CONNECT_TIMEOUT_MS);
+        factory.setReadTimeout(READ_TIMEOUT_MS);
+        return new RestTemplate(factory);
+    }
 
     public static double[][] getDurationMatrix(double[][] coords) {
 
@@ -30,7 +41,7 @@ public class OSRMClient {
                 .build()
                 .toUri();
 
-        RestTemplate restTemplate = new RestTemplate();
+        RestTemplate restTemplate = buildRestTemplate();
 
         OSRMResponse res = restTemplate.getForObject(uri, OSRMResponse.class);
 

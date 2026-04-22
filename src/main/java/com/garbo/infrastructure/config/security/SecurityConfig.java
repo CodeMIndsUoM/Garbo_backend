@@ -60,13 +60,23 @@ public class SecurityConfig {
                         // allow login endpoints without JWT
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/admin/login").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/superadmin/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/admin/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/superadmin/login").permitAll()
+                    // actual controller paths
+                    .requestMatchers(HttpMethod.POST, "/api/admins/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/superadmins/login").permitAll()
                         // allow bin operations for dashboard map interaction
                         .requestMatchers(HttpMethod.GET, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/bins/**").permitAll()
+                        // allow websocket handshake + SockJS endpoints
+                        .requestMatchers("/ws/**").permitAll()
+                        // TEMP: allow route-session testing without JWT
+                        .requestMatchers(HttpMethod.POST, "/api/route-sessions").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/route-sessions/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/route-sessions/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/routes/optimize").permitAll()
                         // allow Spring error endpoint to return real status/details
                         .requestMatchers("/error").permitAll()
                         // any other auth endpoints

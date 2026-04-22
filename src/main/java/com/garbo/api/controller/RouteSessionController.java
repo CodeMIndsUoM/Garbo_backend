@@ -48,6 +48,9 @@ public class RouteSessionController {
 
             return ResponseEntity.ok(snapshot);
 
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(null);
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
@@ -66,6 +69,9 @@ public class RouteSessionController {
                     routeSessionService.getLatestSnapshotByUser(userId);
 
             return ResponseEntity.ok(snapshot);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(null);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -86,6 +92,9 @@ public class RouteSessionController {
 
             return ResponseEntity.ok(snapshot);
 
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(null);
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
@@ -104,6 +113,9 @@ public class RouteSessionController {
                     routeSessionService.recomputeByUser(userId);
 
             return ResponseEntity.ok(snapshot);
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(404).body(null);
 
         } catch (Exception e) {
             e.printStackTrace();

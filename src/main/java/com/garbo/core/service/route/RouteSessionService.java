@@ -127,7 +127,7 @@ public class RouteSessionService {
             return binRepository.findAll();
         }
 
-        List<Bin> bins = binRepository.findAllById(selected);
+        List<Bin> bins = binRepository.findAllByIdWithCast(selected);
 
         Map<Long, Bin> map = new HashMap<>();
         for (Bin b : bins) {
@@ -338,22 +338,34 @@ public class RouteSessionService {
     // SIMPLE ACCESSORS
     // ============================
     public RouteSessionSnapshotDTO getLatestSnapshot(String sessionId) {
-        return sessionsById.get(sessionId).getLatest();
+        RouteSessionState state = sessionsById.get(sessionId);
+        if (state == null) {
+            throw new IllegalArgumentException("Session not found: " + sessionId);
+        }
+        return state.getLatest();
     }
 
     public RouteSessionSnapshotDTO getLatestSnapshotByUser(Long userId) {
         String sid = activeSessionIdByUser.get(userId);
-        return sid == null ? null : getLatestSnapshot(sid);
+        if (sid == null) {
+            throw new IllegalArgumentException("No active session for user: " + userId);
+        }
+        return getLatestSnapshot(sid);
     }
 
     public RouteSessionSnapshotDTO recompute(String sessionId) {
+        if (!sessionsById.containsKey(sessionId)) {
+            throw new IllegalArgumentException("Session not found: " + sessionId);
+        }
         scheduleRecompute(sessionId, "MANUAL", 0);
         return getLatestSnapshot(sessionId);
     }
 
     public RouteSessionSnapshotDTO recomputeByUser(Long userId) {
         String sid = activeSessionIdByUser.get(userId);
-        if (sid == null) return null;
+        if (sid == null) {
+            throw new IllegalArgumentException("No active session for user: " + userId);
+        }
         return recompute(sid);
     }
 

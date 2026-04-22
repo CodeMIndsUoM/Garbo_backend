@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.garbo.core.entity.User;
 import com.garbo.core.service.UserService;
+import com.garbo.infrastructure.config.security.JwtUtil;
 
 @RestController
 @RequestMapping("/api/users")
@@ -25,6 +26,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody User user) {
@@ -39,16 +43,33 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody Map<String, String> payload) {
-        String email = payload.get("email");
-        String password = payload.get("password");
-        if (email == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Email and password required"));
-        }
-        Optional<User> userOpt = userService.login(email, password);
-        if (userOpt.isPresent()) {
-            return ResponseEntity.ok().body(Map.of("success", true, "data", userOpt.get()));
-        } else {
-            return ResponseEntity.status(401).body(Map.of("success", false, "message", "Invalid credentials"));
+        try {
+            String email = payload.get("email");
+            String password = payload.get("password");
+            if (email == null || password == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Email and password required"));
+            }
+
+            Optional<User> userOpt = userService.login(email, password);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                String usernameForToken = user.getEmail() != null ? user.getEmail() : email;
+                String roleForToken = user.getRole() != null ? user.getRole() : "admin";
+                String token = jwtUtil.generateToken(usernameForToken, roleForToken);
+                return ResponseEntity.ok().body(Map.of(
+                        "success", true,
+                        "data", user,
+                        "token", token
+                ));
+            } else {
+                return ResponseEntity.status(401).body(Map.of("success", false, "message", "Invalid credentials"));
+            }
+        } catch (Exception e) {
+            log.error("Login failed", e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Login failed: " + e.getMessage()
+            ));
         }
     }
 
