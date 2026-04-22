@@ -15,6 +15,11 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
 
     List<Bin> findAllByIdIn(List<Long> ids);
 
+    // bins.id is varchar in current DB, while app sends numeric ids.
+    // Cast column to bigint for compatibility during transition.
+    @Query(value = "SELECT * FROM bins b WHERE CAST(b.id AS BIGINT) IN (:ids)", nativeQuery = true)
+    List<Bin> findAllByIdWithCast(@Param("ids") List<Long> ids);
+
     @Modifying
     @Transactional
     @Query(value = "DELETE FROM bins WHERE id = CAST(:id AS VARCHAR)", nativeQuery = true)

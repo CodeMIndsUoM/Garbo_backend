@@ -3,10 +3,13 @@ package com.garbo.domain;
 import com.garbo.core.entity.Bin;
 import com.google.ortools.Loader;
 import com.google.ortools.constraintsolver.*;
+import com.google.protobuf.Duration;
 
 import java.util.*;
 
 public class ORToolsWrapper {
+
+    private static final int SOLVER_TIME_LIMIT_SECONDS = 8;
 
     static {
         Loader.loadNativeLibraries();
@@ -68,6 +71,7 @@ public class ORToolsWrapper {
                                 FirstSolutionStrategy.Value.PATH_CHEAPEST_ARC)
                         .setLocalSearchMetaheuristic(
                                 LocalSearchMetaheuristic.Value.GUIDED_LOCAL_SEARCH)
+                .setTimeLimit(Duration.newBuilder().setSeconds(SOLVER_TIME_LIMIT_SECONDS).build())
                         .build();
 
         Assignment sol = routing.solveWithParameters(params);
