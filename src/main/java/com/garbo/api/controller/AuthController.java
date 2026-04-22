@@ -54,9 +54,8 @@ public class AuthController {
             // Make sure your CustomUserDetailsService sets the role properly
             String role = userDetails.getAuthorities().stream()
                     .findFirst()
-                    .map(auth -> auth.getAuthority())
-                    .orElse("UNKNOWN");
-
+                    .map(auth -> auth.getAuthority().replace("ROLE_", "").trim().toLowerCase())
+                    .orElse("unknown");
             // Generate JWT
             String token = jwtUtil.generateToken(email, role);
 
@@ -74,5 +73,12 @@ public class AuthController {
             error.put("error", "Invalid email or password");
             return ResponseEntity.status(401).body(error);
         }
+    }
+
+    @GetMapping("/validate")
+    public ResponseEntity<?> validateToken() {
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Token is valid");
+        return ResponseEntity.ok(response);
     }
 }

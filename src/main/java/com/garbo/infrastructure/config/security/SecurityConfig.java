@@ -61,6 +61,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        // change for testing.
+                        // .anyRequest().permitAll()
                         .anyRequest().authenticated() // all others need JWT
                 )
                 .exceptionHandling(ex -> ex
