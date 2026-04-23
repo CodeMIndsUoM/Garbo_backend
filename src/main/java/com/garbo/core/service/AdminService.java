@@ -4,6 +4,7 @@ import com.garbo.core.entity.Admin;
 import com.garbo.core.entity.User;
 import com.garbo.core.repository.AdminRepository;
 import com.garbo.core.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,10 +15,12 @@ public class AdminService {
 
     final private AdminRepository adminRepo;
     final private UserRepository userRepository;
+    final private PasswordEncoder passwordEncoder;
 
-    public AdminService(AdminRepository adminRepo, UserRepository userRepository) {
+    public AdminService(AdminRepository adminRepo, UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.adminRepo = adminRepo;
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public Admin saveAdmin(Admin admin) {
@@ -25,11 +28,33 @@ public class AdminService {
     }
 
     public Optional<Admin> login(String email, String password) {
-        Optional<User> userOpt = userRepository.findFirstByEmailAndPasswordOrderByEmpIdAsc(email, password);
-        if (userOpt.isPresent()) {
-            Long empId = userOpt.get().getEmpId();
-            return adminRepo.findById(empId);
+        if (email == null || password == null)
+            return Optional.empty();
+
+        Optional<User> userOpt = userRepository.findFirstByEmailIgnoreCase(email);
+        if (userOpt.isEmpty()) {
+            userOpt = userRepository.findByEmailNative(email);
+            if (userOpt.isEmpty())
+                return Optional.empty();
         }
+
+        User user = userOpt.get();
+        String stored = user.getPassword();
+        if (stored == null)
+            return Optional.empty();
+
+        if (passwordEncoder.matches(password, stored)) {
+            return adminRepo.findById(user.getEmpId());
+        }
+
+        // Legacy plaintext fallback
+        if (stored.equals(password)) {
+            String hashed = passwordEncoder.encode(password);
+            user.setPassword(hashed);
+            userRepository.save(user);
+            return adminRepo.findById(user.getEmpId());
+        }
+
         return Optional.empty();
     }
 
