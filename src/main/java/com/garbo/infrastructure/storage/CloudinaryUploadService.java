@@ -1,5 +1,6 @@
 package com.garbo.infrastructure.storage;
 
+
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.garbo.api.exception.CollectionException;
