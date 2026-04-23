@@ -16,6 +16,8 @@ public interface CollectionRequestRepository extends JpaRepository<CollectionReq
 
     List<CollectionRequest> findByCitizen_EmpIdAndStatusOrderByCreatedAtDesc(Long citizenId, RequestStatus status);
 
+    long countByStatus(RequestStatus status);
+
     List<CollectionRequest> findByStatusOrderByCreatedAtDesc(RequestStatus status);
 
     /**

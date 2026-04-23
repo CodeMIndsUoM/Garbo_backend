@@ -298,6 +298,68 @@ public class CollectionRequestService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public com.garbo.core.dto.collection.CollectorDashboardDto getCollectorDashboard(Long collectorId) {
+        requireCurrentUser(collectorId);
+        
+        int availableRequests = (int) requestRepository.countByStatus(RequestStatus.OPEN);
+        int activeJobs = (int) offerRepository.countByCollector_EmpIdAndStatusIn(collectorId, List.of(OfferStatus.ACCEPTED, OfferStatus.IN_PROGRESS));
+        int completedJobs = (int) offerRepository.countByCollector_EmpIdAndStatusIn(collectorId, List.of(OfferStatus.COMPLETED));
+        
+        List<CollectionOffer> completedOffers = offerRepository.findByCollector_EmpIdAndStatusOrderByCreatedAtDesc(collectorId, OfferStatus.COMPLETED);
+        
+        double todaysRatingSum = 0;
+        int todaysRatedCount = 0;
+        int todaysWorkingMinutes = 0;
+        double todaysWasteCollectedKg = 0;
+        
+        double overallRatingSum = 0;
+        int overallRatedCount = 0;
+
+        Instant startOfToday = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
+                .atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
+
+        for (CollectionOffer offer : completedOffers) {
+            boolean isToday = offer.getCompletedAt() != null && !offer.getCompletedAt().isBefore(startOfToday);
+            
+            if (offer.getCitizenRating() != null && offer.getCitizenRating() > 0) {
+                overallRatingSum += offer.getCitizenRating();
+                overallRatedCount++;
+                if (isToday) {
+                    todaysRatingSum += offer.getCitizenRating();
+                    todaysRatedCount++;
+                }
+            }
+            
+            if (isToday) {
+                if (offer.getCompletionWeightKg() != null) {
+                    todaysWasteCollectedKg += offer.getCompletionWeightKg();
+                }
+                if (offer.getStartedAt() != null && offer.getCompletedAt() != null) {
+                    todaysWorkingMinutes += java.time.Duration.between(offer.getStartedAt(), offer.getCompletedAt()).toMinutes();
+                }
+            }
+        }
+        
+        double todaysRating = todaysRatedCount > 0 ? (todaysRatingSum / todaysRatedCount) : 0.0;
+        double overallRating = overallRatedCount > 0 ? (overallRatingSum / overallRatedCount) : 0.0;
+        
+        double responseRate = 98.0; // Placeholder until negotiation feature
+        double onTimeRate = 96.0;   // Placeholder until location tracking feature
+        
+        return new com.garbo.core.dto.collection.CollectorDashboardDto(
+            availableRequests,
+            activeJobs,
+            completedJobs,
+            todaysRating,
+            todaysWorkingMinutes,
+            todaysWasteCollectedKg,
+            responseRate,
+            onTimeRate,
+            overallRating
+        );
+    }
+
     @Transactional
     public OfferDto sendOffer(Long requestId, CreateOfferDto dto) {
         User viewer = currentUser();
