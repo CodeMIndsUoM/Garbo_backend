@@ -1,7 +1,10 @@
 package com.garbo.api.controller;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.garbo.core.entity.User;
+import com.garbo.core.entity.AdminNew;
 import com.garbo.core.service.UserService;
 
 @RestController
@@ -25,15 +29,46 @@ public class UserController {
 
     private final UserService userService;
 
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
     public UserController(UserService userService) {
         this.userService = userService;
     }
 
     @PostMapping
-    public ResponseEntity<?> createUser(@RequestBody User user) {
+    public ResponseEntity<?> createUser(@RequestBody Map<String, Object> payload) {
         try {
+            // If payload contains 'council' treat as new Admin creation
+            if (payload.containsKey("council")) {
+                AdminNew admin = new AdminNew();
+                // map frontend fields
+                Object fullName = payload.get("fullName");
+                Object email = payload.get("email");
+                Object contactNumber = payload.get("contactNumber");
+                Object council = payload.get("council");
+
+                if (fullName != null)
+                    admin.setEmpName(fullName.toString());
+                if (email != null)
+                    admin.setEmail(email.toString());
+                if (contactNumber != null)
+                    admin.setPhone(contactNumber.toString());
+                if (council != null)
+                    admin.setCouncil(council.toString());
+
+                admin.setRole("ADMIN");
+                admin.setCreatedAt(LocalDateTime.now());
+
+                AdminNew saved = userService.saveAdminNew(admin);
+                return ResponseEntity.ok().body(Map.of("success", true, "data", saved));
+            }
+
+            // Fallback: convert payload to User (supports existing clients)
+            User user = MAPPER.convertValue(payload, User.class);
             User saved = userService.saveUser(user);
             return ResponseEntity.ok().body(Map.of("success", true, "data", saved));
+
         } catch (Exception e) {
             log.error("Failed to create user", e);
             return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to create user"));
