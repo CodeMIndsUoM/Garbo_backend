@@ -59,4 +59,10 @@ public class ThirdPartyCollectorController {
     public ResponseEntity<ApiResponse<List<OfferDto>>> activeJobs(@PathVariable Long collectorId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listActiveJobs(collectorId)));
     }
+
+    @GetMapping("/{collectorId}/dashboard")
+    public ResponseEntity<ApiResponse<com.garbo.core.dto.collection.CollectorDashboardDto>> getDashboard(
+            @PathVariable Long collectorId) {
+        return ResponseEntity.ok(ApiResponse.success(collectionRequestService.getCollectorDashboard(collectorId)));
+    }
 }
