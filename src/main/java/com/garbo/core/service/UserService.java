@@ -11,6 +11,7 @@ import com.garbo.core.entity.User;
 import com.garbo.core.entity.AdminNew;
 import com.garbo.core.repository.UserRepository;
 import com.garbo.core.repository.AdminNewRepository;
+import com.garbo.infrastructure.email.EmailService;
 
 @Service
 public class UserService {
@@ -18,12 +19,14 @@ public class UserService {
     private final UserRepository userRepo;
     private final AdminNewRepository adminNewRepo;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public UserService(UserRepository userRepo, AdminNewRepository adminNewRepo,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepo = userRepo;
         this.adminNewRepo = adminNewRepo;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     public User saveUser(User user) {
@@ -46,8 +49,12 @@ public class UserService {
             // Log to dev-only admin creation audit file
             com.garbo.common.logging.AdminCreationLogger.log(adminNew.getEmail(), temp);
             adminNew.setPassword(hashed);
-            // Note: we do NOT send the temp password via email here.
-            // If desired later, return/send the `temp` value from here or emit an event.
+            // Persist the user with hashed password before sending email
+            AdminNew saved = this.adminNewRepo.save(adminNew);
+            // Attempt to send email with credentials (dev: may be placeholder config)
+            emailService.sendAdminCredentials(saved.getEmail(), temp);
+            // Note: we do NOT return the temp password here; it is emailed to the admin.
+            return saved;
         } else {
             // If caller provided a password (shouldn't happen for admin flow), hash it
             String hashed = passwordEncoder.encode(adminNew.getPassword());
