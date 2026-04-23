@@ -11,6 +11,10 @@ import java.util.Optional;
 @Repository
 public interface CollectionOfferRepository extends JpaRepository<CollectionOffer, Long> {
 
+    long countByRequest_Id(Long requestId);
+
+    long countByCollector_EmpIdAndStatusIn(Long collectorId, List<OfferStatus> statuses);
+
     List<CollectionOffer> findByRequest_IdOrderByCreatedAtDesc(Long requestId);
 
     List<CollectionOffer> findByCollector_EmpIdOrderByCreatedAtDesc(Long collectorId);
