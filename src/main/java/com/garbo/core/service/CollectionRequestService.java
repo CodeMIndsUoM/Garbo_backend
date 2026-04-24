@@ -344,8 +344,25 @@ public class CollectionRequestService {
         double todaysRating = todaysRatedCount > 0 ? (todaysRatingSum / todaysRatedCount) : 0.0;
         double overallRating = overallRatedCount > 0 ? (overallRatingSum / overallRatedCount) : 0.0;
         
-        double responseRate = 98.0; // Placeholder until negotiation feature
-        double onTimeRate = 96.0;   // Placeholder until location tracking feature
+        List<CollectionOffer> allOffers = offerRepository.findByCollector_EmpIdOrderByCreatedAtDesc(collectorId);
+        int cancelledOffers = 0;
+        for (CollectionOffer offer : allOffers) {
+            if (offer.getStatus() == OfferStatus.CANCELLED || offer.getStatus() == OfferStatus.WITHDRAWN) {
+                cancelledOffers++;
+            }
+        }
+        
+        int onTimeCount = 0;
+        for (CollectionOffer offer : completedOffers) {
+            if (offer.getProposedPickupAt() != null && offer.getCompletedAt() != null) {
+                if (offer.getCompletedAt().isBefore(offer.getProposedPickupAt().plus(java.time.Duration.ofHours(24)))) {
+                    onTimeCount++;
+                }
+            }
+        }
+        
+        double responseRate = allOffers.isEmpty() ? 100.0 : Math.max(0.0, 100.0 - ((double) cancelledOffers / allOffers.size()) * 100.0);
+        double onTimeRate = completedOffers.isEmpty() ? 100.0 : ((double) onTimeCount / completedOffers.size()) * 100.0;
         
         return new com.garbo.core.dto.collection.CollectorDashboardDto(
             availableRequests,
@@ -489,9 +506,6 @@ public class CollectionRequestService {
         if (offer.getStatus() != OfferStatus.IN_PROGRESS) {
             throw conflict("Only in-progress offers can be completed");
         }
-        if (photo == null || photo.isEmpty()) {
-            throw badRequest("Completion photo is required");
-        }
         if (latitude == null || longitude == null) {
             throw badRequest("Completion latitude and longitude are required");
         }
@@ -501,7 +515,10 @@ public class CollectionRequestService {
             throw badRequest("Weight is required for this waste type");
         }
 
-        String uploadedPhotoUrl = cloudinaryUploadService.uploadCompletionPhoto(photo, offerId);
+        String uploadedPhotoUrl = null;
+        if (photo != null && !photo.isEmpty()) {
+            uploadedPhotoUrl = cloudinaryUploadService.uploadCompletionPhoto(photo, offerId);
+        }
 
         offer.setCompletionPhotoUrl(uploadedPhotoUrl);
         offer.setCompletionWeightKg(weightKg);
