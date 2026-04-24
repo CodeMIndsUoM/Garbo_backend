@@ -75,7 +75,7 @@ public class OfferController {
     @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
     public ResponseEntity<ApiResponse<OfferDto>> complete(
             @PathVariable Long offerId,
-            @RequestParam("photo") MultipartFile photo,
+            @RequestParam(value = "photo", required = false) MultipartFile photo,
             @RequestParam(value = "weightKg", required = false) Double weightKg,
             @RequestParam("latitude") Double latitude,
             @RequestParam("longitude") Double longitude,
