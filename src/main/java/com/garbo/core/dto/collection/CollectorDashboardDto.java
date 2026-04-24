@@ -1,5 +1,7 @@
 package com.garbo.core.dto.collection;
 
+import java.time.Instant;
+
 public record CollectorDashboardDto(
     int availableRequests,
     int activeJobs,
@@ -9,6 +11,8 @@ public record CollectorDashboardDto(
     double todaysWasteCollectedKg,
     double responseRate,
     double onTimeRate,
-    double overallRating
+    double overallRating,
+    int totalReviews,
+    Instant memberSince
 ) {
 }
