@@ -46,6 +46,14 @@ public class CloudinaryUploadService {
                 "Request photo is required");
     }
 
+    public String uploadProfilePhoto(MultipartFile file, Long userId) {
+        return uploadImage(
+                file,
+                "garbo/profile-photos",
+                "user-" + userId + "-",
+                "Profile photo is required");
+    }
+
     private String uploadImage(
             MultipartFile file,
             String folder,
