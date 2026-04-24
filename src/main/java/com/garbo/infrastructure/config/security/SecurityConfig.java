@@ -79,9 +79,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/routes/optimize").permitAll()
                         // allow Spring error endpoint to return real status/details
                         .requestMatchers("/error").permitAll()
+                        // analytics (NO JWT)
+                        .requestMatchers(HttpMethod.GET, "/api/admin/analytics/**").permitAll()
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated() // all others need JWT
+
+                        
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authEx) -> {
