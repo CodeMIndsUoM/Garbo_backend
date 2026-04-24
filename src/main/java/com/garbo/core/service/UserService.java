@@ -54,4 +54,19 @@ public class UserService {
         if (found.isPresent()) return found;
         return userRepo.findByEmailNative(e);
     }
+
+    public Optional<User> getUserById(Long id) {
+        return userRepo.findById(id);
+    }
+
+    public User updateUser(Long id, User updatedDetails) {
+        return userRepo.findById(id).map(user -> {
+            if (updatedDetails.getEmpName() != null) user.setEmpName(updatedDetails.getEmpName());
+            if (updatedDetails.getEmail() != null) user.setEmail(updatedDetails.getEmail());
+            if (updatedDetails.getPhone() != null) user.setPhone(updatedDetails.getPhone());
+            if (updatedDetails.getDefaultAddress() != null) user.setDefaultAddress(updatedDetails.getDefaultAddress());
+            if (updatedDetails.getAvatarUrl() != null) user.setAvatarUrl(updatedDetails.getAvatarUrl());
+            return userRepo.save(user);
+        }).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+    }
 }
