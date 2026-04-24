@@ -13,7 +13,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class RouteSessionState {
     private final String sessionId;
     private final Long userId;
-    private final RouteSessionCreateRequestDTO config;
+    private volatile String workShift;
+    private RouteSessionCreateRequestDTO config;
     private final AtomicLong version = new AtomicLong(0);
     private volatile long generation;
     private volatile RouteSessionSnapshotDTO latest;

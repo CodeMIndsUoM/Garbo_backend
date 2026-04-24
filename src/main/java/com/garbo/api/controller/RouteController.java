@@ -20,6 +20,7 @@ public class RouteController {
     public ResponseEntity<?> optimizeRoutes(@RequestBody RouteRequestDTO request) {
         try {
             RouteSessionCreateRequestDTO sessionRequest = new RouteSessionCreateRequestDTO();
+            sessionRequest.setSessionId(request.getSessionId());
             sessionRequest.setUserId(request.getUserId() != null ? request.getUserId() : DEFAULT_USER_ID);
             sessionRequest.setVehicleCount(request.getVehicleCount());
             sessionRequest.setVehicleCapacities(request.getVehicleCapacities());

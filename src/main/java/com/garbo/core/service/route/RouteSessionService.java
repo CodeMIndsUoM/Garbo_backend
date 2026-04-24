@@ -4,15 +4,19 @@ import com.garbo.api.dto.RouteResponseDTO;
 import com.garbo.api.dto.RouteResponseDTO.BinStop;
 import com.garbo.api.dto.RouteResponseDTO.VehicleRoute;
 import com.garbo.api.dto.RouteSessionCreateRequestDTO;
-import com.garbo.api.dto.RouteSessionCreateResponseDTO;
 import com.garbo.api.dto.RouteSessionSnapshotDTO;
+import com.garbo.api.dto.websocket.RouteUpdatePayload;
 import com.garbo.core.entity.Bin;
+import com.garbo.core.entity.BinCollector;
 import com.garbo.core.repository.BinRepository;
+import com.garbo.core.repository.BinCollectorRepository;
 import com.garbo.core.service.event.BinChangedEvent;
+import com.garbo.infrastructure.websocket.RouteBroadcaster;
 import com.garbo.domain.ORToolsWrapper;
 import com.garbo.domain.OSRMClient;
+import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -29,56 +33,47 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 public class RouteSessionService {
 
     private static final long RECOMPUTE_DEBOUNCE_MS = 1500;
 
     private final BinRepository binRepository;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final BinCollectorRepository binCollectorRepository;
+    private final RouteBroadcaster routeBroadcaster;
 
     private final ConcurrentMap<String, RouteSessionState> sessionsById = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Long, String> activeSessionIdByUser = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private final ExecutorService computePool = Executors.newFixedThreadPool(2);
 
-    public RouteSessionService(BinRepository binRepository, SimpMessagingTemplate messagingTemplate) {
+    public RouteSessionService(BinRepository binRepository, BinCollectorRepository binCollectorRepository, RouteBroadcaster routeBroadcaster) {
         this.binRepository = binRepository;
-        this.messagingTemplate = messagingTemplate;
-    }
-
-    public RouteSessionCreateResponseDTO createOrReplaceSession(RouteSessionCreateRequestDTO request) {
-        validateRequest(request);
-
-        RouteSessionState state = registerSession(request);
-
-        RouteSessionSnapshotDTO processing = RouteSessionSnapshotDTO.processing(
-                state.getSessionId(),
-                state.getUserId(),
-                state.getVersion().incrementAndGet(),
-                "SESSION_CREATED",
-                state.getConfig().getSelectedBinIds(),
-                Collections.emptyList(),
-                Collections.emptyList()
-        );
-        state.setLatest(processing);
-        publishSnapshot(processing);
-
-        scheduleRecompute(state.getSessionId(), "SESSION_CREATED", 0);
-
-        return new RouteSessionCreateResponseDTO(
-                state.getSessionId(),
-                state.getUserId(),
-                buildUserTopic(state.getUserId()),
-                state.getLatest()
-        );
+        this.binCollectorRepository = binCollectorRepository;
+        this.routeBroadcaster = routeBroadcaster;
     }
 
     public RouteSessionSnapshotDTO optimizeAndBroadcast(RouteSessionCreateRequestDTO request) {
         validateRequest(request);
 
-        RouteSessionState state = registerSession(request);
+        String workShift = resolveWorkShift(request.getUserId());
+        RouteSessionSnapshotDTO conflict = validateShiftBinAvailability(request, workShift, request.getSessionId(), "HTTP_OPTIMIZE");
+        if (conflict != null) {
+            log.warn("Route optimize rejected due to duplicate bin assignment in shift: userId={}, workShift={}, message={}", request.getUserId(), workShift, conflict.message);
+            return conflict;
+        }
+
+        RouteSessionState state = upsertSession(request, workShift);
+        log.info(
+            "Route optimize request accepted: requestedSessionId={}, sessionId={}, userId={}, selectedBins={}, vehicleCount={}",
+            request.getSessionId(),
+            state.getSessionId(),
+            state.getUserId(),
+            state.getConfig().getSelectedBinIds(),
+            state.getConfig().getVehicleCount()
+        );
 
         RouteSessionSnapshotDTO processing = RouteSessionSnapshotDTO.processing(
                 state.getSessionId(),
@@ -125,41 +120,11 @@ public class RouteSessionService {
         }
     }
 
-    public RouteSessionSnapshotDTO getLatestSnapshot(String sessionId) {
-        return getSessionOrThrow(sessionId).getLatest();
-    }
 
-    public RouteSessionSnapshotDTO getLatestSnapshotByUser(Long userId) {
-        return getSessionByUserOrThrow(userId).getLatest();
-    }
-
-    public RouteSessionSnapshotDTO triggerRecompute(String sessionId) {
-        getSessionOrThrow(sessionId);
-        scheduleRecompute(sessionId, "MANUAL", 0);
-        return getLatestSnapshot(sessionId);
-    }
-
-    public RouteSessionSnapshotDTO triggerRecomputeByUser(Long userId) {
-        RouteSessionState state = getSessionByUserOrThrow(userId);
-        scheduleRecompute(state.getSessionId(), "MANUAL", 0);
-        return state.getLatest();
-    }
-
-    public void deleteSession(String sessionId) {
-        RouteSessionState removed = cancelAndRemove(sessionId);
-        if (removed == null) {
-            return;
-        }
-
-        activeSessionIdByUser.remove(removed.getUserId(), sessionId);
-    }
-
-    public void deleteSessionByUser(Long userId) {
-        String sessionId = activeSessionIdByUser.remove(userId);
-        if (sessionId == null) {
-            return;
-        }
-        cancelAndRemove(sessionId);
+    @PreDestroy
+    public void shutdownExecutors() {
+        scheduler.shutdownNow();
+        computePool.shutdownNow();
     }
 
     @EventListener
@@ -270,7 +235,12 @@ public class RouteSessionService {
             return binRepository.findAll();
         }
 
-        List<Bin> bins = binRepository.findAllById(selected);
+        List<Bin> bins;
+        try {
+            bins = binRepository.findAllById(selected);
+        } catch (Exception ignored) {
+            bins = binRepository.findAllByTextIdsCastToBigInt(selected);
+        }
         Map<Long, Bin> byId = new HashMap<>();
         for (Bin bin : bins) {
             byId.put(bin.getId(), bin);
@@ -425,36 +395,110 @@ public class RouteSessionService {
         return current != null && current.getGeneration() == generation;
     }
 
-    private RouteSessionState cancelAndRemove(String sessionId) {
-        RouteSessionState removed = sessionsById.remove(sessionId);
-        if (removed == null) {
+    private RouteSessionState upsertSession(RouteSessionCreateRequestDTO request, String workShift) {
+        synchronized (this) {
+            String requestedSessionId = request.getSessionId();
+            if (requestedSessionId != null && !requestedSessionId.isBlank()) {
+                RouteSessionState existing = sessionsById.get(requestedSessionId);
+                if (existing != null) {
+                    if (!existing.getUserId().equals(request.getUserId())) {
+                        throw new IllegalArgumentException("Session does not belong to this user.");
+                    }
+                    existing.setConfig(request);
+                    existing.setWorkShift(workShift);
+                    return existing;
+                }
+            }
+
+            String sessionId = requestedSessionId;
+            if (sessionId == null || sessionId.isBlank() || sessionsById.containsKey(sessionId)) {
+                sessionId = UUID.randomUUID().toString();
+            }
+
+            RouteSessionState state = new RouteSessionState(sessionId, request.getUserId(), request);
+            state.setWorkShift(workShift);
+            sessionsById.put(sessionId, state);
+            return state;
+        }
+    }
+
+    private String resolveWorkShift(Long userId) {
+        BinCollector collector = binCollectorRepository.findById(userId).orElse(null);
+        if (collector == null) {
+            log.warn("Unable to resolve work shift for userId {}. Duplicate-bin validation will be skipped.", userId);
             return null;
         }
 
-        if (removed.getScheduledFuture() != null) {
-            removed.getScheduledFuture().cancel(false);
-        }
-        if (removed.getRunningFuture() != null) {
-            removed.getRunningFuture().cancel(true);
+        if (collector.getWorkShift() == null || collector.getWorkShift().isBlank()) {
+            log.warn("Collector profile for userId {} does not define a work shift. Duplicate-bin validation will be skipped.", userId);
+            return null;
         }
 
-        return removed;
+        return collector.getWorkShift().trim();
     }
 
-    private RouteSessionState registerSession(RouteSessionCreateRequestDTO request) {
-        Long userId = request.getUserId();
-        String sessionId = UUID.randomUUID().toString();
-        RouteSessionState state = new RouteSessionState(sessionId, userId, request);
-
-        synchronized (this) {
-            String existingSessionId = activeSessionIdByUser.put(userId, sessionId);
-            if (existingSessionId != null) {
-                cancelAndRemove(existingSessionId);
+    private RouteSessionSnapshotDTO validateShiftBinAvailability(
+            RouteSessionCreateRequestDTO request,
+            String workShift,
+            String excludeSessionId,
+            String trigger
+    ) {
+            if (workShift == null || workShift.isBlank()) {
+                return null;
             }
-            sessionsById.put(sessionId, state);
+
+        List<Long> selectedBinIds = request.getSelectedBinIds();
+        if (selectedBinIds == null || selectedBinIds.isEmpty()) {
+            return null;
         }
 
-        return state;
+        List<String> overlappingSessions = new ArrayList<>();
+        List<Long> overlappingBins = new ArrayList<>();
+
+        for (RouteSessionState existing : sessionsById.values()) {
+            if (existing.getSessionId().equals(excludeSessionId)) {
+                continue;
+            }
+            if (existing.getWorkShift() == null || !existing.getWorkShift().equalsIgnoreCase(workShift)) {
+                continue;
+            }
+
+            List<Long> existingBins = existing.getConfig() != null ? existing.getConfig().getSelectedBinIds() : Collections.emptyList();
+            if (existingBins == null || existingBins.isEmpty()) {
+                continue;
+            }
+
+            List<Long> conflicts = selectedBinIds.stream()
+                    .filter(existingBins::contains)
+                    .collect(Collectors.toList());
+
+            if (!conflicts.isEmpty()) {
+                overlappingSessions.add(existing.getSessionId());
+                for (Long binId : conflicts) {
+                    if (!overlappingBins.contains(binId)) {
+                        overlappingBins.add(binId);
+                    }
+                }
+            }
+        }
+
+        if (overlappingBins.isEmpty()) {
+            return null;
+        }
+
+        String message = "WARNING: selected bin(s) " + overlappingBins + " are already assigned to another route in work shift " + workShift +
+                (overlappingSessions.isEmpty() ? "" : " (conflicting session(s): " + overlappingSessions + ")");
+
+        return RouteSessionSnapshotDTO.warning(
+                excludeSessionId,
+                request.getUserId(),
+                0L,
+                trigger,
+                selectedBinIds,
+                Collections.emptyList(),
+                Collections.emptyList(),
+                message
+        );
     }
 
     private RouteSessionSnapshotDTO publishOptimizationError(RouteSessionState state, String message) {
@@ -475,12 +519,61 @@ public class RouteSessionService {
     }
 
     private void publishSnapshot(RouteSessionSnapshotDTO snapshot) {
-        messagingTemplate.convertAndSend(buildUserTopic(snapshot.userId), snapshot);
-        messagingTemplate.convertAndSend("/topic/route-sessions/" + snapshot.sessionId, snapshot);
+        if (snapshot == null || snapshot.route == null || snapshot.userId == null) {
+            return;
+        }
+        if (!"READY".equalsIgnoreCase(snapshot.status)) {
+            return;
+        }
+
+        try {
+            RouteUpdatePayload payload = toRouteUpdatePayload(snapshot);
+            routeBroadcaster.onRouteOptimized(snapshot.userId, payload);
+        } catch (Exception ignored) {
+            // Keep route optimization resilient even if broadcasting fails.
+        }
     }
 
-    private String buildUserTopic(Long userId) {
-        return "/topic/routes/users/" + userId;
+    private RouteUpdatePayload toRouteUpdatePayload(RouteSessionSnapshotDTO snapshot) {
+        Map<Integer, RouteUpdatePayload.VehicleRoute> mappedRoutes = new LinkedHashMap<>();
+
+        if (snapshot.route.routes != null) {
+            for (Map.Entry<Integer, VehicleRoute> entry : snapshot.route.routes.entrySet()) {
+                VehicleRoute vr = entry.getValue();
+                List<RouteUpdatePayload.BinStop> mappedStops = new ArrayList<>();
+
+                if (vr.binSequence != null) {
+                    for (BinStop stop : vr.binSequence) {
+                        mappedStops.add(new RouteUpdatePayload.BinStop(
+                                stop.stopOrder,
+                                stop.binId,
+                                stop.lat,
+                                stop.lng,
+                                stop.durationFromPrevStopSeconds,
+                                null
+                        ));
+                    }
+                }
+
+                mappedRoutes.put(entry.getKey(), new RouteUpdatePayload.VehicleRoute(
+                        vr.vehicleId,
+                        vr.capacity,
+                        vr.totalBins,
+                        vr.estimatedDurationSeconds,
+                        mappedStops
+                ));
+            }
+        }
+
+        long updatedAt = snapshot.generatedAt != null ? snapshot.generatedAt.toEpochMilli() : System.currentTimeMillis();
+
+        return new RouteUpdatePayload(
+                snapshot.sessionId,
+                snapshot.userId,
+                snapshot.route.totalVehiclesUsed,
+                mappedRoutes,
+                updatedAt
+        );
     }
 
     private void validateRequest(RouteSessionCreateRequestDTO request) {
@@ -495,19 +588,4 @@ public class RouteSessionService {
         }
     }
 
-    private RouteSessionState getSessionOrThrow(String sessionId) {
-        RouteSessionState state = sessionsById.get(sessionId);
-        if (state == null) {
-            throw new IllegalArgumentException("Route session not found: " + sessionId);
-        }
-        return state;
-    }
-
-    private RouteSessionState getSessionByUserOrThrow(Long userId) {
-        String sessionId = activeSessionIdByUser.get(userId);
-        if (sessionId == null) {
-            throw new IllegalArgumentException("No active route session for userId: " + userId);
-        }
-        return getSessionOrThrow(sessionId);
-    }
 }

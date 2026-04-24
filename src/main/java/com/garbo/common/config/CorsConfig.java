@@ -12,13 +12,11 @@ public class CorsConfig {
     @Bean
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
-        
-        // Allow frontend origins
-        config.addAllowedOrigin("http://localhost:3000");
-        config.addAllowedOrigin("http://localhost:3001");
-        config.addAllowedOrigin("http://localhost:3002");
-        config.addAllowedOrigin("http://localhost:3003");
-        
+
+        // Allow Flutter web dev servers and local frontend origins during development.
+        // Restrict this later for production deployment.
+        config.addAllowedOriginPattern("*");
+
         // Allow all headers
         config.addAllowedHeader("*");
         

@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class RouteRequestDTO {
+    private String sessionId;
     private Long userId;
     private int vehicleCount;
     private int[] vehicleCapacities;
