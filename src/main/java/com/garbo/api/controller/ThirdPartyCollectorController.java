@@ -11,9 +11,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.garbo.core.entity.ThirdPartyCollector;
 
 import java.util.Map;
 import java.util.List;
@@ -64,5 +68,20 @@ public class ThirdPartyCollectorController {
     public ResponseEntity<ApiResponse<com.garbo.core.dto.collection.CollectorDashboardDto>> getDashboard(
             @PathVariable Long collectorId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.getCollectorDashboard(collectorId)));
+    }
+
+    @GetMapping("/{collectorId}/profile")
+    public ResponseEntity<ApiResponse<ThirdPartyCollector>> getProfile(@PathVariable Long collectorId) {
+        return thirdPartyCollectorService.getProfile(collectorId)
+                .map(collector -> ResponseEntity.ok(ApiResponse.success(collector)))
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{collectorId}/profile")
+    public ResponseEntity<ApiResponse<ThirdPartyCollector>> updateProfile(
+            @PathVariable Long collectorId,
+            @RequestBody ThirdPartyCollector updatedDetails) {
+        ThirdPartyCollector updated = thirdPartyCollectorService.updateProfile(collectorId, updatedDetails);
+        return ResponseEntity.ok(ApiResponse.success(updated));
     }
 }
