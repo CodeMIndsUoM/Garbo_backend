@@ -364,6 +364,12 @@ public class CollectionRequestService {
         double responseRate = allOffers.isEmpty() ? 100.0 : Math.max(0.0, 100.0 - ((double) cancelledOffers / allOffers.size()) * 100.0);
         double onTimeRate = completedOffers.isEmpty() ? 100.0 : ((double) onTimeCount / completedOffers.size()) * 100.0;
         
+        java.time.Instant memberSince = userRepository.findById(collectorId)
+                .map(u -> u.getCreatedAt())
+                .filter(java.util.Objects::nonNull)
+                .map(ldt -> ldt.atZone(java.time.ZoneId.systemDefault()).toInstant())
+                .orElse(null);
+
         return new com.garbo.core.dto.collection.CollectorDashboardDto(
             availableRequests,
             activeJobs,
@@ -373,7 +379,9 @@ public class CollectionRequestService {
             todaysWasteCollectedKg,
             responseRate,
             onTimeRate,
-            overallRating
+            overallRating,
+            overallRatedCount,
+            memberSince
         );
     }
 
