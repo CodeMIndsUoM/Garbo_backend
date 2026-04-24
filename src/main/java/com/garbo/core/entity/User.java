@@ -47,6 +47,9 @@ public class User {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
+    @Column(name = "must_change_password")
+    private boolean mustChangePassword = false;
+
     // ================= Security methods =================
 
     // @Override

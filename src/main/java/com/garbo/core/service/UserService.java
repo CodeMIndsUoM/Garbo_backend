@@ -49,6 +49,8 @@ public class UserService {
             // Log to dev-only admin creation audit file
             com.garbo.common.logging.AdminCreationLogger.log(adminNew.getEmail(), temp);
             adminNew.setPassword(hashed);
+            // Mark that the admin must change password on first login
+            adminNew.setMustChangePassword(true);
             // Persist the user with hashed password before sending email
             AdminNew saved = this.adminNewRepo.save(adminNew);
             // Attempt to send email with credentials (dev: may be placeholder config)
@@ -119,6 +121,36 @@ public class UserService {
         if (found.isPresent())
             return found;
         return userRepo.findByEmailNative(e);
+    }
+
+    /**
+     * Change a user's password after verifying their current password.
+     * If the user is not found, a NoSuchElementException is thrown.
+     * If the old password does not match, an IllegalArgumentException is thrown.
+     */
+    public void changePassword(String email, String oldPassword, String newPassword) {
+        if (email == null || oldPassword == null || newPassword == null)
+            throw new IllegalArgumentException("email and passwords must be provided");
+
+        Optional<User> found = getByEmail(email);
+        if (found.isEmpty())
+            throw new java.util.NoSuchElementException("User not found");
+
+        User user = found.get();
+        String stored = user.getPassword();
+        if (stored == null)
+            throw new IllegalArgumentException("Invalid current password");
+
+        // Verify current password. Support BCrypt hashes and legacy plaintext equality.
+        boolean matches = passwordEncoder.matches(oldPassword, stored) || stored.equals(oldPassword);
+        if (!matches)
+            throw new IllegalArgumentException("Invalid current password");
+
+        // Encode and save new password, clear mustChangePassword flag
+        String hashed = passwordEncoder.encode(newPassword);
+        user.setPassword(hashed);
+        user.setMustChangePassword(false);
+        userRepo.save(user);
     }
 
     private static final String PASSWORD_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*()-_";
