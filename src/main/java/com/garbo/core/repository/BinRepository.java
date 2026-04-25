@@ -13,7 +13,28 @@ import java.util.List;
 @Repository
 public interface BinRepository extends JpaRepository<Bin, Long> {
 
+    interface BinMapRow {
+        Long getId();
+        Double getLat();
+        Double getLng();
+        Integer getFillLevel();
+        String getPriority();
+        String getZone();
+    }
+
     List<Bin> findAllByIdIn(List<Long> ids);
+
+    @Query(value = """
+            SELECT
+                CAST(id AS BIGINT) AS id,
+                lat AS lat,
+                lng AS lng,
+                fill_level AS fillLevel,
+                priority AS priority,
+                zone AS zone
+            FROM bins
+            """, nativeQuery = true)
+    List<BinMapRow> findAllForMap();
 
     // bins.id is varchar in current DB, while app sends numeric ids.
     // Cast column to bigint for compatibility during transition.
@@ -34,6 +55,13 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
     @Transactional
     @Query(value = "UPDATE bins SET zone = :zone WHERE id = CAST(:id AS VARCHAR)", nativeQuery = true)
     void updateZoneNative(@Param("id") Long id, @Param("zone") String zone);
+
+    @Query("SELECT DISTINCT b.zone FROM Bin b")
+    List<String> findDistinctZones();
+
+    List<Bin> findByZone(String zone);
+    @Query("SELECT b FROM Bin b WHERE b.zone IN ('A','B','C','D','E')")
+    List<Bin> findAllValidBins();
 }
 
 
