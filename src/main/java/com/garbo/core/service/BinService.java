@@ -41,7 +41,19 @@ public class BinService {
 
     //  Get all bins (for map)
     public List<Bin> getAllBins() {
-        return binRepository.findAll();
+        return binRepository.findAllForMap()
+                .stream()
+                .map(row -> {
+                    Bin bin = new Bin();
+                    bin.setId(row.getId());
+                    bin.setLat(row.getLat());
+                    bin.setLng(row.getLng());
+                    bin.setFillLevel(row.getFillLevel());
+                    bin.setPriority(row.getPriority());
+                    bin.setZone(row.getZone());
+                    return bin;
+                })
+                .toList();
     }
 
     //  Get bin details

@@ -81,6 +81,20 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         // analytics (NO JWT)
                         .requestMatchers(HttpMethod.GET, "/api/admin/analytics/**").permitAll()
+                        //admin analytics (NO JWT)
+                        .requestMatchers("/api/admin/bin-analytics/**").permitAll()
+                        // staff analytics (NO JWT)
+                        .requestMatchers("/api/admin/staffanalytics").permitAll()
+                        // complaint analytics (NO JWT)
+                        .requestMatchers("/api/admin/complaintanalytics").permitAll()
+                        // third party analytics (NO JWT)
+                        .requestMatchers("/api/admin/thirdparty/analyze").permitAll()
+                        //bin report analytics (NO JWT)
+                        .requestMatchers("/api/admin/bin-reports/analytics").permitAll()
+                        //vehicle analytics (NO JWT)
+                        .requestMatchers("/api/admin/vehicles/analytics/**").permitAll()
+                        
+
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated() // all others need JWT
