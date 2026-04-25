@@ -4,50 +4,47 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @Entity
-@Table(name = "complaints")
-public class Complaint {
+@Table(name = "events")
+public class Event {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Transient
+    @Column(nullable = false)
     private String title;
 
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    private String category;
-    private String urgency;
-    private String wasteType;
-
     @Column(nullable = false)
+    private LocalDate eventDate;
+
+    private LocalTime startTime;
+    private LocalTime endTime;
     private String location;
-
-    private Double locationLat;
-    private Double locationLong;
-    private String locationAddress;
-
+    private String category;
     private String imageUrl;
-    @Column(columnDefinition = "TEXT")
-    private String resolutionNotes;
+    private Integer maxParticipants;
+    private Integer enrolledCount = 0;
+    private String status = "ACTIVE";
+    private String rejectionReason;
 
     @Column(nullable = false)
-    private String status = "PENDING"; // PENDING, IN_PROGRESS, RESOLVED
+    private String council;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "citizen_id", nullable = false)
-    private User citizen;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "assigned_to_id")
-    private User assignedTo;
+    @JoinColumn(name = "organizer_citizen_id", nullable = false)
+    private User organizerCitizen;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -56,6 +53,12 @@ public class Complaint {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        if (enrolledCount == null) {
+            enrolledCount = 0;
+        }
+        if (status == null || status.isBlank()) {
+            status = "ACTIVE";
+        }
     }
 
     @PreUpdate

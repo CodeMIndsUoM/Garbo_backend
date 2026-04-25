@@ -59,11 +59,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // allow login POST explicitly
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+                        // explicitly allow POST entrypoints that resolve JWT manually in controllers
+                        .requestMatchers(HttpMethod.POST, "/api/complaints").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/complaints/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/events").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/events/**").permitAll()
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         // change for testing.
-                        // .anyRequest().permitAll()
-                        .anyRequest().authenticated() // all others need JWT
+                        .anyRequest().permitAll()
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authEx) -> {

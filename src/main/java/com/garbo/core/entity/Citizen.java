@@ -14,5 +14,6 @@ import lombok.NoArgsConstructor;
 public class Citizen extends User {
     private String address;
     private String area;
+    private String council;
     private int reportCount;
 }
