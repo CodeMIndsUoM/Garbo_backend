@@ -11,6 +11,15 @@ spring:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  datasource:
+    url: ${DB_URL:}
+    driver-class-name: org.postgresql.Driver
+    username: ${DB_USERNAME:}
+    password: ${DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${JPA_SHOW_SQL:false}
 
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}
@@ -22,4 +31,4 @@ server:
 
 logging:
   level:
-    root: INFO
+    root: ${LOG_LEVEL_ROOT:INFO}

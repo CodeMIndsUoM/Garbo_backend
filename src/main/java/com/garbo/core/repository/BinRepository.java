@@ -7,6 +7,13 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
+public interface BinRepository extends JpaRepository<Bin, Long> {
+
+    boolean existsByBinCode(String binCode);
+
+    List<Bin> findByIsActiveTrue();
+
+    List<Bin> findByCouncilAndIsActiveTrue(String council);
 public interface BinRepository extends JpaRepository<Bin, String> {
     List<Bin> findByAssignedToEmpId(Long empId);
 }
