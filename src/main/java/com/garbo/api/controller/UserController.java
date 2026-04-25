@@ -28,12 +28,14 @@ public class UserController {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
+    private final com.garbo.core.service.CurrentUserService currentUserService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, com.garbo.core.service.CurrentUserService currentUserService) {
         this.userService = userService;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping
@@ -54,6 +56,15 @@ public class UserController {
                     admin.setEmail(email.toString());
                 if (contactNumber != null)
                     admin.setPhone(contactNumber.toString());
+                // Only superadmin may create AdminNew via this endpoint
+                String callerRole = currentUserService.getCurrentRole().orElse("");
+                if (!callerRole.equals("superadmin")) {
+                    return ResponseEntity.status(403).body(Map.of(
+                            "success", false,
+                            "message", "Only superadmin can create admins"));
+                }
+
+                // Caller is superadmin — map council directly from payload
                 if (council != null)
                     admin.setCouncil(council.toString());
 
