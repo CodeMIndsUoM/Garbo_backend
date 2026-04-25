@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "bin_collectors")
 @PrimaryKeyJoinColumn(name = "emp_id")
 public class BinCollector extends User{
-    private String assignedZone;
+    private String assignedCouncil;
     private String team;
     private String workShift;
     private boolean onDuty;
