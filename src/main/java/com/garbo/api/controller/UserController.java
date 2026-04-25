@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.garbo.core.entity.User;
 import com.garbo.core.entity.AdminNew;
+import com.garbo.core.entity.Citizen;
 import com.garbo.core.service.UserService;
 
 @RestController
@@ -39,8 +40,12 @@ public class UserController {
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody Map<String, Object> payload) {
         try {
-            // If payload contains 'council' treat as new Admin creation
-            if (payload.containsKey("council")) {
+            String role = payload.get("role") == null ? "" : payload.get("role").toString().trim().toUpperCase();
+            boolean citizenSignup = "CITIZEN".equals(role) || "ROLE_CITIZEN".equals(role);
+            boolean adminSignup = payload.containsKey("council") && !citizenSignup;
+
+            // If payload contains 'council' and is not a citizen signup treat as admin creation
+            if (adminSignup) {
                 AdminNew admin = new AdminNew();
                 // map frontend fields
                 Object fullName = payload.get("fullName");
@@ -61,6 +66,34 @@ public class UserController {
                 admin.setCreatedAt(LocalDateTime.now());
 
                 AdminNew saved = userService.saveAdminNew(admin);
+                return ResponseEntity.ok().body(Map.of("success", true, "data", saved));
+            }
+
+            if (citizenSignup || payload.containsKey("area") || payload.containsKey("address")) {
+                Citizen citizen = MAPPER.convertValue(payload, Citizen.class);
+
+                Object fullName = payload.get("fullName");
+                Object contactNumber = payload.get("contactNumber");
+                Object council = payload.get("council");
+                Object area = payload.get("area");
+                Object address = payload.get("address");
+
+                if (fullName != null)
+                    citizen.setEmpName(fullName.toString());
+                if (contactNumber != null)
+                    citizen.setPhone(contactNumber.toString());
+                if (council != null)
+                    citizen.setCouncil(council.toString());
+                if (area != null)
+                    citizen.setArea(area.toString());
+                if (address != null)
+                    citizen.setAddress(address.toString());
+                if (citizen.getRole() == null || citizen.getRole().isBlank())
+                    citizen.setRole("CITIZEN");
+                if (citizen.getCreatedAt() == null)
+                    citizen.setCreatedAt(LocalDateTime.now());
+
+                Citizen saved = userService.saveCitizen(citizen);
                 return ResponseEntity.ok().body(Map.of("success", true, "data", saved));
             }
 

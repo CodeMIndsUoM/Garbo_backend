@@ -9,8 +9,10 @@ import org.springframework.stereotype.Service;
 
 import com.garbo.core.entity.User;
 import com.garbo.core.entity.AdminNew;
+import com.garbo.core.entity.Citizen;
 import com.garbo.core.repository.UserRepository;
 import com.garbo.core.repository.AdminNewRepository;
+import com.garbo.core.repository.CitizenRepository;
 import com.garbo.infrastructure.email.EmailService;
 
 @Service
@@ -18,19 +20,25 @@ public class UserService {
 
     private final UserRepository userRepo;
     private final AdminNewRepository adminNewRepo;
+    private final CitizenRepository citizenRepo;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    public UserService(UserRepository userRepo, AdminNewRepository adminNewRepo,
+    public UserService(UserRepository userRepo, AdminNewRepository adminNewRepo, CitizenRepository citizenRepo,
             PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepo = userRepo;
         this.adminNewRepo = adminNewRepo;
+        this.citizenRepo = citizenRepo;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
     }
 
     public User saveUser(User user) {
         return this.userRepo.save(user);
+    }
+
+    public Citizen saveCitizen(Citizen citizen) {
+        return this.citizenRepo.save(citizen);
     }
 
     /**

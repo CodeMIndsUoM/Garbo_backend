@@ -3,6 +3,7 @@ package com.garbo.api.controller;
 import com.garbo.infrastructure.config.security.CustomUserDetailsService;
 import com.garbo.infrastructure.config.security.JwtUtil;
 import com.garbo.core.service.UserService;
+import com.garbo.core.entity.AdminNew;
 import com.garbo.core.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -77,6 +78,17 @@ public class AuthController {
                 mustChange = userOpt.get().isMustChangePassword();
             }
             response.put("mustChangePassword", mustChange);
+            Object councilValue = null;
+            if ("admin".equals(role) && userOpt.isPresent() && userOpt.get() instanceof AdminNew) {
+                AdminNew admin = (AdminNew) userOpt.get();
+                String councilName = admin.getCouncil();
+                if (councilName != null) {
+                    Map<String, String> councilMap = new HashMap<>();
+                    councilMap.put("name", councilName);
+                    councilValue = councilMap;
+                }
+            }
+            response.put("council", councilValue);
 
             return ResponseEntity.ok(response);
 
