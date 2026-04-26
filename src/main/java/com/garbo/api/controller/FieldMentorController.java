@@ -13,16 +13,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.garbo.infrastructure.storage.CloudinaryUploadService;
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+
 @RestController
 @RequestMapping("/api/fieldmentors")
 public class FieldMentorController {
 
     final private FieldMentorService fieldMentorService;
     final private BinService binService;
+    final private CloudinaryUploadService cloudinaryUploadService;
 
-    public FieldMentorController(FieldMentorService fieldMentorService, BinService binService) {
+    public FieldMentorController(FieldMentorService fieldMentorService, BinService binService, CloudinaryUploadService cloudinaryUploadService) {
         this.fieldMentorService = fieldMentorService;
         this.binService = binService;
+        this.cloudinaryUploadService = cloudinaryUploadService;
     }
 
     @PostMapping
@@ -74,13 +80,30 @@ public class FieldMentorController {
         return ResponseEntity.ok(ApiResponse.success(allowedBins));
     }
 
-    @PostMapping("/{empId}/bins/{binId}/report")
+    @PostMapping(value = "/{empId}/bins/{binId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<Map<String, Object>>> reportBinStatus(
             @PathVariable Long empId,
             @PathVariable String binId,
-            @RequestBody BinReportRequest request) {
+            @RequestParam("status") String status,
+            @RequestParam("fillLevel") Integer fillLevel,
+            @RequestParam("latitude") Double latitude,
+            @RequestParam("longitude") Double longitude,
+            @RequestParam(value = "notes", required = false) String notes,
+            @RequestParam(value = "photo", required = false) MultipartFile photo) {
 
         try {
+            BinReportRequest request = new BinReportRequest();
+            request.setStatus(status);
+            request.setFillLevel(fillLevel);
+            request.setLatitude(latitude);
+            request.setLongitude(longitude);
+            request.setNotes(notes);
+
+            if (photo != null && !photo.isEmpty()) {
+                String photoUrl = cloudinaryUploadService.uploadBinReportPhoto(photo, binId);
+                request.setPhotoUrl(photoUrl);
+            }
+
             Bin updatedBin = binService.reportBinStatus(binId, empId, request);
 
             Map<String, Object> data = new HashMap<>();

@@ -8,4 +8,5 @@ public enum OfferStatus {
     CANCELLED,
     IN_PROGRESS,
     COMPLETED
+    // expain this each status why use and is evry one usefull
 }
