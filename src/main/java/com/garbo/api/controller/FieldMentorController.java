@@ -86,7 +86,7 @@ public class FieldMentorController {
     @PostMapping(value = "/{empId}/bins/{binId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<Map<String, Object>>> reportBinStatus(
             @PathVariable Long empId,
-            @PathVariable String binId,
+            @PathVariable Long binId,
             @RequestParam("status") String status,
             @RequestParam("fillLevel") Integer fillLevel,
             @RequestParam("latitude") Double latitude,

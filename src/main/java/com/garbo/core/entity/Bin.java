@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 @Table(name = "bins")
 public class Bin {
     @Id
-    @Column(length = 20)
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     private String location;
 
@@ -44,4 +44,21 @@ public class Bin {
     @ManyToOne
     @JoinColumn(name = "assigned_to", referencedColumnName = "emp_id", nullable = true)
     private FieldMentor assignedTo;
+
+    // Compatibility getters for team's Route Optimization code
+    public Double getLat() {
+        return latitude;
+    }
+
+    public Double getLng() {
+        return longitude;
+    }
+
+    // Constructor for team's BinMapper/seeding code if needed
+    public Bin(double latitude, double longitude, int fillLevel, String status) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.fillLevel = fillLevel;
+        this.status = status;
+    }
 }
