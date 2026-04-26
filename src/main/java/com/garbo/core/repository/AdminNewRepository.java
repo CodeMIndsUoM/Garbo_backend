@@ -1,12 +1,13 @@
 package com.garbo.core.repository;
 
-import com.garbo.core.entity.Citizen;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import com.garbo.core.entity.AdminNew;
 
 import java.util.Optional;
 
 @Repository
-public interface CitizenRepository extends JpaRepository<Citizen, Long> {
-    Optional<Citizen> findFirstByEmailIgnoreCase(String email);
+public interface AdminNewRepository extends JpaRepository<AdminNew, Long> {
+    Optional<AdminNew> findFirstByEmailIgnoreCase(String email);
 }
