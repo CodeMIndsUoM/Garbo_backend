@@ -22,6 +22,10 @@ import com.garbo.core.entity.ThirdPartyCollector;
 import java.util.Map;
 import java.util.List;
 
+// Third-party collector flow:
+//   Collectors browse the open-request feed, send offers (via
+//   CollectionRequestController), and manage their own offers and active
+//   jobs through OfferController (start / complete / withdraw / cancel).
 @RestController
 @RequestMapping("/api/thirdpartycollectors")
 @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
