@@ -34,9 +34,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         // Skip JWT processing for authentication endpoints
         String path = request.getServletPath();
         System.out.println("JwtAuthenticationFilter: incoming path=" + path);
-
-        if (path != null && (path.equals("/api/auth/login") ||
-                path.equals("/api/auth/register"))) {
+        if (path != null && path.startsWith("/api/auth/")) {
+            System.out.println("JwtAuthenticationFilter: skipping auth filter for " + path);
             filterChain.doFilter(request, response);
             return;
         }
@@ -68,6 +67,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             // Validate token matches username
             if (jwtUtil.isTokenValid(token, userDetails.getUsername())) {
+
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails,
                         null, userDetails.getAuthorities());
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
