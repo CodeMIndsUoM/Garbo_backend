@@ -47,6 +47,12 @@ public class User {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
+    @Column(name = "default_address", length = 500)
+    private String defaultAddress;
+
     @Column(name = "must_change_password")
     private boolean mustChangePassword = false;
 
@@ -57,8 +63,48 @@ public class User {
     // return List.of(new SimpleGrantedAuthority("ROLE_" + role));
     // }
 
+    public Long getEmpId() {
+        return empId;
+    }
+
+    public String getEmpName() {
+        return empName;
+    }
+
+    public String getEmail() {
+        return email; // login using email
+    }
+
     public String getUsername() {
         return email; // login using email
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
+    public String getDefaultAddress() {
+        return defaultAddress;
+    }
+
+    public void setDefaultAddress(String defaultAddress) {
+        this.defaultAddress = defaultAddress;
     }
 
     public boolean isAccountNonExpired() {
