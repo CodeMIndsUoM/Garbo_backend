@@ -10,9 +10,9 @@ import java.util.List;
 @Repository
 public interface BinCollectorRepository extends JpaRepository<BinCollector, Long> {
 
-    // =========================
+    
     // 1. SUMMARY
-    // =========================
+    
     @Query(value = """
         SELECT
             COUNT(*)                                        AS total,
@@ -32,9 +32,9 @@ public interface BinCollectorRepository extends JpaRepository<BinCollector, Long
     """, nativeQuery = true)
     List<Object[]> getSummary();
 
-    // =========================
+
     // 2. ZONE BREAKDOWN
-    // =========================
+    
     @Query(value = """
         SELECT
             assigned_zone AS zone,

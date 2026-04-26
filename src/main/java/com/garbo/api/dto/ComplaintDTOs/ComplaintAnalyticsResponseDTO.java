@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * Full payload: GET /api/admin/complaintanalytics?filter=TODAY|WEEK|MONTH
+ *  GET /api/admin/complaintanalytics?filter=TODAY|WEEK|MONTH
  */
 @Data
 @Builder

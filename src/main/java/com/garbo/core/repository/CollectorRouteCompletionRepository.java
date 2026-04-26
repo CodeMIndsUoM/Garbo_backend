@@ -10,9 +10,9 @@ import java.util.List;
 
 public interface CollectorRouteCompletionRepository extends JpaRepository<CollectorRouteCompletion, Long> {
 
-    // =========================
+   
     // 1. TOTAL SUMMARY
-    // =========================
+    
     @Query(value = """
         SELECT
             COALESCE(SUM(assigned_bins),  0),
@@ -23,10 +23,9 @@ public interface CollectorRouteCompletionRepository extends JpaRepository<Collec
     """, nativeQuery = true)
     List<Object[]> getSummary(@Param("startDate") LocalDateTime startDate);
 
-    // =========================
+    
     // 2. HOURLY  (DAY filter)
     // Label format: "08:00", "14:00"
-    // =========================
     @Query(value = """
         SELECT
             TO_CHAR(completed_at, 'HH24:00') AS label,
@@ -40,10 +39,8 @@ public interface CollectorRouteCompletionRepository extends JpaRepository<Collec
     """, nativeQuery = true)
     List<Object[]> getHourlyData(@Param("startDate") LocalDateTime startDate);
 
-    // =========================
     // 3. DAILY  (WEEK filter)
     // Label format: "Mon", "Tue"
-    // =========================
     @Query(value = """
         SELECT
             TO_CHAR(completed_at, 'Dy')  AS label,
@@ -57,10 +54,8 @@ public interface CollectorRouteCompletionRepository extends JpaRepository<Collec
     """, nativeQuery = true)
     List<Object[]> getDailyData(@Param("startDate") LocalDateTime startDate);
 
-    // =========================
     // 4. WEEKLY  (MONTH filter)
     // Label format: "Week 1", "Week 2"
-    // =========================
     @Query(value = """
         SELECT
             'Week ' || RANK() OVER (ORDER BY TO_CHAR(completed_at, 'IYYY-IW')) AS label,

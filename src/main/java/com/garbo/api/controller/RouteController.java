@@ -19,7 +19,6 @@ public class RouteController {
     private static final long DEFAULT_USER_ID = 42L;
 
     /**
-     * Legacy-compatible endpoint (still used by admin dashboard / Flutter client)
      * Internally converts request → session-based optimization pipeline
      * and broadcasts real-time updates via WebSocket
      */

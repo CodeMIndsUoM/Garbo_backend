@@ -11,15 +11,15 @@ import java.util.List;
 @Repository
 public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
-    // ── KPI: Total active fleet ───────────────────────────────────────────────
+    //  Total active fleet 
     long countByIsActiveTrue();
 
-    // ── KPI: Count by status (active vehicles only) ───────────────────────────
+    //  Count by status (active vehicles only)
     long countByStatusAndIsActiveTrue(String status);
 
-    // ── Table: All active vehicles for the fleet list ─────────────────────────
+    // Table: All active vehicles for the fleet list 
     List<Vehicle> findAllByIsActiveTrueOrderByVehicleCodeAsc();
 
-    // ── Optional: filter by status for table ──────────────────────────────────
+    // Optional: filter by status for table 
     List<Vehicle> findAllByStatusAndIsActiveTrueOrderByVehicleCodeAsc(String status);
 }

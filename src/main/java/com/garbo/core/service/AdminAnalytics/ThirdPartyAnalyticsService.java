@@ -35,14 +35,14 @@ public class ThirdPartyAnalyticsService {
         Instant from = resolveFrom(period);
         boolean allTime = (from == null);
 
-        // ── Raw totals ────────────────────────────────────────────────────────
+        //  Raw totals 
         long total     = allTime ? repo.count()               : repo.countByCreatedAtAfter(from);
         long completed = allTime ? repo.countCompletedAllTime(): repo.countCompletedAfter(from);
 
         double completionRate = total == 0 ? 0.0
                 : Math.round((completed * 100.0 / total) * 10) / 10.0;   // 1 decimal place
 
-        // ── Group-by distributions ────────────────────────────────────────────
+        //  Group-by distributions 
         List<Object[]> slotRows   = allTime ? repo.countBySlotGroupedAllTime()
                                             : repo.countBySlotGrouped(from);
         List<Object[]> statusRows = allTime ? repo.countByStatusGroupedAllTime()
@@ -60,7 +60,7 @@ public class ThirdPartyAnalyticsService {
                 .build();
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    //  Helpers 
 
     /**
      * Returns the start-of-window Instant, or null for "all time".

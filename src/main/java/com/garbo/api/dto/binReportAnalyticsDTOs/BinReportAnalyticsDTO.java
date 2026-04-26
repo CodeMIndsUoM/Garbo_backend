@@ -34,7 +34,7 @@ public class BinReportAnalyticsDTO {
     @AllArgsConstructor
     @NoArgsConstructor
     public static class DailyCount {
-        private String day;    // e.g. "Mon", "Tue"
+        private String day;    // as "Mon", "Tue"
         private long count;
     }
 }

@@ -28,9 +28,6 @@ public class MonthlyReportDetailDTO {
     private String periodLabel;
     private String fileSizeDisplay;
 
-    /**
-     * The full analytics snapshot.
-     * Frontend uses this to render the printable report view.
-     */
+    
     private ReportSnapshotPayload snapshot;
 }

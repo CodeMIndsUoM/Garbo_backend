@@ -23,13 +23,13 @@ public class VehicleAnalyticsService {
 
     public VehicleAnalyticsDTO getAnalytics() {
 
-        // ── KPIs ──────────────────────────────────────────────────────────────
+        //  KPIs 
         long totalFleet   = vehicleRepository.countByIsActiveTrue();
         long onRoute      = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_ON_ROUTE);
         long available    = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_AVAILABLE);
         long maintenance  = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_MAINTENANCE);
 
-        // ── Fleet table ───────────────────────────────────────────────────────
+        //  Fleet table 
         List<Vehicle> vehicles = vehicleRepository.findAllByIsActiveTrueOrderByVehicleCodeAsc();
 
         List<VehicleRowDTO> rows = vehicles.stream()
@@ -44,7 +44,7 @@ public class VehicleAnalyticsService {
         return new VehicleAnalyticsDTO(totalFleet, onRoute, available, maintenance, rows);
     }
 
-    // ── Filtered fleet list (used when frontend passes a status filter) ────────
+    //  Filtered fleet list (used when frontend passes a status filter) 
     public VehicleAnalyticsDTO getAnalyticsByStatus(String statusFilter) {
 
         long totalFleet  = vehicleRepository.countByIsActiveTrue();
@@ -74,7 +74,7 @@ public class VehicleAnalyticsService {
         return new VehicleAnalyticsDTO(totalFleet, onRoute, available, maintenance, rows);
     }
 
-    // ── Convert DB status to display label ────────────────────────────────────
+    //  Convert DB status to display label 
     private String formatStatus(String dbStatus) {
         if (dbStatus == null) return "Unknown";
         return switch (dbStatus.toLowerCase()) {

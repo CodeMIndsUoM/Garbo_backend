@@ -18,17 +18,16 @@ public class AnalyticsService {
 
     public DashboardResponseDTO getDashboard(String filter) {
 
-        // =========================
         // 1. NORMALIZE FILTER
-        // =========================
+        
         if (filter == null) {
             filter = "DAY";
         }
         filter = filter.toUpperCase();
 
-        // =========================
+        
         // 2. DATE RANGE
-        // =========================
+        
         LocalDateTime startDate;
 
         switch (filter) {
@@ -42,10 +41,10 @@ public class AnalyticsService {
                 startDate = LocalDateTime.now().minusDays(1);
         }
 
-        // =========================
+       
         // 3. SUMMARY (SAFE)
         // getSummary returns List<Object[]> — unwrap the first row
-        // =========================
+        
         List<Object[]> summaryList = repo.getSummary(startDate);
         Object[] summary = (summaryList != null && !summaryList.isEmpty()) ? summaryList.get(0) : null;
 
@@ -59,9 +58,9 @@ public class AnalyticsService {
             missed    = summary[2] != null ? ((Number) summary[2]).intValue() : 0;
         }
 
-        // =========================
+       
         // 4. CHART DATA SELECTION
-        // =========================
+        
         List<Object[]> rawData;
 
         if ("WEEK".equals(filter)) {
@@ -72,9 +71,9 @@ public class AnalyticsService {
             rawData = repo.getHourlyData(startDate);
         }
 
-        // =========================
+        
         // 5. CHART MAPPING (SAFE)
-        // =========================
+        
         List<ChartDataDTO> chartData = new ArrayList<>();
 
         if (rawData != null) {
@@ -88,9 +87,9 @@ public class AnalyticsService {
             }
         }
 
-        // =========================
+        
         // 6. RESPONSE
-        // =========================
+        
         return new DashboardResponseDTO(
                 assigned,
                 collected,

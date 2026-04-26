@@ -13,10 +13,8 @@ import java.util.List;
 @Repository
 public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
-    // -----------------------------------------------------------------------
     // 1. TODAY summary — KPI cards (always fixed to today)
     // Row: [newCount, inProgressCount, resolvedCount]
-    // -----------------------------------------------------------------------
     @Query(value = """
         SELECT
             COUNT(*) FILTER (WHERE status = 'new')         AS new_count,
@@ -27,9 +25,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     """, nativeQuery = true)
     List<Object[]> getTodaySummary();
 
-    // -----------------------------------------------------------------------
     // 2. TODAY chart — single bar: new / inprogress / completed today
-    // -----------------------------------------------------------------------
     @Query(value = """
         SELECT
             'Today'                                        AS label,
@@ -41,9 +37,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     """, nativeQuery = true)
     List<Object[]> getTodayChart();
 
-    // -----------------------------------------------------------------------
     // 3. LAST 7 DAYS — grouped by day name (Mon, Tue …)
-    // -----------------------------------------------------------------------
     @Query(value = """
         SELECT
             TO_CHAR(created_at, 'Dy')                      AS label,
@@ -57,9 +51,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     """, nativeQuery = true)
     List<Object[]> getWeekChart(@Param("startDate") LocalDateTime startDate);
 
-    // -----------------------------------------------------------------------
     // 4. LAST 30 DAYS — grouped by date label (Mar 01, Mar 05 …)
-    // -----------------------------------------------------------------------
     @Query(value = """
         SELECT
             TO_CHAR(created_at, 'Mon DD')                  AS label,

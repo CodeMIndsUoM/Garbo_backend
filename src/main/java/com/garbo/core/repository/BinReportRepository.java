@@ -13,28 +13,28 @@ import java.util.List;
 @Repository
 public interface BinReportRepository extends JpaRepository<BinReport, Long> {
 
-    // ── KPI: Total reports today ──────────────────────────────────────────────
+    //  KPI: Total reports today 
     @Query("SELECT COUNT(r) FROM BinReport r WHERE r.reportedAt >= :start AND r.reportedAt < :end")
     long countReportsBetween(
         @Param("start") LocalDateTime start,
         @Param("end")   LocalDateTime end
     );
 
-    // ── KPI: Distinct bins affected today ────────────────────────────────────
+    //  KPI: Distinct bins affected today 
     @Query("SELECT COUNT(DISTINCT r.bin.id) FROM BinReport r WHERE r.reportedAt >= :start AND r.reportedAt < :end")
     long countDistinctBinsBetween(
         @Param("start") LocalDateTime start,
         @Param("end")   LocalDateTime end
     );
 
-    // ── KPI: Distinct reporters today (non-null reporter_id only) ─────────────
+    //  KPI: Distinct reporters today (non-null reporter_id only) 
     @Query("SELECT COUNT(DISTINCT r.reporter.empId) FROM BinReport r WHERE r.reportedAt >= :start AND r.reportedAt < :end AND r.reporter IS NOT NULL")
     long countDistinctReportersBetween(
         @Param("start") LocalDateTime start,
         @Param("end")   LocalDateTime end
     );
 
-    // ── Chart: Hourly counts for today (PostgreSQL: EXTRACT instead of HOUR()) ─
+    //  Chart: Hourly counts for today (PostgreSQL: EXTRACT instead of HOUR())
     // Returns Object[] { hour (Double in PG), count (Long) }
     @Query(value = """
         SELECT EXTRACT(HOUR FROM reported_at) AS hr, COUNT(id)
@@ -48,7 +48,7 @@ public interface BinReportRepository extends JpaRepository<BinReport, Long> {
         @Param("end")   LocalDateTime end
     );
 
-    // ── Chart: Daily counts for last 7 days (PostgreSQL: DATE() cast) ─────────
+    // Chart: Daily counts for last 7 days (PostgreSQL: DATE() cast) 
     // Returns Object[] { date (java.sql.Date), count (Long) }
     @Query(value = """
         SELECT DATE(reported_at) AS day, COUNT(id)

@@ -47,7 +47,7 @@ public class BinController {
             BinDTO response = BinMapper.toDTO(saved);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            System.err.println("❌ Error: " + e.getMessage());
+            System.err.println(" Error: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error: " + e.getMessage());
