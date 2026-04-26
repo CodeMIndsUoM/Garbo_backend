@@ -32,7 +32,7 @@ public class BinService {
     }
 
     @Transactional
-    public Bin reportBinStatus(String binId, Long reporterId, BinReportRequest request) {
+    public Bin reportBinStatus(Long binId, Long reporterId, BinReportRequest request) {
         Bin bin = binRepository.findById(binId)
                 .orElseThrow(() -> new EntityNotFoundException("Bin not found with ID: " + binId));
 

@@ -32,6 +32,11 @@
             <!--<version>3.2.0</version>-->
         </dependency>
         <dependency>
+            <groupId>com.google.ortools</groupId>
+            <artifactId>ortools-java</artifactId>
+            <version>9.12.4544</version>
+        </dependency>
+        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <!--<version>42.6.0</version>-->

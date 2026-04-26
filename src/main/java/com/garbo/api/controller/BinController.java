@@ -34,7 +34,7 @@ public class BinController {
 
     @PostMapping("/{binId}/report")
     public ResponseEntity<ApiResponse<Map<String, Object>>> reportBinStatus(
-            @PathVariable String binId,
+            @PathVariable Long binId,
             @RequestBody BinReportRequest request) {
         
         try {
