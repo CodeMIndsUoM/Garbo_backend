@@ -7,6 +7,7 @@ import com.garbo.core.entity.ThirdPartyCollector;
 import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
 import java.util.List;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,28 +41,38 @@ public class DataSeeder implements CommandLineRunner {
     }
 
     private void seedMobileTestUsers() {
-        seedCitizen();
+        seedCitizens();
         seedBinCollector();
-        seedThirdPartyCollector();
+        seedThirdPartyCollectors();
     }
 
-    private void seedCitizen() {
-        if (userRepository.findFirstByEmailIgnoreCase("citizen.test@garbo.com").isPresent()) {
-            System.out.println("Citizen test user already exists, skipping seed.");
+    private void seedCitizens() {
+        seedCitizen("Citizen Demo One", "citizen.one@garbo.com", "Citizen123", "0771000001",
+                "123 Galle Road, Colombo 04", "Colombo");
+        seedCitizen("Citizen Demo Two", "citizen.two@garbo.com", "Citizen123", "0771000002",
+                "45 Peradeniya Road, Kandy", "Kandy");
+        seedCitizen("Citizen Demo Three", "citizen.three@garbo.com", "Citizen123", "0771000003",
+                "78 Wakwella Road, Galle", "Galle");
+    }
+
+    private void seedCitizen(String name, String email, String password, String phone, String address, String area) {
+        if (userRepository.findFirstByEmailIgnoreCase(email).isPresent()) {
+            System.out.println("Citizen already exists, skipping seed: " + email);
             return;
         }
 
         Citizen citizen = new Citizen();
-        citizen.setEmpName("Citizen Test User");
-        citizen.setEmail("citizen.test@garbo.com");
-        citizen.setPassword(passwordEncoder.encode("Citizen123"));
+        citizen.setEmpName(name);
+        citizen.setEmail(email);
+        citizen.setPassword(passwordEncoder.encode(password));
         citizen.setRole("CITIZEN");
-        citizen.setPhone("0770000001");
-        citizen.setAddress("Colombo 05");
-        citizen.setArea("Colombo");
+        citizen.setPhone(phone);
+        citizen.setAddress(address);
+        citizen.setDefaultAddress(address);
+        citizen.setArea(area);
         citizen.setReportCount(0);
         userRepository.save(citizen);
-        System.out.println("Seeded citizen test user: citizen.test@garbo.com");
+        System.out.println("Seeded citizen: " + email);
     }
 
     private void seedBinCollector() {
@@ -87,24 +98,39 @@ public class DataSeeder implements CommandLineRunner {
         System.out.println("Seeded bin collector test user: collector.test@garbo.com");
     }
 
-    private void seedThirdPartyCollector() {
-        if (userRepository.findFirstByEmailIgnoreCase("thirdparty.test@garbo.com").isPresent()) {
-            System.out.println("Third-party collector test user already exists, skipping seed.");
+    private void seedThirdPartyCollectors() {
+        seedThirdPartyCollector("Third Party Collector One", "thirdparty.one@garbo.com", "ThirdParty123",
+                "0772000001", "199012345678", "Garbo Partner Logistics", "TPC-001",
+                LocalDate.of(2026, 4, 15), LocalDate.of(2027, 4, 15));
+        seedThirdPartyCollector("Third Party Collector Two", "thirdparty.two@garbo.com", "ThirdParty123",
+                "0772000002", "199012345679", "EcoCycle Lanka", "TPC-002",
+                LocalDate.of(2026, 4, 15), LocalDate.of(2027, 4, 15));
+        seedThirdPartyCollector("Third Party Collector Three", "thirdparty.three@garbo.com", "ThirdParty123",
+                "0772000003", "199012345680", "GreenLoop Services", "TPC-003",
+                LocalDate.of(2026, 4, 15), LocalDate.of(2027, 4, 15));
+    }
+
+    private void seedThirdPartyCollector(String name, String email, String password, String phone, String nic,
+            String company, String contractId, LocalDate contractStart, LocalDate contractEnd) {
+        if (userRepository.findFirstByEmailIgnoreCase(email).isPresent()) {
+            System.out.println("Third-party collector already exists, skipping seed: " + email);
             return;
         }
 
         ThirdPartyCollector thirdPartyCollector = new ThirdPartyCollector();
-        thirdPartyCollector.setEmpName("Third Party Test User");
-        thirdPartyCollector.setEmail("thirdparty.test@garbo.com");
-        thirdPartyCollector.setPassword(passwordEncoder.encode("ThirdParty123"));
+        thirdPartyCollector.setEmpName(name);
+        thirdPartyCollector.setEmail(email);
+        thirdPartyCollector.setPassword(passwordEncoder.encode(password));
         thirdPartyCollector.setRole("THIRD_PARTY_COLLECTOR");
-        thirdPartyCollector.setPhone("0770000003");
-        thirdPartyCollector.setNIC("199012345678");
-        thirdPartyCollector.setCompany("Garbo Partner Logistics");
-        thirdPartyCollector.setContractId("TPC-001");
+        thirdPartyCollector.setPhone(phone);
+        thirdPartyCollector.setNIC(nic);
+        thirdPartyCollector.setCompany(company);
+        thirdPartyCollector.setContractId(contractId);
+        thirdPartyCollector.setContractStart(contractStart);
+        thirdPartyCollector.setContractEnd(contractEnd);
         thirdPartyCollector.setCompletedRequests(0);
         userRepository.save(thirdPartyCollector);
-        System.out.println("Seeded third-party collector test user: thirdparty.test@garbo.com");
+        System.out.println("Seeded third-party collector: " + email);
     }
 
     private void seedFieldMentorDemoUser() {
