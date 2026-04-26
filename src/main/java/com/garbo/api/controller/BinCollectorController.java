@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/bincollectors")
 public class BinCollectorController {
-    final private BinCollectorService binCollectorService;
+    private final BinCollectorService binCollectorService;
 
     public BinCollectorController(BinCollectorService binCollectorService) {
         this.binCollectorService = binCollectorService;
