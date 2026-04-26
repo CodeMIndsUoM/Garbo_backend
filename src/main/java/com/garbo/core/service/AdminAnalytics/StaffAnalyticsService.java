@@ -20,7 +20,7 @@ public class StaffAnalyticsService {
 
     public StaffAnalyticsResponseDTO getAnalytics() {
 
-        // ── 1. Summary — unwrap first row from List ─────────────────────────
+        //  1. Summary — unwrap first row from List 
         List<Object[]> summaryList = repo.getSummary();
         Object[] s = (summaryList != null && !summaryList.isEmpty())
                 ? summaryList.get(0)
@@ -42,7 +42,7 @@ public class StaffAnalyticsService {
                 .avgPerformance(Math.round(avgPerformance * 10.0) / 10.0)
                 .build();
 
-        // ── 2. Zone breakdown ───────────────────────────────────────────────
+        //  2. Zone breakdown 
         List<Object[]> zoneRows = repo.getZoneBreakdown();
         List<ZoneStaffDTO> zoneData = new ArrayList<>();
 
@@ -64,7 +64,7 @@ public class StaffAnalyticsService {
                 .build();
     }
 
-    // ── Helpers ─────────────────────────────────────────────────────────────
+    //  Helpers 
     private long toLong(Object val) {
         return val instanceof Number ? ((Number) val).longValue() : 0L;
     }

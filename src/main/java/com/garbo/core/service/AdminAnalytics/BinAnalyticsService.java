@@ -24,9 +24,7 @@ public class BinAnalyticsService {
         // ✅ LOAD FILTERED DATA FROM DB (IMPORTANT)
         List<Bin> allBins = binRepository.findAllValidBins();
 
-        // =========================
         // KPI CALCULATIONS
-        // =========================
         long totalBins = allBins.size();
 
         long urgentBins = allBins.stream()
@@ -38,9 +36,7 @@ public class BinAnalyticsService {
                 .average()
                 .orElse(0.0);
 
-        // =========================
         // ZONE ANALYTICS
-        // =========================
         List<ZoneAnalyticsDTO> zoneData = new ArrayList<>();
 
         for (String zone : validZones) {

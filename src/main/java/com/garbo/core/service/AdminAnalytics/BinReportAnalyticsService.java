@@ -22,18 +22,18 @@ public class BinReportAnalyticsService {
 
     public BinReportAnalyticsDTO getAnalytics() {
 
-        // ── Time boundaries ───────────────────────────────────────────────────
+        //  Time boundaries 
         LocalDate today     = LocalDate.now();
         LocalDateTime dayStart  = today.atStartOfDay();
         LocalDateTime dayEnd    = today.plusDays(1).atStartOfDay();
         LocalDateTime weekStart = today.minusDays(6).atStartOfDay();
 
-        // ── KPIs ──────────────────────────────────────────────────────────────
+        //  KPIs 
         long totalReports    = binReportRepository.countReportsBetween(dayStart, dayEnd);
         long affectedBins    = binReportRepository.countDistinctBinsBetween(dayStart, dayEnd);
         long uniqueReporters = binReportRepository.countDistinctReportersBetween(dayStart, dayEnd);
 
-        // ── Hourly frequency (today) ───────────────────────────────────────────
+        //  Hourly frequency (today) 
         // PostgreSQL returns EXTRACT result as Double, count as Long
         List<Object[]> hourlyRaw = binReportRepository.countByHourBetween(dayStart, dayEnd);
 
@@ -51,7 +51,7 @@ public class BinReportAnalyticsService {
             hourlyList.add(new HourlyCount(String.format("%02d:00", h), c))
         );
 
-        // ── Daily frequency (last 7 days) ──────────────────────────────────────
+        //  Daily frequency (last 7 days) 
         // PostgreSQL native query returns DATE() as java.sql.Date, not LocalDate
         List<Object[]> dailyRaw = binReportRepository.countByDayBetween(weekStart, dayEnd);
 

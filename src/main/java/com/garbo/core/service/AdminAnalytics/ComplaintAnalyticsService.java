@@ -25,7 +25,7 @@ public class ComplaintAnalyticsService {
         if (filter == null) filter = "TODAY";
         filter = filter.toUpperCase();
 
-        // ── 1. KPI summary — always today ───────────────────────────────────
+        //  1. KPI summary — always today 
         List<Object[]> summaryList = repo.getTodaySummary();
         Object[] s = (summaryList != null && !summaryList.isEmpty())
                 ? summaryList.get(0)
@@ -46,7 +46,7 @@ public class ComplaintAnalyticsService {
                 .resolutionRate(resRate)
                 .build();
 
-        // ── 2. Chart data — varies by filter ────────────────────────────────
+        //  2. Chart data — varies by filter 
         List<Object[]> rawChart;
         switch (filter) {
             case "WEEK"  -> rawChart = repo.getWeekChart(LocalDateTime.now().minusDays(7));

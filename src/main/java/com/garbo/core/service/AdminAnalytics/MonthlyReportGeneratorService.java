@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MonthlyReportGeneratorService {
 
-    // ── Analytics services ────────────────────────────────────────────────────
+    //  Analytics services 
     private final AnalyticsService           analyticsService;
     private final BinAnalyticsService        binAnalyticsService;
     private final ComplaintAnalyticsService  complaintAnalyticsService;
@@ -36,13 +36,12 @@ public class MonthlyReportGeneratorService {
     private final ThirdPartyAnalyticsService thirdPartyAnalyticsService;
     private final VehicleAnalyticsService    vehicleAnalyticsService;
 
-    // ── Persistence ───────────────────────────────────────────────────────────
+    //  Persistence 
     private final MonthlyReportRepository reportRepository;
     private final ObjectMapper            objectMapper;
 
-    // ─────────────────────────────────────────────────────────────────────────
     // GENERATE
-    // ─────────────────────────────────────────────────────────────────────────
+   
 
     /**
      * Calls every required analytics service, assembles the snapshot, persists it,
@@ -60,7 +59,7 @@ public class MonthlyReportGeneratorService {
 
         log.info("Generating report: {} ({} → {})", title, periodStart, today);
 
-        // ── 1. Call analytics services ────────────────────────────────────────
+        //  1. Call analytics services 
         var collection  = analyticsService.getDashboard("MONTH");
         var binAnalytics = binAnalyticsService.getAnalytics();
         var complaints  = complaintAnalyticsService.getAnalytics("MONTH");
@@ -68,11 +67,11 @@ public class MonthlyReportGeneratorService {
         var thirdParty  = thirdPartyAnalyticsService.getAnalytics("LAST_MONTH");
         var vehicles    = vehicleAnalyticsService.getAnalytics();
 
-        // ── 2. Build extra snapshots ──────────────────────────────────────────
+        //  2. Build extra snapshots 
         Map<String, Integer> binZoneSnapshot    = buildBinZoneSnapshot(binAnalytics);
         Map<String, Long>    vehicleTypeSnapshot = buildVehicleTypeSnapshot(vehicles.getVehicles());
 
-        // ── 3. Assemble payload ───────────────────────────────────────────────
+        // 3. Assemble payload
         ReportSnapshotPayload payload = ReportSnapshotPayload.builder()
                 .collection(collection)
                 .binAnalytics(binAnalytics)
@@ -86,7 +85,7 @@ public class MonthlyReportGeneratorService {
                 .periodLabel(periodLabel)
                 .build();
 
-        // ── 4. Serialize to JSON ──────────────────────────────────────────────
+        //  4. Serialize to JSON 
         String snapshotJson;
         try {
             snapshotJson = objectMapper.writeValueAsString(payload);
@@ -96,7 +95,7 @@ public class MonthlyReportGeneratorService {
 
         int fileSizeKb = snapshotJson.getBytes().length / 1024;
 
-        // ── 5. Persist ────────────────────────────────────────────────────────
+        //  5. Persist 
         MonthlyReport entity = MonthlyReport.builder()
                 .title(title)
                 .periodStart(periodStart)
@@ -112,9 +111,7 @@ public class MonthlyReportGeneratorService {
         return toSummary(saved);
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
     // LIST
-    // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public List<MonthlyReportSummaryDTO> getAllReports() {
@@ -124,9 +121,7 @@ public class MonthlyReportGeneratorService {
                 .collect(Collectors.toList());
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
     // GET BY ID
-    // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public MonthlyReportDetailDTO getReportById(Long id) {
@@ -154,9 +149,7 @@ public class MonthlyReportGeneratorService {
                 .build();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
     // RAW SNAPSHOT (for download endpoint)
-    // ─────────────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public String getRawSnapshot(Long id) {
@@ -165,9 +158,7 @@ public class MonthlyReportGeneratorService {
                 .getSnapshot();
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
     // HELPERS
-    // ─────────────────────────────────────────────────────────────────────────
 
     /**
      * Bin count per zone from the already-computed BinAnalyticsResponseDTO.
