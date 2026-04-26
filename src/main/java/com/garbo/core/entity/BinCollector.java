@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Entity
 @Table(name = "bin_collectors")
 @PrimaryKeyJoinColumn(name = "emp_id")
-public class BinCollector extends User{
+public class BinCollector extends User {
     private String assignedCouncil;
     private String team;
     private String workShift;
