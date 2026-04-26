@@ -29,16 +29,55 @@ public class UserController {
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
     private final UserService userService;
-    private final CloudinaryUploadService cloudinaryUploadService;
+    private final com.garbo.core.service.CurrentUserService currentUserService;
 
-    public UserController(UserService userService, CloudinaryUploadService cloudinaryUploadService) {
+    private static final ObjectMapper MAPPER = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    public UserController(UserService userService, com.garbo.core.service.CurrentUserService currentUserService) {
         this.userService = userService;
-        this.cloudinaryUploadService = cloudinaryUploadService;
+        this.currentUserService = currentUserService;
     }
 
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody User user) {
         try {
+            // If payload contains 'council' treat as new Admin creation
+            if (payload.containsKey("council")) {
+                AdminNew admin = new AdminNew();
+                // map frontend fields
+                Object fullName = payload.get("fullName");
+                Object email = payload.get("email");
+                Object contactNumber = payload.get("contactNumber");
+                Object council = payload.get("council");
+
+                if (fullName != null)
+                    admin.setEmpName(fullName.toString());
+                if (email != null)
+                    admin.setEmail(email.toString());
+                if (contactNumber != null)
+                    admin.setPhone(contactNumber.toString());
+                // Only superadmin may create AdminNew via this endpoint
+                String callerRole = currentUserService.getCurrentRole().orElse("");
+                if (!callerRole.equals("superadmin")) {
+                    return ResponseEntity.status(403).body(Map.of(
+                            "success", false,
+                            "message", "Only superadmin can create admins"));
+                }
+
+                // Caller is superadmin — map council directly from payload
+                if (council != null)
+                    admin.setCouncil(council.toString());
+
+                admin.setRole("ADMIN");
+                admin.setCreatedAt(LocalDateTime.now());
+
+                AdminNew saved = userService.saveAdminNew(admin);
+                return ResponseEntity.ok().body(Map.of("success", true, "data", saved));
+            }
+
+            // Fallback: convert payload to User (supports existing clients)
+            User user = MAPPER.convertValue(payload, User.class);
             User saved = userService.saveUser(user);
             return ResponseEntity.ok().body(Map.of("success", true, "data", saved));
         } catch (Exception e) {

@@ -35,9 +35,61 @@ public class FieldMentorController {
     }
 
     @PostMapping
-    public void createFieldMentor(@RequestBody FieldMentor fieldMentor) {
-        System.out.println("admin saved successfully");
-        fieldMentorService.saveFieldMentor(fieldMentor);
+    public ResponseEntity<?> createFieldMentor(@RequestBody FieldMentor fieldMentor) {
+        try {
+            String role = currentUserService.getCurrentRole().orElse("");
+            // Only admin may create FieldMentor
+            if (!role.equals("admin")) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "success", false,
+                        "message", "Only admin can create field mentors"));
+            }
+
+            // For admin, require admin council and force assignment
+            java.util.Optional<String> councilOpt = currentUserService.getCurrentCouncil();
+            if (councilOpt.isEmpty()) {
+                return ResponseEntity.status(400).body(Map.of(
+                        "success", false,
+                        "message", "Admin council not found"));
+            }
+
+            String adminCouncil = councilOpt.get();
+            fieldMentor.setAssignedCouncil(adminCouncil);
+
+            FieldMentor saved = fieldMentorService.saveFieldMentor(fieldMentor);
+            return ResponseEntity.ok().body(Map.of("success", true, "data", saved));
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("success", false, "message", "Failed to create field mentor"));
+        }
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getAllFieldMentors() {
+        try {
+            String role = currentUserService.getCurrentRole().orElse("");
+            if (role.equals("superadmin")) {
+                java.util.List<FieldMentor> all = fieldMentorService.getAll();
+                return ResponseEntity.ok().body(Map.of("success", true, "data", all));
+            } else if (role.equals("admin")) {
+                java.util.Optional<String> councilOpt = currentUserService.getCurrentCouncil();
+                if (councilOpt.isEmpty()) {
+                    return ResponseEntity.status(400).body(Map.of(
+                            "success", false,
+                            "message", "Admin council not found"));
+                }
+                String council = councilOpt.get();
+                java.util.List<FieldMentor> byCouncil = fieldMentorService.findByCouncil(council);
+                return ResponseEntity.ok().body(Map.of("success", true, "data", byCouncil));
+            } else {
+                return ResponseEntity.status(403).body(Map.of(
+                        "success", false,
+                        "message", "Forbidden"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(500)
+                    .body(Map.of("success", false, "message", "Failed to fetch field mentors"));
+        }
     }
 
     @GetMapping("/{empId}")

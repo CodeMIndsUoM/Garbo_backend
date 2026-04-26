@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "field_mentors")
 @PrimaryKeyJoinColumn(name = "emp_id")
 public class FieldMentor extends User {
-    private String assignedZone;
+    private String assignedCouncil;
     private String workShift;
     private boolean onDuty;
     private double rewardPoints;
