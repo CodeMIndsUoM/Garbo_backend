@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+// Shared offer lifecycle endpoints used by both flows:
+//   Citizen side -> accept / reject / confirm (+rate)
+//   Collector side -> withdraw / cancel / start / complete
 @RestController
 @RequestMapping("/api/offers")
 public class OfferController {

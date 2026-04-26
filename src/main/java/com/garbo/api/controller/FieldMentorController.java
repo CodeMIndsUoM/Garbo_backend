@@ -17,6 +17,9 @@ import com.garbo.infrastructure.storage.CloudinaryUploadService;
 import org.springframework.http.MediaType;
 import org.springframework.web.multipart.MultipartFile;
 
+// Field staff (field mentor) flow:
+//   Flutter screens under presentation/field_staff hit these endpoints to
+//   list a mentor's assigned bins and submit bin status reports with photo.
 @RestController
 @RequestMapping("/api/fieldmentors")
 public class FieldMentorController {

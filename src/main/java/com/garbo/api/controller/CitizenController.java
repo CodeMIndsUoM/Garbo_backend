@@ -23,6 +23,10 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
+// Citizen request flow:
+//   Citizens create a collection request (with optional photo), see the
+//   list of their requests, and act on offers via OfferController
+//   (accept / reject / confirm-and-rate).
 @RestController
 @RequestMapping("/api/citizens")
 @PreAuthorize("hasRole('CITIZEN')")
