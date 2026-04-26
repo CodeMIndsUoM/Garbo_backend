@@ -54,6 +54,14 @@ public class CloudinaryUploadService {
                 "Profile photo is required");
     }
 
+    public String uploadBinReportPhoto(MultipartFile file, String binId) {
+        return uploadImage(
+                file,
+                "garbo/bin-reports",
+                "bin-" + binId + "-",
+                "Bin report photo is required");
+    }
+
     private String uploadImage(
             MultipartFile file,
             String folder,
