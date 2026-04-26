@@ -1,53 +1,83 @@
 package com.garbo.api.controller;
 
-import java.util.Map;
-import java.util.NoSuchElementException;
-
+import com.garbo.api.dto.BinDTO;
+import com.garbo.api.mapper.BinMapper;
+import com.garbo.core.entity.Bin;
+import com.garbo.core.service.BinService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import com.garbo.core.entity.WasteBin;
-import com.garbo.core.service.WasteBinService;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/bins")
-@CrossOrigin(origins = "*")
+@CrossOrigin("*")
 public class BinController {
 
-    private final WasteBinService wasteBinService;
+    private final BinService service;
 
-    public BinController(WasteBinService wasteBinService) {
-        this.wasteBinService = wasteBinService;
+    public BinController(BinService service) {
+        this.service = service;
     }
 
     @GetMapping
-    public ResponseEntity<?> getAll() {
-        return ResponseEntity.ok(Map.of("success", true, "data", wasteBinService.getAll()));
+    public ResponseEntity<List<BinDTO>> getAll() {
+        try {
+            List<BinDTO> bins = service.getAllBins()
+                    .stream()
+                    .map(BinMapper::toDTO)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(bins);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody WasteBin payload) {
+    public ResponseEntity<?> create(@RequestBody BinDTO dto) {
         try {
-            return ResponseEntity.ok(Map.of("success", true, "data", wasteBinService.create(payload)));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+            System.out.println("📥 Received: lat=" + dto.lat + ", lng=" + dto.lng + ", fill=" + dto.fillLevel + ", priority=" + dto.priority);
+            
+            Bin saved = service.addBin(dto);
+            
+            System.out.println("✅ Saved with ID: " + saved.getId());
+            
+            BinDTO response = BinMapper.toDTO(saved);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("❌ Error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable String id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         try {
-            wasteBinService.delete(id);
-            return ResponseEntity.ok(Map.of("success", true, "message", "Bin deleted"));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(404).body(Map.of("success", false, "message", e.getMessage()));
+            service.deleteBin(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PutMapping("/{id}/priority")
+    public ResponseEntity<?> updatePriority(
+            @PathVariable Long id,
+            @RequestParam String priority
+    ) {
+        try {
+            Bin updated = service.updatePriority(id, priority);
+            return ResponseEntity.ok(BinMapper.toDTO(updated));
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error: " + e.getMessage());
         }
     }
 }
