@@ -1,0 +1,18 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://ep-solitary-water-a1k4fpoz-pooler.ap-southeast-1.aws.neon.tech/GarboDB1_dev?sslmode=require&channelBinding=require
+    driver-class-name: org.postgresql.Driver
+    username: neondb_owner
+    password: npg_HeskrVL7l0Pj
+  
+  jpa:
+    hibernate:
+      ddl-auto: update # Strict validation in production
+    show-sql: false
+
+  flyway:
+    enabled: false # Flyway should manage production schema
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    validate-on-migrate: true

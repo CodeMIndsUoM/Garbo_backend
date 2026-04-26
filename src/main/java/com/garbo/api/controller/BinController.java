@@ -1,83 +1,55 @@
 package com.garbo.api.controller;
 
-import com.garbo.api.dto.BinDTO;
-import com.garbo.api.mapper.BinMapper;
+import com.garbo.core.dto.ApiResponse;
+import com.garbo.core.dto.BinReportRequest;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.service.BinService;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/bins")
-@CrossOrigin("*")
 public class BinController {
 
-    private final BinService service;
+    private final BinService binService;
 
-    public BinController(BinService service) {
-        this.service = service;
-    }
-
-    @GetMapping
-    public ResponseEntity<List<BinDTO>> getAll() {
-        try {
-            List<BinDTO> bins = service.getAllBins()
-                    .stream()
-                    .map(BinMapper::toDTO)
-                    .collect(Collectors.toList());
-            return ResponseEntity.ok(bins);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
+    public BinController(BinService binService) {
+        this.binService = binService;
     }
 
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody BinDTO dto) {
+    public ResponseEntity<ApiResponse<Bin>> createBin(@RequestBody Bin bin) {
         try {
-            System.out.println("📥 Received: lat=" + dto.lat + ", lng=" + dto.lng + ", fill=" + dto.fillLevel + ", priority=" + dto.priority);
-            
-            Bin saved = service.addBin(dto);
-            
-            System.out.println("✅ Saved with ID: " + saved.getId());
-            
-            BinDTO response = BinMapper.toDTO(saved);
-            return ResponseEntity.ok(response);
+            Bin createdBin = binService.createBin(bin);
+            return ResponseEntity.ok(ApiResponse.success(createdBin));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "BIN_EXISTS"));
         } catch (Exception e) {
-            System.err.println("❌ Error: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(ApiResponse.error(e.getMessage(), "CREATE_FAILED"));
         }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    @PostMapping("/{binId}/report")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> reportBinStatus(
+            @PathVariable String binId,
+            @RequestBody BinReportRequest request) {
+        
         try {
-            service.deleteBin(id);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-    }
+            // Pass null for reporterId as this is a generic/anonymous report
+            Bin updatedBin = binService.reportBinStatus(binId, null, request);
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("id", updatedBin.getId());
+            data.put("status", updatedBin.getStatus());
+            data.put("fillLevel", updatedBin.getFillLevel());
+            data.put("lastChecked", updatedBin.getLastChecked());
 
-    @PutMapping("/{id}/priority")
-    public ResponseEntity<?> updatePriority(
-            @PathVariable Long id,
-            @RequestParam String priority
-    ) {
-        try {
-            Bin updated = service.updatePriority(id, priority);
-            return ResponseEntity.ok(BinMapper.toDTO(updated));
+            return ResponseEntity.ok(ApiResponse.success(data));
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "REPORT_FAILED"));
         }
     }
 }

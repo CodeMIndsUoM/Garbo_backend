@@ -1,39 +1,47 @@
 package com.garbo.core.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.time.LocalDateTime;
 
 @Entity
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 @Table(name = "bins")
 public class Bin {
-
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(length = 20)
+    private String id;
 
-    private double lat;
-    private double lng;
-    private int fillLevel;
+    private String location;
+
+    @Column(name = "type", length = 20)
+    private String category; // public/park/commercial/medical/education
+
+    @Column(length = 20)
+    private String status = "notChecked"; // notChecked/full/half/empty
+
+    @Column(name = "fill_level")
+    private Integer fillLevel;
+
+    @Column(length = 50)
+    private String zone;
+
+    @Column(name = "lat")
+    private Double latitude;
+
+    @Column(name = "lng")
+    private Double longitude;
+
+    @Column(name = "last_checked")
+    private LocalDateTime lastChecked;
+
     private String priority;
 
-    public Bin() {}
-
-    public Bin(double lat, double lng, int fillLevel, String priority) {
-        this.lat = lat;
-        this.lng = lng;
-        this.fillLevel = fillLevel;
-        this.priority = priority;
-    }
-
-    // Getters
-    public Long getId() { return id; }
-    public double getLat() { return lat; }
-    public double getLng() { return lng; }
-    public int getFillLevel() { return fillLevel; }
-    public String getPriority() { return priority; }
-
-    // Setters (NO setId!)
-    public void setLat(double lat) { this.lat = lat; }
-    public void setLng(double lng) { this.lng = lng; }
-    public void setFillLevel(int fillLevel) { this.fillLevel = fillLevel; }
-    public void setPriority(String priority) { this.priority = priority; }
+    @ManyToOne
+    @JoinColumn(name = "assigned_to", referencedColumnName = "emp_id", nullable = true)
+    private FieldMentor assignedTo;
 }
