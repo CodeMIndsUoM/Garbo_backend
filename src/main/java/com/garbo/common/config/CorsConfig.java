@@ -4,7 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 
 @Configuration
 public class CorsConfig {
@@ -14,12 +13,11 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         // Allow frontend origins
-        config.setAllowedOriginPatterns(java.util.List.of("*"));
-        // config.setAllowedOrigins(java.util.List.of(
-        // "http://localhost:3000",
-        // "http://localhost:3001",
-        // "http://localhost:3002",
-        // "http://localhost:3003"));
+        config.setAllowedOrigins(java.util.List.of(
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://localhost:3002",
+                "http://localhost:3003"));
 
         // Allow headers and methods
         config.setAllowedHeaders(java.util.List.of("*"));

@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/garbo_db
+    driver-class-name: org.postgresql.Driver
+    username: sasindudb
+    password: ""
+
+  jpa:
+    hibernate:
+      ddl-auto: update # Automatically updates the local database structure based on your entity classes
+    show-sql: true
+
+  flyway:
+    enabled: false # Disabled locally because you mentioned team members change DB manually and don't use flyway
+
+logging:
+  level:
+    root: DEBUG
+    com.garbo: DEBUG # Enable debug logging for your application classes locally

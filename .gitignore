@@ -38,4 +38,11 @@ build/
 ### Mac OS ###
 .DS_Store
 
-./auth-attempt.log
+### Logs ###
+*.log
+logs/
+
+### Env ###
+.env
+.env.*
+!.env.example
