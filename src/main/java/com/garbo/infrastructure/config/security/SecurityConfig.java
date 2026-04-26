@@ -93,7 +93,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/bin-reports/analytics").permitAll()
                         //vehicle analytics (NO JWT)
                         .requestMatchers("/api/admin/vehicles/analytics/**").permitAll()
-                        
+                        // monthly report generation (NO JWT)
+                        .requestMatchers("/api/admin/reports/**").permitAll()
 
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
