@@ -52,20 +52,51 @@ src/main/resources/
 ## Team Setup (First Time)
 
 1. Create a local PostgreSQL database.
-2. Configure DB values in `application.yml` (or your local profile).
-3. Create `.env` from template:
+2. Create `.env` from template:
 
 ```bash
 cp .env.example .env
 ```
 
-4. Add Cloudinary credentials in `.env`:
+3. Pick the profile in `.env`:
+
+```env
+SPRING_PROFILES_ACTIVE=local
+```
+
+Use `local` for your machine's PostgreSQL database.
+Use `prod` for the remote PostgreSQL database.
+
+4. For `local`, fill your own PostgreSQL connection values in `.env`:
+
+```env
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/garbo_db
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+SPRING_DATASOURCE_USERNAME=your_local_db_username
+SPRING_DATASOURCE_PASSWORD=your_local_db_password
+```
+
+5. For `prod`, fill the remote DB values in `.env`:
+
+```env
+PROD_SPRING_DATASOURCE_URL=
+PROD_SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+PROD_SPRING_DATASOURCE_USERNAME=
+PROD_SPRING_DATASOURCE_PASSWORD=
+```
+
+6. Add Cloudinary credentials in `.env`:
 
 ```env
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 ```
+
+Notes:
+`src/main/resources/application-local.yml` reads `SPRING_DATASOURCE_*` values from `.env`.
+`src/main/resources/application-prod.yml` reads `PROD_SPRING_DATASOURCE_*` values from `.env`.
+`.env` is ignored by Git, so each team member can keep their own local DB credentials safely.
 
 ## Run the Backend
 
