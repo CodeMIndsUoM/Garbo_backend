@@ -3,6 +3,7 @@ package com.garbo.core.service;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.garbo.core.entity.SuperAdmin;
@@ -12,14 +13,10 @@ import com.garbo.core.repository.UserRepository;
 
 @Service
 public class SuperAdminService {
-
-    private final SuperAdminRepository superAdminRepo;
-    private final UserRepository userRepository;
-
-    public SuperAdminService(SuperAdminRepository superAdminRepo, UserRepository userRepository) {
-        this.superAdminRepo = superAdminRepo;
-        this.userRepository = userRepository;
-    }
+    @Autowired
+    private SuperAdminRepository superAdminRepo;
+    @Autowired
+    private UserRepository userRepository;
 
     public SuperAdmin saveSuperAdmin(SuperAdmin superAdmin) {
         return this.superAdminRepo.save(superAdmin);

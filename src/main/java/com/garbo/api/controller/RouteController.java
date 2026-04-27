@@ -1,6 +1,7 @@
 package com.garbo.api.controller;
 
 import com.garbo.api.dto.RouteRequestDTO;
+<<<<<<< HEAD
 import com.garbo.api.dto.RouteResponseDTO;
 import com.garbo.api.dto.RouteResponseDTO.BinStop;
 import com.garbo.api.dto.RouteResponseDTO.VehicleRoute;
@@ -8,10 +9,16 @@ import com.garbo.core.domain.algorithm.ORToolsWrapper;
 import com.garbo.core.domain.algorithm.OSRMClient;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.repository.BinRepository;
+=======
+import com.garbo.api.dto.RouteSessionCreateRequestDTO;
+import com.garbo.api.dto.RouteSessionSnapshotDTO;
+import com.garbo.core.service.route.RouteSessionService;
+>>>>>>> kevin-RWS
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+<<<<<<< HEAD
 import java.util.*;
 
 @RestController
@@ -133,6 +140,59 @@ public class RouteController {
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body("Error optimizing routes: " + e.getMessage());
+=======
+@RestController
+@RequestMapping("/api/routes")
+@CrossOrigin("*")
+public class RouteController {
+
+    @Autowired
+    private RouteSessionService routeSessionService;
+
+    private static final long DEFAULT_USER_ID = 42L;
+
+    /**
+     * Internally converts request → session-based optimization pipeline
+     * and broadcasts real-time updates via WebSocket
+     */
+    @PostMapping("/optimize")
+    public ResponseEntity<?> optimizeRoutes(@RequestBody RouteRequestDTO request) {
+
+        try {
+            // 1. Convert legacy request → session request
+            RouteSessionCreateRequestDTO sessionRequest = new RouteSessionCreateRequestDTO();
+
+            // user handling (fallback if not provided)
+            sessionRequest.setUserId(
+                    request.getUserId() != null
+                            ? request.getUserId()
+                            : DEFAULT_USER_ID
+            );
+
+            // routing configuration
+            sessionRequest.setVehicleCount(request.getVehicleCount());
+            sessionRequest.setVehicleCapacities(request.getVehicleCapacities());
+
+            // depot location
+            sessionRequest.setDepotLat(request.getDepotLat());
+            sessionRequest.setDepotLng(request.getDepotLng());
+
+            // IMPORTANT: selected bins from admin dashboard
+            sessionRequest.setSelectedBinIds(request.getSelectedBinIds());
+
+            // 2. Call session-based optimization engine
+            RouteSessionSnapshotDTO snapshot =
+                    routeSessionService.optimizeAndBroadcast(sessionRequest);
+
+            // 3. Return latest snapshot (also pushed via WebSocket internally)
+            return ResponseEntity.ok(snapshot);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity
+                    .status(500)
+                    .body("Error optimizing routes: " + e.getMessage());
+>>>>>>> kevin-RWS
         }
     }
 }

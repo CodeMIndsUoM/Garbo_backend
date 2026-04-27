@@ -51,4 +51,8 @@ public class BinReport {
             reportedAt = LocalDateTime.now();
         }
     }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> kevin-RWS

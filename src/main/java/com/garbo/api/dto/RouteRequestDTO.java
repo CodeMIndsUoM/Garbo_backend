@@ -1,5 +1,6 @@
 package com.garbo.api.dto;
 
+<<<<<<< HEAD
 import java.util.Arrays;
 
 public class RouteRequestDTO {
@@ -44,3 +45,30 @@ public class RouteRequestDTO {
         return depotLat != 0.0 && depotLng != 0.0;
     }
 }
+=======
+import lombok.Data;
+import java.util.List;
+
+@Data
+public class RouteRequestDTO {
+
+    private Long userId;
+
+    private int vehicleCount;
+
+    private int[] vehicleCapacities;
+
+    private double depotLat;
+
+    private double depotLng;
+
+    private List<Long> selectedBinIds;
+}
+
+
+
+
+
+
+
+>>>>>>> kevin-RWS

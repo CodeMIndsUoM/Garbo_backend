@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ThirdPartyCollectorRepository extends JpaRepository<ThirdPartyCollector, Long> {
+    
 }

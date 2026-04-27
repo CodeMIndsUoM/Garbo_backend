@@ -2,9 +2,9 @@ package com.garbo.api.controller;
 
 import java.util.Map;
 import java.util.Optional;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,7 +19,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.garbo.core.entity.User;
 import com.garbo.core.service.UserService;
+<<<<<<< HEAD
 import com.garbo.infrastructure.storage.CloudinaryUploadService;
+=======
+import com.garbo.infrastructure.config.security.JwtUtil;
+>>>>>>> kevin-RWS
 
 @RestController
 @RequestMapping("/api/users")
@@ -28,6 +32,7 @@ public class UserController {
 
     private static final Logger log = LoggerFactory.getLogger(UserController.class);
 
+<<<<<<< HEAD
     private final UserService userService;
     private final com.garbo.core.service.CurrentUserService currentUserService;
 
@@ -38,6 +43,13 @@ public class UserController {
         this.userService = userService;
         this.currentUserService = currentUserService;
     }
+=======
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+>>>>>>> kevin-RWS
 
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody User user) {
@@ -88,16 +100,33 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody Map<String, String> payload) {
-        String email = payload.get("email");
-        String password = payload.get("password");
-        if (email == null || password == null) {
-            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Email and password required"));
-        }
-        Optional<User> userOpt = userService.login(email, password);
-        if (userOpt.isPresent()) {
-            return ResponseEntity.ok().body(Map.of("success", true, "data", userOpt.get()));
-        } else {
-            return ResponseEntity.status(401).body(Map.of("success", false, "message", "Invalid credentials"));
+        try {
+            String email = payload.get("email");
+            String password = payload.get("password");
+            if (email == null || password == null) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Email and password required"));
+            }
+
+            Optional<User> userOpt = userService.login(email, password);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                String usernameForToken = user.getEmail() != null ? user.getEmail() : email;
+                String roleForToken = user.getRole() != null ? user.getRole() : "admin";
+                String token = jwtUtil.generateToken(usernameForToken, roleForToken);
+                return ResponseEntity.ok().body(Map.of(
+                        "success", true,
+                        "data", user,
+                        "token", token
+                ));
+            } else {
+                return ResponseEntity.status(401).body(Map.of("success", false, "message", "Invalid credentials"));
+            }
+        } catch (Exception e) {
+            log.error("Login failed", e);
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Login failed: " + e.getMessage()
+            ));
         }
     }
 

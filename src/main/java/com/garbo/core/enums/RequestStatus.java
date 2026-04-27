@@ -1,5 +1,9 @@
 package com.garbo.core.enums;
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> kevin-RWS
 public enum RequestStatus {
     OPEN,
     ASSIGNED,
@@ -7,4 +11,8 @@ public enum RequestStatus {
     COMPLETED,
     CONFIRMED,
     CANCELLED
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> kevin-RWS
