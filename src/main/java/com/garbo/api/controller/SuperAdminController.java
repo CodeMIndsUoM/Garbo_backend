@@ -2,7 +2,9 @@ package com.garbo.api.controller;
 
 import com.garbo.core.entity.SuperAdmin;
 import com.garbo.core.service.SuperAdminService;
+import com.garbo.infrastructure.config.security.JwtUtil;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,12 +14,11 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/superadmins")
 public class SuperAdminController {
+    @Autowired
+    private SuperAdminService superAdminService;
 
-    private final SuperAdminService superAdminService;
-
-    public SuperAdminController(SuperAdminService superAdminService) {
-        this.superAdminService = superAdminService;
-    }
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @PostMapping
     public ResponseEntity<?> createSuperAdmin(@RequestBody SuperAdmin superAdmin) {
@@ -38,10 +39,13 @@ public class SuperAdminController {
         }
         Optional<SuperAdmin> superAdminOpt = superAdminService.login(email, password);
         if (superAdminOpt.isPresent()) {
+            SuperAdmin superAdmin = superAdminOpt.get();
+            String token = jwtUtil.generateToken(superAdmin.getEmail(), "superadmin");
             return ResponseEntity.ok().body(Map.of(
                     "success", true,
-                    "data", superAdminOpt.get(),
-                    "role", "superadmin"
+                    "data", superAdmin,
+                    "role", "superadmin",
+                    "token", token
             ));
         } else {
             return ResponseEntity.status(401).body(Map.of("success", false, "message", "Invalid credentials"));

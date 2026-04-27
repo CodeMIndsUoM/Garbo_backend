@@ -1,6 +1,7 @@
 package com.garbo.core.entity;
 
 import jakarta.persistence.*;
+<<<<<<< HEAD
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,10 +13,20 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Table(name = "bins")
 public class Bin {
+=======
+import lombok.Data;
+
+@Entity
+@Table(name = "bins")
+@Data
+public class Bin {
+
+>>>>>>> kevin-RWS
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+<<<<<<< HEAD
     private String location;
 
     @Column(name = "type", length = 20)
@@ -62,3 +73,14 @@ public class Bin {
         this.status = status;
     }
 }
+=======
+    private double lat;
+    private double lng;
+
+    private int fillLevel;
+
+    private String priority;
+
+    private String zone;
+}
+>>>>>>> kevin-RWS

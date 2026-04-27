@@ -2,16 +2,23 @@ package com.garbo.api.controller;
 
 import com.garbo.core.entity.BinCollector;
 import com.garbo.core.service.BinCollectorService;
+<<<<<<< HEAD
 import com.garbo.core.service.CurrentUserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+=======
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+>>>>>>> kevin-RWS
 
 @RestController
 @RequestMapping("/api/bincollectors")
 public class BinCollectorController {
+<<<<<<< HEAD
     private final BinCollectorService binCollectorService;
     private final CurrentUserService currentUserService;
 
@@ -72,4 +79,8 @@ public class BinCollectorController {
                     .body(Map.of("success", false, "message", "Failed to fetch bin collectors"));
         }
     }
+=======
+    @Autowired
+    private BinCollectorService binCollectorService;
+>>>>>>> kevin-RWS
 }

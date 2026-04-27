@@ -29,10 +29,6 @@ public class UserService {
         Optional<User> found = userRepo.findFirstByEmailAndPasswordOrderByEmpIdAsc(e, p);
         if (found.isPresent()) return found;
 
-        // try native exact match (LIMIT 1)
-        found = userRepo.findByEmailAndPasswordNative(e, p);
-        if (found.isPresent()) return found;
-
         // try case-insensitive email lookup then compare password in Java
         Optional<User> byEmail = userRepo.findFirstByEmailIgnoreCase(e);
         if (byEmail.isPresent() && p.equals(byEmail.get().getPassword())) {
@@ -49,9 +45,7 @@ public class UserService {
     public Optional<User> getByEmail(String email) {
         if (email == null) return Optional.empty();
         String e = email.trim();
-        Optional<User> found = userRepo.findFirstByEmailIgnoreCase(e);
-        if (found.isPresent()) return found;
-        return userRepo.findByEmailNative(e);
+        return userRepo.findFirstByEmailIgnoreCase(e);
     }
 
     public Optional<User> getUserById(Long id) {

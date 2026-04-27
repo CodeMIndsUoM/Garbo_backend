@@ -4,7 +4,10 @@ import java.util.List;
 import java.util.Map;
 
 public class RouteResponseDTO {
+<<<<<<< HEAD
 
+=======
+>>>>>>> kevin-RWS
     public int totalVehiclesUsed;
     public Map<Integer, VehicleRoute> routes;  // vehicleId -> route details
 

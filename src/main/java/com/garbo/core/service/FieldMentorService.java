@@ -3,6 +3,8 @@ package com.garbo.core.service;
 import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.repository.FieldMentorRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service

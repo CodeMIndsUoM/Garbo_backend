@@ -1,5 +1,6 @@
 package com.garbo.api.controller;
 
+<<<<<<< HEAD
 import com.garbo.core.entity.User;
 import com.garbo.core.repository.UserRepository;
 import com.garbo.infrastructure.config.security.CustomUserDetailsService;
@@ -7,20 +8,24 @@ import com.garbo.infrastructure.config.security.JwtUtil;
 import com.garbo.core.service.UserService;
 import com.garbo.core.entity.User;
 import com.garbo.core.entity.AdminNew;
+=======
+import com.garbo.core.service.UserService;
+import com.garbo.infrastructure.config.security.JwtUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+>>>>>>> kevin-RWS
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
 public class AuthController {
+    @Autowired
+    private UserService userService;
 
+<<<<<<< HEAD
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
@@ -113,5 +118,31 @@ public class AuthController {
             error.put("error", "Invalid email or password");
             return ResponseEntity.status(401).body(error);
         }
+=======
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @GetMapping("/validate")
+    public ResponseEntity<?> validate(@RequestHeader(value = "Authorization", required = false) String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.ok(Map.of("success", true, "data", false));
+            }
+
+            String token = authHeader.substring(7);
+            String username = jwtUtil.extractUsername(token);
+            boolean valid = jwtUtil.isTokenValid(token, username);
+
+            return ResponseEntity.ok(Map.of("success", true, "data", valid));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("success", true, "data", false));
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout() {
+        // Stateless JWT logout on client side.
+        return ResponseEntity.ok(Map.of("success", true));
+>>>>>>> kevin-RWS
     }
 }

@@ -6,8 +6,17 @@ import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.service.BinService;
 import com.garbo.core.service.FieldMentorService;
+<<<<<<< HEAD
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+=======
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+>>>>>>> kevin-RWS
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/fieldmentors")
 public class FieldMentorController {
+<<<<<<< HEAD
 
     final private FieldMentorService fieldMentorService;
     final private BinService binService;
@@ -33,6 +43,10 @@ public class FieldMentorController {
         this.binService = binService;
         this.cloudinaryUploadService = cloudinaryUploadService;
     }
+=======
+    @Autowired
+    private FieldMentorService fieldMentorService;
+>>>>>>> kevin-RWS
 
     @PostMapping
     public ResponseEntity<?> createFieldMentor(@RequestBody FieldMentor fieldMentor) {

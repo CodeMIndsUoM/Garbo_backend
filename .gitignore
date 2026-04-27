@@ -37,6 +37,7 @@ build/
 
 ### Mac OS ###
 .DS_Store
+<<<<<<< HEAD
 
 ### Logs ###
 *.log
@@ -46,3 +47,19 @@ logs/
 .env
 .env.*
 !.env.example
+=======
+.DS_Store
+
+application.yml
+
+workspace.xml
+vcs.xml
+misc.xml
+google-java-format.xml
+encodings.xml
+dbnavigator.xml
+copilot.data.migration.agent.xml
+copilot.data.migration.ask.xml
+copilot.data.migration.ask2agent.xml
+copilot.data.migration.edit.xml
+>>>>>>> kevin-RWS
