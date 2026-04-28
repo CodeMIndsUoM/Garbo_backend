@@ -136,14 +136,18 @@ public class DataSeeder implements CommandLineRunner {
     private void seedFieldMentorDemoUser() {
         // Only seed if this user doesn't already exist
         if (userRepository.findFirstByEmailIgnoreCase("sasindu@gmail.com").isEmpty()) {
-            // Fix the PostgreSQL sequence to avoid duplicate key conflicts
-            try {
+            String dialect = String.valueOf(entityManager.getEntityManagerFactory()
+                    .getProperties().getOrDefault("hibernate.dialect", ""));
+
+            // The sequence reset query is PostgreSQL-specific and can mark the
+            // transaction rollback-only on H2 even if we catch the exception.
+            if (dialect.contains("PostgreSQL")) {
                 entityManager.createNativeQuery(
                         "SELECT setval('users_emp_id_seq', (SELECT COALESCE(MAX(emp_id), 0) FROM users))")
                         .getSingleResult();
                 System.out.println("Reset users_emp_id_seq to current max emp_id.");
-            } catch (Exception e) {
-                System.out.println("Could not reset sequence (may not be needed): " + e.getMessage());
+            } else {
+                System.out.println("Skipping PostgreSQL sequence reset for dialect: " + dialect);
             }
 
             FieldMentor fm = new FieldMentor();
