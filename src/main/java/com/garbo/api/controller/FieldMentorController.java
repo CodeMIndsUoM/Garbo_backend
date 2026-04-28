@@ -1,38 +1,32 @@
 package com.garbo.api.controller;
 
 import com.garbo.core.dto.ApiResponse;
-import com.garbo.core.dto.BinReportRequest;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.service.BinService;
 import com.garbo.core.service.CurrentUserService;
 import com.garbo.core.service.FieldMentorService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.garbo.infrastructure.storage.CloudinaryUploadService;
-import org.springframework.http.MediaType;
-import org.springframework.web.multipart.MultipartFile;
-
 // Field staff (field mentor) flow:
 //   Flutter screens under presentation/field_staff hit these endpoints to
-//   list a mentor's assigned bins and submit bin status reports with photo.
+//   list the authenticated mentor's assigned bins.
 @RestController
 @RequestMapping("/api/fieldmentors")
 public class FieldMentorController {
 
     final private FieldMentorService fieldMentorService;
     final private BinService binService;
-    final private CloudinaryUploadService cloudinaryUploadService;
 
-    public FieldMentorController(FieldMentorService fieldMentorService, BinService binService, CloudinaryUploadService cloudinaryUploadService) {
+    public FieldMentorController(FieldMentorService fieldMentorService, BinService binService) {
         this.fieldMentorService = fieldMentorService;
         this.binService = binService;
-        this.cloudinaryUploadService = cloudinaryUploadService;
     }
 
     @PostMapping
@@ -105,8 +99,11 @@ public class FieldMentorController {
         }
     }
 
-    @GetMapping("/{empId}/bins")
-    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAssignedBins(@PathVariable Long empId) {
+    @GetMapping("/me/bins")
+    @PreAuthorize("hasRole('FIELD_MENTOR')")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAssignedBins() {
+        Long empId = CurrentUserService.getCurrentEmpId()
+                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
         List<Bin> bins = binService.getAssignedBins(empId);
 
         List<Map<String, Object>> allowedBins = bins.stream().map(bin -> {
@@ -134,63 +131,5 @@ public class FieldMentorController {
         }).toList();
 
         return ResponseEntity.ok(ApiResponse.success(allowedBins));
-    }
-
-    @PostMapping(value = "/{empId}/bins/{binId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse<Map<String, Object>>> reportBinStatus(
-            @PathVariable Long empId,
-            @PathVariable Long binId,
-            @RequestParam("status") String status,
-            @RequestParam("fillLevel") Integer fillLevel,
-            @RequestParam("latitude") Double latitude,
-            @RequestParam("longitude") Double longitude,
-            @RequestParam(value = "notes", required = false) String notes,
-            @RequestParam(value = "photo", required = false) MultipartFile photo) {
-
-        try {
-            BinReportRequest request = new BinReportRequest();
-            request.setStatus(status);
-            request.setFillLevel(fillLevel);
-            request.setLatitude(latitude);
-            request.setLongitude(longitude);
-            request.setNotes(notes);
-
-            if (photo != null && !photo.isEmpty()) {
-                String photoUrl = cloudinaryUploadService.uploadBinReportPhoto(photo, binId);
-                request.setPhotoUrl(photoUrl);
-            }
-
-            Bin updatedBin = binService.reportBinStatus(binId, empId, request);
-
-            Map<String, Object> data = new HashMap<>();
-            data.put("id", updatedBin.getId());
-            data.put("status", updatedBin.getStatus());
-            data.put("fillLevel", updatedBin.getFillLevel());
-            data.put("lastChecked", updatedBin.getLastChecked());
-
-            return ResponseEntity.ok(ApiResponse.success(data));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "REPORT_FAILED"));
-        }
-    }
-
-    @PostMapping("/{empId}/bins/{binId}/undo")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> undoBinReport(
-            @PathVariable Long empId,
-            @PathVariable Long binId) {
-
-        try {
-            Bin updatedBin = binService.undoBinReport(binId, empId);
-
-            Map<String, Object> data = new HashMap<>();
-            data.put("id", updatedBin.getId());
-            data.put("status", updatedBin.getStatus());
-            data.put("fillLevel", updatedBin.getFillLevel());
-            data.put("lastChecked", updatedBin.getLastChecked());
-
-            return ResponseEntity.ok(ApiResponse.success(data));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "UNDO_FAILED"));
-        }
     }
 }
