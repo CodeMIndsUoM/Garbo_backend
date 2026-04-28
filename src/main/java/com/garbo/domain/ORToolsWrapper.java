@@ -90,7 +90,7 @@ public class ORToolsWrapper {
                 int node = manager.indexToNode(index);
 
                 if (node != depot) {
-                    route.add(bins.get(node - 1).getId());
+                    route.add((Long) bins.get(node - 1).getId());
                 }
 
                 index = sol.value(routing.nextVar(index));

@@ -1,6 +1,8 @@
 package com.garbo.core.repository;
 
 import com.garbo.core.entity.Bin;
+
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -31,6 +33,20 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
 	    nativeQuery = true
     )
     List<Bin> findAllByTextIdsCastToBigInt(@Param("ids") List<Long> ids);
+
+    List<Bin> findAllValidBins();
+
+    List<Bin> findByAssignedToEmpId(Long empId);
+
+    Collection<Bin> findAllForMap();
+
+    void deleteByIdNative(Long id);
+
+    void updatePriorityNative(Long id, String priority);
+
+    void updateZoneNative(Long id, String safeZone);
+
+    List<Bin> findAllByIdWithCast(List<Long> selected);
 
 }
 

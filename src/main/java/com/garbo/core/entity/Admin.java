@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "admins")
 @PrimaryKeyJoinColumn(name = "emp_id")

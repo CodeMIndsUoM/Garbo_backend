@@ -4,10 +4,6 @@ import java.util.List;
 import java.util.Map;
 
 public class RouteResponseDTO {
-<<<<<<< HEAD
-
-=======
->>>>>>> kevin-RWS
     public int totalVehiclesUsed;
     public Map<Integer, VehicleRoute> routes;  // vehicleId -> route details
 
@@ -39,9 +35,9 @@ public class RouteResponseDTO {
         public double lng;
         public double durationFromPrevStopSeconds; // travel time from previous stop (or depot)
 
-        public BinStop(int stopOrder, long binId, double lat, double lng, double durationFromPrevStopSeconds) {
+        public BinStop(int stopOrder, Object binId, double lat, double lng, double durationFromPrevStopSeconds) {
             this.stopOrder = stopOrder;
-            this.binId = binId;
+            this.binId = (long) binId;
             this.lat = lat;
             this.lng = lng;
             this.durationFromPrevStopSeconds = durationFromPrevStopSeconds;

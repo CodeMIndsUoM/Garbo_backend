@@ -5,18 +5,10 @@ import com.garbo.core.dto.BinReportRequest;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.service.BinService;
+import com.garbo.core.service.CurrentUserService;
 import com.garbo.core.service.FieldMentorService;
-<<<<<<< HEAD
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-=======
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
->>>>>>> kevin-RWS
 
 import java.util.HashMap;
 import java.util.List;
@@ -32,7 +24,6 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/fieldmentors")
 public class FieldMentorController {
-<<<<<<< HEAD
 
     final private FieldMentorService fieldMentorService;
     final private BinService binService;
@@ -43,15 +34,11 @@ public class FieldMentorController {
         this.binService = binService;
         this.cloudinaryUploadService = cloudinaryUploadService;
     }
-=======
-    @Autowired
-    private FieldMentorService fieldMentorService;
->>>>>>> kevin-RWS
 
     @PostMapping
     public ResponseEntity<?> createFieldMentor(@RequestBody FieldMentor fieldMentor) {
         try {
-            String role = currentUserService.getCurrentRole().orElse("");
+            String role = CurrentUserService.getCurrentRole().orElse("");
             // Only admin may create FieldMentor
             if (!role.equals("admin")) {
                 return ResponseEntity.status(403).body(Map.of(
@@ -60,7 +47,7 @@ public class FieldMentorController {
             }
 
             // For admin, require admin council and force assignment
-            java.util.Optional<String> councilOpt = currentUserService.getCurrentCouncil();
+            java.util.Optional<String> councilOpt = CurrentUserService.getCurrentCouncil();
             if (councilOpt.isEmpty()) {
                 return ResponseEntity.status(400).body(Map.of(
                         "success", false,
@@ -81,12 +68,12 @@ public class FieldMentorController {
     @GetMapping
     public ResponseEntity<?> getAllFieldMentors() {
         try {
-            String role = currentUserService.getCurrentRole().orElse("");
+            String role = CurrentUserService.getCurrentRole().orElse("");
             if (role.equals("superadmin")) {
                 java.util.List<FieldMentor> all = fieldMentorService.getAll();
                 return ResponseEntity.ok().body(Map.of("success", true, "data", all));
             } else if (role.equals("admin")) {
-                java.util.Optional<String> councilOpt = currentUserService.getCurrentCouncil();
+                java.util.Optional<String> councilOpt = CurrentUserService.getCurrentCouncil();
                 if (councilOpt.isEmpty()) {
                     return ResponseEntity.status(400).body(Map.of(
                             "success", false,

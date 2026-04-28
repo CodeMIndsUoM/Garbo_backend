@@ -89,7 +89,7 @@ public class BinService {
     }
 
     public Bin createBin(Bin bin) {
-        if (binRepository.existsById(bin.getId())) {
+        if (binRepository.existsById((Long) bin.getId())) {
             throw new IllegalArgumentException("Bin with ID " + bin.getId() + " already exists.");
         }
         return binRepository.save(bin);
@@ -101,7 +101,7 @@ public class BinService {
     // Add new bin
     public Bin addBin(BinDTO dto) {
         Bin bin = new Bin();
-        bin.setLat(dto.getLat());
+        bin.setLatitude(dto.getLat());
         bin.setLng(dto.getLng());
         bin.setFillLevel(dto.getFillLevel());
         bin.setPriority(dto.getPriority());
@@ -125,7 +125,7 @@ public class BinService {
                 .map(row -> {
                     Bin bin = new Bin();
                     bin.setId(row.getId());
-                    bin.setLat(row.getLat());
+                    bin.setLatitude(row.getLat());
                     bin.setLng(row.getLng());
                     bin.setFillLevel(row.getFillLevel());
                     bin.setPriority(row.getPriority());

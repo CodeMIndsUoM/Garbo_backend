@@ -28,11 +28,11 @@ public class BinAnalyticsService {
         long totalBins = allBins.size();
 
         long urgentBins = allBins.stream()
-                .filter(b -> b.getFillLevel() > 75)
+                .filter(b -> getFillLevelAsInt(b) > 75)
                 .count();
 
         double avgFillLevel = allBins.stream()
-                .mapToInt(Bin::getFillLevel)
+                .mapToInt(this::getFillLevelAsInt)
                 .average()
                 .orElse(0.0);
 
@@ -42,7 +42,7 @@ public class BinAnalyticsService {
         for (String zone : validZones) {
 
             List<Bin> bins = allBins.stream()
-                    .filter(b -> zone.equalsIgnoreCase(b.getZone()))
+                    .filter(b -> zone.equalsIgnoreCase((String) b.getZone()))
                     .toList();
 
             int below30 = 0;
@@ -56,7 +56,7 @@ public class BinAnalyticsService {
 
             for (Bin b : bins) {
 
-                int fill = b.getFillLevel();
+                int fill = getFillLevelAsInt(b);
 
                 // Fill level ranges
                 if (fill < 30) below30++;
@@ -65,8 +65,8 @@ public class BinAnalyticsService {
                 else above75++;
 
                 // Priority
-                if ("HIGH".equalsIgnoreCase(b.getPriority())) high++;
-                else if ("MEDIUM".equalsIgnoreCase(b.getPriority())) medium++;
+                if ("HIGH".equalsIgnoreCase((String) b.getPriority())) high++;
+                else if ("MEDIUM".equalsIgnoreCase((String) b.getPriority())) medium++;
                 else low++;
             }
 
@@ -92,5 +92,20 @@ public class BinAnalyticsService {
                 avgFillLevel,
                 zoneData
         );
+    }
+
+    private int getFillLevelAsInt(Bin bin) {
+        Object fillLevel = bin.getFillLevel();
+        if (fillLevel instanceof Number number) {
+            return number.intValue();
+        }
+        if (fillLevel instanceof String value) {
+            try {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException ignored) {
+                return 0;
+            }
+        }
+        return 0;
     }
 }

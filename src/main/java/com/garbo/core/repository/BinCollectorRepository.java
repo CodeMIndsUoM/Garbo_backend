@@ -9,10 +9,6 @@ import java.util.List;
 
 @Repository
 public interface BinCollectorRepository extends JpaRepository<BinCollector, Long> {
-<<<<<<< HEAD
-    List<BinCollector> findByAssignedCouncil(String assignedCouncil);
-}
-=======
 
     
     // 1. SUMMARY
@@ -59,5 +55,6 @@ public interface BinCollectorRepository extends JpaRepository<BinCollector, Long
         ORDER BY assigned_zone
     """, nativeQuery = true)
     List<Object[]> getZoneBreakdown();
+
+    List<BinCollector> findByAssignedCouncil(String assignedCouncil);
 }
->>>>>>> kevin-RWS

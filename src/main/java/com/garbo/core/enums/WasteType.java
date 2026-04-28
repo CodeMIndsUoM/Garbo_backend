@@ -20,4 +20,4 @@ public enum WasteType {
         return weightRequiredAtCompletion;
     }
 }
-}
+

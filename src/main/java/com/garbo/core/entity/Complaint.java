@@ -57,4 +57,44 @@ public class Complaint {
     void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+
+    public void setCitizen(User citizen) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'setCitizen'");
+    }
+
+    public Object getCategory() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getCategory'");
+    }
+
+    public Object getTitle() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getTitle'");
+    }
+
+    public void setCategory(Object object) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'setCategory'");
+    }
+
+    public String getLocationAddress() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getLocationAddress'");
+    }
+
+    public User getCitizen() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getCitizen'");
+    }
+
+    public void setAssignedTo(User personnel) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'setAssignedTo'");
+    }
+
+    public void setTitle(String string) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'setTitle'");
+    }
 }

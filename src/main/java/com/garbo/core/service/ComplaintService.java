@@ -27,7 +27,7 @@ public class ComplaintService {
                 .orElseThrow(() -> new RuntimeException("Citizen not found"));
         complaint.setCitizen(citizen);
         complaint.setStatus("PENDING");
-        if (complaint.getCategory() == null || complaint.getCategory().isBlank()) {
+        if (complaint.getCategory() == null || ((String) complaint.getCategory()).isBlank()) {
             complaint.setCategory(complaint.getTitle() == null ? "General" : complaint.getTitle());
         }
         if (complaint.getDescription() == null || complaint.getDescription().isBlank()) {

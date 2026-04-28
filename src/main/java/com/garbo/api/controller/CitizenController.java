@@ -6,16 +6,11 @@ import com.garbo.core.dto.collection.RequestSummaryDto;
 import com.garbo.core.enums.RequestStatus;
 import com.garbo.core.service.CollectionRequestService;
 import com.garbo.core.service.CitizenService;
-<<<<<<< HEAD
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-=======
-
-import org.springframework.beans.factory.annotation.Autowired;
->>>>>>> kevin-RWS
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,7 +31,6 @@ import java.util.Map;
 @RequestMapping("/api/citizens")
 @PreAuthorize("hasRole('CITIZEN')")
 public class CitizenController {
-<<<<<<< HEAD
     @SuppressWarnings("unused")
     private final CitizenService citizenService;
     private final CollectionRequestService collectionRequestService;
@@ -69,8 +63,4 @@ public class CitizenController {
         String url = collectionRequestService.uploadCitizenRequestPhoto(citizenId, photo);
         return ResponseEntity.ok(ApiResponse.success(Map.of("photoUrl", url)));
     }
-=======
-    @Autowired
-    private CitizenService citizenService;
->>>>>>> kevin-RWS
 }

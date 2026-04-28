@@ -131,7 +131,7 @@ public class RouteSessionService {
 
         Map<Long, Bin> map = new HashMap<>();
         for (Bin b : bins) {
-            map.put(b.getId(), b);
+            map.put((Long) b.getId(), b);
         }
 
         List<Bin> ordered = new ArrayList<>();
@@ -172,7 +172,7 @@ public class RouteSessionService {
                 solver.solve(matrix, bins, vehicleCount, capacities);
 
         Map<Long, Bin> lookup = new HashMap<>();
-        for (Bin b : bins) lookup.put(b.getId(), b);
+        for (Bin b : bins) lookup.put((Long) b.getId(), b);
 
         Map<Integer, VehicleRoute> result = new LinkedHashMap<>();
 
@@ -289,7 +289,7 @@ public class RouteSessionService {
     // =========================================================
     private List<Long> extractIds(List<Bin> bins) {
         List<Long> ids = new ArrayList<>();
-        for (Bin b : bins) ids.add(b.getId());
+        for (Bin b : bins) ids.add((Long) b.getId());
         return ids;
     }
 
