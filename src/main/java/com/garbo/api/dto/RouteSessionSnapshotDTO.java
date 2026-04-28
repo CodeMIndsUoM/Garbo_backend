@@ -93,4 +93,29 @@ public class RouteSessionSnapshotDTO {
                 message
         );
     }
+
+        public static RouteSessionSnapshotDTO warning(
+                        String sessionId,
+                        Long userId,
+                        long version,
+                        String trigger,
+                        List<Long> selectedBinIds,
+                        List<Long> addedBinIds,
+                        List<Long> removedBinIds,
+                        String message
+        ) {
+                return new RouteSessionSnapshotDTO(
+                                sessionId,
+                                userId,
+                                version,
+                                "WARNING",
+                                Instant.now(),
+                                trigger,
+                                message,
+                                selectedBinIds,
+                                addedBinIds,
+                                removedBinIds,
+                                null
+                );
+        }
 }
