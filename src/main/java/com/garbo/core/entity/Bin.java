@@ -1,7 +1,6 @@
 package com.garbo.core.entity;
 
 import jakarta.persistence.*;
-<<<<<<< HEAD
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -13,20 +12,34 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Table(name = "bins")
 public class Bin {
-=======
-import lombok.Data;
+    public Object getId() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getId'");
+    }
 
-@Entity
-@Table(name = "bins")
-@Data
-public class Bin {
+public Object getFillLevel() {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'getFillLevel'");
+}
 
->>>>>>> kevin-RWS
+public Object getPriority() {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'getPriority'");
+}
+
+public Object getZone() {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'getZone'");
+}
+
+public void setId(Object object) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'setId'");
+}
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-<<<<<<< HEAD
     private String location;
 
     @Column(name = "type", length = 20)
@@ -36,7 +49,7 @@ public class Bin {
     private String status = "notChecked"; // notChecked/full/half/empty
 
     @Column(name = "fill_level")
-    private Integer fillLevel;
+    private Object fillLevel;
 
     @Column(length = 50)
     private String zone;
@@ -72,15 +85,48 @@ public class Bin {
         this.fillLevel = fillLevel;
         this.status = status;
     }
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public void setFillLevel(Object fillLevel) {
+        this.fillLevel = fillLevel;
+    }
+
+    public void setZone(Object zone) {
+        this.zone = (String) zone;
+    }
+
+    public void setLatitude(Double latitude) {
+        this.latitude = latitude;
+    }
+
+    public void setLongitude(Double longitude) {
+        this.longitude = longitude;
+    }
+
+    public void setLastChecked(LocalDateTime lastChecked) {
+        this.lastChecked = lastChecked;
+    }
+
+    public void setPriority(Object priority) {
+        this.priority = (String) priority;
+    }
+
+    public void setAssignedTo(FieldMentor assignedTo) {
+        this.assignedTo = assignedTo;
+    }
+
+    public void setLng(double lng) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'setLng'");
+    }
 }
-=======
-    private double lat;
-    private double lng;
-
-    private int fillLevel;
-
-    private String priority;
-
-    private String zone;
-}
->>>>>>> kevin-RWS

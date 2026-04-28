@@ -5,4 +5,4 @@ public enum PreferredSlot {
     AFTERNOON,
     EVENING
 }
-}
+

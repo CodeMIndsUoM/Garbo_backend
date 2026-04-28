@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "field_mentors")
 @PrimaryKeyJoinColumn(name = "emp_id")
@@ -19,4 +18,8 @@ public class FieldMentor extends User {
     private String workShift;
     private boolean onDuty;
     private double rewardPoints;
+    public void setAssignedZone(String string) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'setAssignedZone'");
+    }
 }

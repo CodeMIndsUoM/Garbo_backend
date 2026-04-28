@@ -131,7 +131,7 @@ public class ORToolsWrapper {
                     // Convert node index back to bin ID
                     // Node 1 = bins.get(0), Node 2 = bins.get(1), etc.
                     Bin bin = bins.get(nodeIndex - 1);
-                    binIds.add(bin.getId());
+                    binIds.add((Long) bin.getId());
                 }
 
                 index = solution.value(routing.nextVar(index));

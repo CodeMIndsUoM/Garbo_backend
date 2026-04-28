@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@EqualsAndHashCode(callSuper = true)
 @Entity
 @Table(name = "bin_collectors")
 @PrimaryKeyJoinColumn(name = "emp_id")
@@ -22,4 +21,8 @@ public class BinCollector extends User {
     private int completedCollections;
     private int missedCollections;
     private double rewardPoints;
+    public void setAssignedZone(Object object) {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'setAssignedZone'");
+    }
 }

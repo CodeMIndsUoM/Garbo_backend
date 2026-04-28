@@ -7,12 +7,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 
 @Data
 @AllArgsConstructor
@@ -58,7 +59,6 @@ public class Vehicle {
     @Column(name = "last_maintenance_at")
     private LocalDateTime lastMaintenanceAt;
 
-<<<<<<< HEAD
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -75,4 +75,3 @@ public class Vehicle {
         this.updatedAt = LocalDateTime.now();
     }
 }
->>>>>>> kevin-RWS

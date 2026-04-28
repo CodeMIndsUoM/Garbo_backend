@@ -1,18 +1,7 @@
-<<<<<<< HEAD
-=======
-// BinReportRepository.java
->>>>>>> kevin-RWS
 package com.garbo.core.repository;
 
 import com.garbo.core.entity.BinReport;
 import org.springframework.data.jpa.repository.JpaRepository;
-<<<<<<< HEAD
-import org.springframework.stereotype.Repository;
-
-@Repository
-public interface BinReportRepository extends JpaRepository<BinReport, Long> {
-}
-=======
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -72,4 +61,3 @@ public interface BinReportRepository extends JpaRepository<BinReport, Long> {
         @Param("end")   LocalDateTime end
     );
 }
->>>>>>> kevin-RWS

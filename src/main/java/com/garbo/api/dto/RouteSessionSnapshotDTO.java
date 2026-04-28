@@ -3,6 +3,7 @@ package com.garbo.api.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -117,5 +118,11 @@ public class RouteSessionSnapshotDTO {
                                 removedBinIds,
                                 null
                 );
+        }
+
+        public RouteSessionSnapshotDTO(String sessionId2, Long userId2, long version2, String string, Instant now,
+                        String trigger2, String message2, List<Long> selectedBinIds2, List<Long> addedBinIds2,
+                        List<Long> removedBinIds2, Object object) {
+                //TODO Auto-generated constructor stub
         }
 }

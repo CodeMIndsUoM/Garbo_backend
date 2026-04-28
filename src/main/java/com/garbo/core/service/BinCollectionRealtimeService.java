@@ -57,8 +57,8 @@ public class BinCollectionRealtimeService {
                 Bin bin = binRepository.findByIdCastToBigInt(binId);
         String resolvedPriority = priority;
         if (resolvedPriority == null || resolvedPriority.isBlank()) {
-                        resolvedPriority = bin != null && bin.getPriority() != null && !bin.getPriority().isBlank()
-                                        ? bin.getPriority()
+                        resolvedPriority = bin != null && bin.getPriority() != null && !((String) bin.getPriority()).isBlank()
+                                        ? (String) bin.getPriority()
                                         : "MEDIUM";
         }
 
@@ -158,7 +158,7 @@ public class BinCollectionRealtimeService {
                 created.setPhone(user.getPhone());
                 created.setCreatedAt(user.getCreatedAt());
                 created.setLastLoginAt(user.getLastLoginAt());
-                created.setAssignedZone(null);
+                created.setAssignedCouncil(null);
                 created.setTeam(null);
                 created.setWorkShift(null);
                 created.setOnDuty(false);

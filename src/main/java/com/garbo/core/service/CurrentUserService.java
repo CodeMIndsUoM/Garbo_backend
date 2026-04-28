@@ -14,13 +14,13 @@ import java.util.Optional;
 @Service
 public class CurrentUserService {
 
-    private final UserRepository userRepository;
+    private static UserRepository userRepository;
 
     public CurrentUserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
-    public Optional<String> getCurrentEmail() {
+    public static Optional<String> getCurrentEmail() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null)
             return Optional.empty();
@@ -28,7 +28,7 @@ public class CurrentUserService {
         return Optional.ofNullable(name);
     }
 
-    public Optional<String> getCurrentRole() {
+    public static Optional<String> getCurrentRole() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null)
             return Optional.empty();
@@ -37,14 +37,14 @@ public class CurrentUserService {
                 .map(a -> a.getAuthority().replace("ROLE_", "").trim().toLowerCase());
     }
 
-    public Optional<User> getCurrentUser() {
+    public static Optional<User> getCurrentUser() {
         Optional<String> emailOpt = getCurrentEmail();
         if (emailOpt.isEmpty())
             return Optional.empty();
         return userRepository.findFirstByEmailIgnoreCase(emailOpt.get());
     }
 
-    public Optional<String> getCurrentCouncil() {
+    public static Optional<String> getCurrentCouncil() {
         Optional<User> uOpt = getCurrentUser();
         if (uOpt.isEmpty())
             return Optional.empty();
