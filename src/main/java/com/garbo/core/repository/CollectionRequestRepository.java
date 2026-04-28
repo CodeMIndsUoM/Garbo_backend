@@ -40,21 +40,65 @@ public interface CollectionRequestRepository extends JpaRepository<CollectionReq
             """)
     List<CollectionRequest> findOpenFeedNear(@Param("lat") Double lat, @Param("lng") Double lng);
 
+    @Query("""
+            SELECT r.preferredSlot, COUNT(r)
+            FROM CollectionRequest r
+            GROUP BY r.preferredSlot
+            """)
     List<Object[]> countBySlotGroupedAllTime();
 
-    List<Object[]> countBySlotGrouped(Instant from);
+    @Query("""
+            SELECT r.preferredSlot, COUNT(r)
+            FROM CollectionRequest r
+            WHERE r.createdAt >= :from
+            GROUP BY r.preferredSlot
+            """)
+    List<Object[]> countBySlotGrouped(@Param("from") Instant from);
 
     long countByCreatedAtAfter(Instant from);
 
-    long countCompletedAfter(Instant from);
+    @Query("""
+            SELECT COUNT(r)
+            FROM CollectionRequest r
+            WHERE r.createdAt >= :from
+              AND r.status = com.garbo.core.enums.RequestStatus.COMPLETED
+            """)
+    long countCompletedAfter(@Param("from") Instant from);
 
-    List<Object[]> countByWasteTypeGrouped(Instant from);
+    @Query("""
+            SELECT r.wasteType, COUNT(r)
+            FROM CollectionRequest r
+            WHERE r.createdAt >= :from
+            GROUP BY r.wasteType
+            """)
+    List<Object[]> countByWasteTypeGrouped(@Param("from") Instant from);
 
+    @Query("""
+            SELECT r.status, COUNT(r)
+            FROM CollectionRequest r
+            GROUP BY r.status
+            """)
     List<Object[]> countByStatusGroupedAllTime();
 
-    List<Object[]> countByStatusGrouped(Instant from);
+    @Query("""
+            SELECT r.status, COUNT(r)
+            FROM CollectionRequest r
+            WHERE r.createdAt >= :from
+            GROUP BY r.status
+            """)
+    List<Object[]> countByStatusGrouped(@Param("from") Instant from);
 
+    @Query("""
+            SELECT r.wasteType, COUNT(r)
+            FROM CollectionRequest r
+            GROUP BY r.wasteType
+            """)
     List<Object[]> countByWasteTypeGroupedAllTime();
 
+    @Query("""
+            SELECT COUNT(r)
+            FROM CollectionRequest r
+            WHERE r.status = com.garbo.core.enums.RequestStatus.COMPLETED
+            """)
     long countCompletedAllTime();
 }

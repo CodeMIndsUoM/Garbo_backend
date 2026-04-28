@@ -74,4 +74,33 @@ public class UserService {
         if (found.isPresent()) return found;
         return userRepo.findByEmailNative(e);
     }
+
+    public void changePassword(String email, String oldPassword, String newPassword) {
+        if (email == null || oldPassword == null || newPassword == null) {
+            throw new IllegalArgumentException("email, oldPassword and newPassword are required");
+        }
+
+        User user = getByEmail(email)
+                .orElseThrow(java.util.NoSuchElementException::new);
+
+        String stored = user.getPassword();
+        if (stored == null) {
+            throw new IllegalArgumentException("Invalid current password");
+        }
+
+        boolean matches;
+        if (stored.startsWith("$2a$") || stored.startsWith("$2b$") || stored.startsWith("$2y$")) {
+            matches = passwordEncoder.matches(oldPassword, stored);
+        } else {
+            matches = stored.equals(oldPassword);
+        }
+
+        if (!matches) {
+            throw new IllegalArgumentException("Invalid current password");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setMustChangePassword(false);
+        userRepo.save(user);
+    }
 }

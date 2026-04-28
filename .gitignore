@@ -37,21 +37,18 @@ build/
 
 ### Mac OS ###
 .DS_Store
-<<<<<<< HEAD
 
 ### Logs ###
 *.log
 logs/
+auth-attempt.log
 
 ### Env ###
 .env
 .env.*
 !.env.example
-=======
-.DS_Store
 
-application.yml
-
+### IntelliJ / project metadata ###
 workspace.xml
 vcs.xml
 misc.xml
@@ -62,4 +59,3 @@ copilot.data.migration.agent.xml
 copilot.data.migration.ask.xml
 copilot.data.migration.ask2agent.xml
 copilot.data.migration.edit.xml
->>>>>>> kevin-RWS
