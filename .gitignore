@@ -41,21 +41,9 @@ build/
 ### Logs ###
 *.log
 logs/
-auth-attempt.log
+data/
 
 ### Env ###
 .env
 .env.*
 !.env.example
-
-### IntelliJ / project metadata ###
-workspace.xml
-vcs.xml
-misc.xml
-google-java-format.xml
-encodings.xml
-dbnavigator.xml
-copilot.data.migration.agent.xml
-copilot.data.migration.ask.xml
-copilot.data.migration.ask2agent.xml
-copilot.data.migration.edit.xml

@@ -1,9 +1,9 @@
 spring:
   datasource:
-    url: jdbc:postgresql://ep-solitary-water-a1k4fpoz-pooler.ap-southeast-1.aws.neon.tech/GarboDB1_dev?sslmode=require&channelBinding=require
-    driver-class-name: org.postgresql.Driver
-    username: neondb_owner
-    password: npg_HeskrVL7l0Pj
+    url: ${PROD_SPRING_DATASOURCE_URL}
+    driver-class-name: ${PROD_SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    username: ${PROD_SPRING_DATASOURCE_USERNAME}
+    password: ${PROD_SPRING_DATASOURCE_PASSWORD}
   
   jpa:
     hibernate:

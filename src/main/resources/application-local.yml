@@ -1,17 +1,20 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/garbo_db
-    driver-class-name: org.postgresql.Driver
-    username: sasindudb
-    password: ""
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/garbo_db}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
 
   jpa:
     hibernate:
-      ddl-auto: update # Automatically updates the local database structure based on your entity classes
-    show-sql: true
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update} # Automatically updates the local database structure based on your entity classes
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+    properties:
+      hibernate:
+        dialect: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
 
   flyway:
-    enabled: false # Disabled locally because you mentioned team members change DB manually and don't use flyway
+    enabled: ${SPRING_FLYWAY_ENABLED:false} # Disabled locally because you mentioned team members change DB manually and don't use flyway
 
 logging:
   level:

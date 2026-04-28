@@ -60,25 +60,62 @@ src/main/resources/
 
 ## Prerequisites
 
-- **Java 17** installed (and `JAVA_HOME` pointing to it)
-- **Maven** (`mvn`) available
-- PostgreSQL instance available (local or remote)
+1. Create a local PostgreSQL database.
+2. Create `.env` from template:
 
-## Configure database
+```bash
+cp .env.example .env
+```
 
-The project currently uses `application.yml` for datasource settings. Ensure the following are correct:
+3. Pick the profile in `.env`:
 
-- `spring.datasource.url`
-- `spring.datasource.username`
-- `spring.datasource.password`
+```env
+SPRING_PROFILES_ACTIVE=local
+```
 
-Hibernate setting:
+Use `local` for your machine's PostgreSQL database.
+Use `prod` for the remote PostgreSQL database.
 
-- `spring.jpa.hibernate.ddl-auto: update` (auto-updates schema on startup)
+4. For `local`, fill your own PostgreSQL connection values in `.env`:
 
-## Run backend
+```env
+SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/garbo_db
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+SPRING_DATASOURCE_USERNAME=your_local_db_username
+SPRING_DATASOURCE_PASSWORD=your_local_db_password
+```
 
-From `Garbo_backend/`:
+5. For `prod`, fill the remote DB values in `.env`:
+
+```env
+PROD_SPRING_DATASOURCE_URL=
+PROD_SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+PROD_SPRING_DATASOURCE_USERNAME=
+PROD_SPRING_DATASOURCE_PASSWORD=
+```
+
+6. Add Cloudinary credentials in `.env`:
+
+```env
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
+
+Notes:
+`src/main/resources/application-local.yml` reads `SPRING_DATASOURCE_*` values from `.env`.
+`src/main/resources/application-prod.yml` reads `PROD_SPRING_DATASOURCE_*` values from `.env`.
+`.env` is ignored by Git, so each team member can keep their own local DB credentials safely.
+
+## Run the Backend
+
+Recommended local start (loads `.env` automatically):
+
+```bash
+./run-local.sh
+```
+
+Alternative manual start:
 
 ```bash
 mvn clean compile
