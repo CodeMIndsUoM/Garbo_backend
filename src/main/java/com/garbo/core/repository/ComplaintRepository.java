@@ -18,14 +18,26 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
 
     // ── Basic finders (HEAD) ──────────────────────────────────────────────────
 
-    List<Complaint> findByCitizen(User citizen);
+    @Query("""
+                SELECT c
+                FROM Complaint c
+                WHERE c.citizenId = :#{#citizen.empId}
+                ORDER BY c.createdAt DESC
+            """)
+    List<Complaint> findByCitizen(@Param("citizen") User citizen);
     List<Complaint> findByStatus(String status);
-    List<Complaint> findByAssignedTo(User assignedTo);
+    @Query("""
+                SELECT c
+                FROM Complaint c
+                WHERE c.assignedPersonnelId = :#{#assignedTo.empId}
+                ORDER BY c.createdAt DESC
+            """)
+    List<Complaint> findByAssignedTo(@Param("assignedTo") User assignedTo);
 
     @Query("""
                 SELECT c
                 FROM Complaint c
-                JOIN Citizen ci ON ci.empId = c.citizen.empId
+                JOIN Citizen ci ON ci.empId = c.citizenId
                 WHERE LOWER(ci.council) = LOWER(:council)
                 ORDER BY c.createdAt DESC
             """)
@@ -34,7 +46,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     @Query("""
                 SELECT c
                 FROM Complaint c
-                JOIN Citizen ci ON ci.empId = c.citizen.empId
+                JOIN Citizen ci ON ci.empId = c.citizenId
                 WHERE c.id = :id AND LOWER(ci.council) = LOWER(:council)
             """)
     Optional<Complaint> findByIdAndCitizenCouncil(@Param("id") Long id, @Param("council") String council);

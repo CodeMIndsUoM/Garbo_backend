@@ -12,30 +12,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @Table(name = "bins")
 public class Bin {
-    public Object getId() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getId'");
-    }
-
-public Object getFillLevel() {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getFillLevel'");
-}
-
-public Object getPriority() {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getPriority'");
-}
-
-public Object getZone() {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'getZone'");
-}
-
-public void setId(Object object) {
-    // TODO Auto-generated method stub
-    throw new UnsupportedOperationException("Unimplemented method 'setId'");
-}
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -49,7 +25,7 @@ public void setId(Object object) {
     private String status = "notChecked"; // notChecked/full/half/empty
 
     @Column(name = "fill_level")
-    private Object fillLevel;
+    private Integer fillLevel;
 
     @Column(length = 50)
     private String zone;
@@ -97,12 +73,12 @@ public void setId(Object object) {
         this.status = status;
     }
 
-    public void setFillLevel(Object fillLevel) {
+    public void setFillLevel(Integer fillLevel) {
         this.fillLevel = fillLevel;
     }
 
-    public void setZone(Object zone) {
-        this.zone = (String) zone;
+    public void setZone(String zone) {
+        this.zone = zone;
     }
 
     public void setLatitude(Double latitude) {
@@ -117,8 +93,8 @@ public void setId(Object object) {
         this.lastChecked = lastChecked;
     }
 
-    public void setPriority(Object priority) {
-        this.priority = (String) priority;
+    public void setPriority(String priority) {
+        this.priority = priority;
     }
 
     public void setAssignedTo(FieldMentor assignedTo) {
@@ -126,7 +102,6 @@ public void setId(Object object) {
     }
 
     public void setLng(double lng) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setLng'");
+        this.longitude = lng;
     }
 }
