@@ -8,10 +8,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.garbo.core.entity.User;
@@ -73,6 +75,34 @@ public class UserController {
         } catch (Exception e) {
             log.error("Failed to fetch users", e);
             return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to fetch users"));
+        }
+    }
+
+    @PutMapping("/{userId}")
+    public ResponseEntity<?> updateUser(@PathVariable Long userId, @RequestBody User user) {
+        try {
+            Optional<User> updated = userService.updateUser(userId, user);
+            if (updated.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "User not found"));
+            }
+            return ResponseEntity.ok().body(Map.of("success", true, "data", updated.get()));
+        } catch (Exception e) {
+            log.error("Failed to update user {}", userId, e);
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to update user"));
+        }
+    }
+
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        try {
+            boolean deleted = userService.deleteUser(userId);
+            if (!deleted) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "User not found"));
+            }
+            return ResponseEntity.ok().body(Map.of("success", true, "message", "User deleted"));
+        } catch (Exception e) {
+            log.error("Failed to delete user {}", userId, e);
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to delete user"));
         }
     }
 

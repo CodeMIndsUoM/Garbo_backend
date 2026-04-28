@@ -75,6 +75,33 @@ public class UserService {
         return userRepo.findByEmailNative(e);
     }
 
+    public Optional<User> updateUser(Long userId, User payload) {
+        if (userId == null || payload == null) {
+            return Optional.empty();
+        }
+        Optional<User> existingOpt = userRepo.findById(userId);
+        if (existingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        User existing = existingOpt.get();
+        if (payload.getEmpName() != null) existing.setEmpName(payload.getEmpName());
+        if (payload.getEmail() != null) existing.setEmail(payload.getEmail());
+        if (payload.getRole() != null) existing.setRole(payload.getRole());
+        if (payload.getPhone() != null) existing.setPhone(payload.getPhone());
+        if (payload.getPassword() != null && !payload.getPassword().isBlank()) {
+            existing.setPassword(passwordEncoder.encode(payload.getPassword()));
+        }
+        return Optional.of(userRepo.save(existing));
+    }
+
+    public boolean deleteUser(Long userId) {
+        if (userId == null || !userRepo.existsById(userId)) {
+            return false;
+        }
+        userRepo.deleteById(userId);
+        return true;
+    }
+
     public void changePassword(String email, String oldPassword, String newPassword) {
         if (email == null || oldPassword == null || newPassword == null) {
             throw new IllegalArgumentException("email, oldPassword and newPassword are required");
