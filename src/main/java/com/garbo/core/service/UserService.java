@@ -1,65 +1,77 @@
 package com.garbo.core.service;
 
-import com.garbo.core.entity.User;
-import com.garbo.core.repository.UserRepository;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.garbo.core.entity.User;
+import com.garbo.core.repository.UserRepository;
+
 @Service
 public class UserService {
+    @Autowired
+    private UserRepository userRepo;
 
-    final private UserRepository userRepo;
-
-    public UserService(UserRepository userRepo) {
-        this.userRepo = userRepo;
-    }
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public User saveUser(User user) {
         return this.userRepo.save(user);
     }
 
     public Optional<User> login(String email, String password) {
-        if (email == null || password == null) return Optional.empty();
-        String e = email.trim();
-        String p = password.trim();
-
-        // try derived query
-        Optional<User> found = userRepo.findFirstByEmailAndPasswordOrderByEmpIdAsc(e, p);
-        if (found.isPresent()) return found;
-
-        // try case-insensitive email lookup then compare password in Java
-        Optional<User> byEmail = userRepo.findFirstByEmailIgnoreCase(e);
-        if (byEmail.isPresent() && p.equals(byEmail.get().getPassword())) {
-            return byEmail;
+        if (email == null || password == null) {
+            return Optional.empty();
         }
 
-        return Optional.empty();
+        String normalizedEmail = email.trim();
+        String normalizedPassword = password.trim();
+
+        try {
+            // Use the simplest query path first to avoid repository/query exceptions.
+            Optional<User> byEmail = userRepo.findFirstByEmailIgnoreCase(normalizedEmail);
+            if (byEmail.isPresent()) {
+                String storedPassword = byEmail.get().getPassword();
+                if (storedPassword != null) {
+                    boolean plainMatch = normalizedPassword.equals(storedPassword);
+                    boolean bcryptMatch = false;
+
+                    // Support bcrypt-hashed passwords used in current database.
+                    if (storedPassword.startsWith("$2a$") || storedPassword.startsWith("$2b$") || storedPassword.startsWith("$2y$")) {
+                        bcryptMatch = passwordEncoder.matches(normalizedPassword, storedPassword);
+                    }
+
+                    if (plainMatch || bcryptMatch) {
+                        return byEmail;
+                    }
+                }
+            }
+
+            return Optional.empty();
+        } catch (Exception ex) {
+            // Keep auth predictable: invalid credentials should never become a 500.
+            return Optional.empty();
+        }
     }
 
     public List<User> getAllUsers() {
         return this.userRepo.findAll();
     }
 
+    public Optional<User> getById(Long userId) {
+        if (userId == null) {
+            return Optional.empty();
+        }
+        return userRepo.findById(userId);
+    }
+
     public Optional<User> getByEmail(String email) {
         if (email == null) return Optional.empty();
         String e = email.trim();
-        return userRepo.findFirstByEmailIgnoreCase(e);
-    }
-
-    public Optional<User> getUserById(Long id) {
-        return userRepo.findById(id);
-    }
-
-    public User updateUser(Long id, User updatedDetails) {
-        return userRepo.findById(id).map(user -> {
-            if (updatedDetails.getEmpName() != null) user.setEmpName(updatedDetails.getEmpName());
-            if (updatedDetails.getEmail() != null) user.setEmail(updatedDetails.getEmail());
-            if (updatedDetails.getPhone() != null) user.setPhone(updatedDetails.getPhone());
-            if (updatedDetails.getDefaultAddress() != null) user.setDefaultAddress(updatedDetails.getDefaultAddress());
-            if (updatedDetails.getAvatarUrl() != null) user.setAvatarUrl(updatedDetails.getAvatarUrl());
-            return userRepo.save(user);
-        }).orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+        Optional<User> found = userRepo.findFirstByEmailIgnoreCase(e);
+        if (found.isPresent()) return found;
+        return userRepo.findByEmailNative(e);
     }
 }
