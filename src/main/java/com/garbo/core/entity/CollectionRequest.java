@@ -1,9 +1,6 @@
 package com.garbo.core.entity;
 
-<<<<<<< HEAD
-=======
 
->>>>>>> kevin-RWS
 import com.garbo.core.enums.PreferredSlot;
 import com.garbo.core.enums.RequestStatus;
 import com.garbo.core.enums.WasteType;
@@ -95,8 +92,5 @@ public class CollectionRequest {
     protected void onUpdate() {
         updatedAt = Instant.now();
     }
-<<<<<<< HEAD
 }
-=======
 }
->>>>>>> kevin-RWS

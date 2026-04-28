@@ -4,8 +4,5 @@ public enum PreferredSlot {
     MORNING,
     AFTERNOON,
     EVENING
-<<<<<<< HEAD
 }
-=======
 }
->>>>>>> kevin-RWS
