@@ -19,8 +19,5 @@ public enum WasteType {
     public boolean isWeightRequiredAtCompletion() {
         return weightRequiredAtCompletion;
     }
-<<<<<<< HEAD
 }
-=======
 }
->>>>>>> kevin-RWS

@@ -35,7 +35,6 @@ public class User {
     private LocalDateTime createdAt;
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
-<<<<<<< HEAD
 
     @Column(name = "avatar_url")
     private String avatarUrl;
@@ -112,6 +111,4 @@ public class User {
     public boolean isEnabled() {
         return true;
     }
-=======
->>>>>>> kevin-RWS
 }
