@@ -121,6 +121,27 @@ Response includes:
 - `mustChangePassword`
 - optional `council` for `AdminNew` users
 
+## Council-scoped admin behavior
+
+Current dashboard behavior relies on the authenticated admin council (returned by login and used in frontend requests):
+
+- superadmin can switch councils from the dashboard
+- admin users are restricted to their own council context
+- admin create flows (for example bins/vehicles from dashboard) enforce the admin council in payloads
+
+This implementation does **not** require database table changes.
+
+## User management endpoints used by dashboard
+
+The dashboard now uses these secured user endpoints:
+
+- `GET /api/users`
+- `POST /api/users`
+- `PUT /api/users/{userId}`
+- `DELETE /api/users/{userId}`
+
+Use `Authorization: Bearer <token>` for protected operations.
+
 ### Change password
 
 - `POST /api/auth/change-password`
