@@ -173,4 +173,24 @@ public class FieldMentorController {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "REPORT_FAILED"));
         }
     }
+
+    @PostMapping("/{empId}/bins/{binId}/undo")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> undoBinReport(
+            @PathVariable Long empId,
+            @PathVariable Long binId) {
+
+        try {
+            Bin updatedBin = binService.undoBinReport(binId, empId);
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("id", updatedBin.getId());
+            data.put("status", updatedBin.getStatus());
+            data.put("fillLevel", updatedBin.getFillLevel());
+            data.put("lastChecked", updatedBin.getLastChecked());
+
+            return ResponseEntity.ok(ApiResponse.success(data));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "UNDO_FAILED"));
+        }
+    }
 }

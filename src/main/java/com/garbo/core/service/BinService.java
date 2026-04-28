@@ -51,7 +51,7 @@ public class BinService {
 
     @Transactional
     public Bin reportBinStatus(Long binId, Long reporterId, BinReportRequest request) {
-        Bin bin = binRepository.findById(binId)
+        Bin bin = binRepository.findByNumericId(binId)
                 .orElseThrow(() -> new EntityNotFoundException("Bin not found with ID: " + binId));
 
         FieldMentor reporter = null;
@@ -80,12 +80,39 @@ public class BinService {
 
         binReportRepository.save(report);
 
-        // Update Bin
-        bin.setStatus(request.getStatus());
-        bin.setFillLevel(request.getFillLevel());
-        bin.setLastChecked(LocalDateTime.now());
+        // Update the bin via native query because bins.id is stored as text in DB.
+        int updatedRows = binRepository.updateStatusForReport(binId, request.getStatus(), request.getFillLevel());
+        if (updatedRows == 0) {
+            throw new EntityNotFoundException("Bin not found with ID: " + binId);
+        }
 
-        return binRepository.save(bin);
+        Bin updated = new Bin();
+        updated.setId(binId);
+        updated.setStatus(request.getStatus());
+        updated.setFillLevel(request.getFillLevel());
+        updated.setLastChecked(LocalDateTime.now());
+        return updated;
+    }
+
+    @Transactional
+    public Bin undoBinReport(Long binId, Long reporterId) {
+        if (reporterId != null) {
+            fieldMentorRepository.findById(reporterId)
+                    .orElseThrow(() -> new EntityNotFoundException("Field Mentor not found with ID: " + reporterId));
+        }
+
+        int updatedRows = binRepository.resetStatusForUndo(binId);
+        if (updatedRows == 0) {
+            throw new EntityNotFoundException("Bin not found with ID: " + binId);
+        }
+
+        // Return a lightweight response object with final state expected by mobile.
+        Bin updated = new Bin();
+        updated.setId(binId);
+        updated.setStatus("notChecked");
+        updated.setFillLevel(0);
+        updated.setLastChecked(null);
+        return updated;
     }
 
     public Bin createBin(Bin bin) {
