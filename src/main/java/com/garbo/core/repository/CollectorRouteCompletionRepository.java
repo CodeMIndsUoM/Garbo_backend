@@ -2,6 +2,8 @@ package com.garbo.core.repository;
 
 import com.garbo.core.entity.CollectorRouteCompletion;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -14,11 +16,52 @@ public interface CollectorRouteCompletionRepository extends JpaRepository<Collec
 
     List<CollectorRouteCompletion> findByCollectorIdOrderByCompletedAtAsc(Long collectorId);
 
-    List<Object[]> getSummary(LocalDateTime startDate);
+    @Query(value = """
+            SELECT
+                COALESCE(SUM(assigned_bins), 0) AS assigned,
+                COALESCE(SUM(collected_bins), 0) AS collected,
+                COALESCE(SUM(missed_bins), 0) AS missed
+            FROM collector_route_completions
+            WHERE completed_at >= :startDate
+            """, nativeQuery = true)
+    List<Object[]> getSummary(@Param("startDate") LocalDateTime startDate);
 
-    List<Object[]> getDailyData(LocalDateTime startDate);
+    @Query(value = """
+            SELECT
+                TO_CHAR(DATE_TRUNC('day', completed_at), 'YYYY-MM-DD') AS label,
+                COALESCE(SUM(assigned_bins), 0) AS assigned,
+                COALESCE(SUM(collected_bins), 0) AS collected,
+                COALESCE(SUM(missed_bins), 0) AS missed
+            FROM collector_route_completions
+            WHERE completed_at >= :startDate
+            GROUP BY DATE_TRUNC('day', completed_at)
+            ORDER BY DATE_TRUNC('day', completed_at)
+            """, nativeQuery = true)
+    List<Object[]> getDailyData(@Param("startDate") LocalDateTime startDate);
 
-    List<Object[]> getWeeklyData(LocalDateTime startDate);
+    @Query(value = """
+            SELECT
+                TO_CHAR(DATE_TRUNC('week', completed_at), 'IYYY-"W"IW') AS label,
+                COALESCE(SUM(assigned_bins), 0) AS assigned,
+                COALESCE(SUM(collected_bins), 0) AS collected,
+                COALESCE(SUM(missed_bins), 0) AS missed
+            FROM collector_route_completions
+            WHERE completed_at >= :startDate
+            GROUP BY DATE_TRUNC('week', completed_at)
+            ORDER BY DATE_TRUNC('week', completed_at)
+            """, nativeQuery = true)
+    List<Object[]> getWeeklyData(@Param("startDate") LocalDateTime startDate);
 
-    List<Object[]> getHourlyData(LocalDateTime startDate);
+    @Query(value = """
+            SELECT
+                TO_CHAR(DATE_TRUNC('hour', completed_at), 'YYYY-MM-DD HH24:00') AS label,
+                COALESCE(SUM(assigned_bins), 0) AS assigned,
+                COALESCE(SUM(collected_bins), 0) AS collected,
+                COALESCE(SUM(missed_bins), 0) AS missed
+            FROM collector_route_completions
+            WHERE completed_at >= :startDate
+            GROUP BY DATE_TRUNC('hour', completed_at)
+            ORDER BY DATE_TRUNC('hour', completed_at)
+            """, nativeQuery = true)
+    List<Object[]> getHourlyData(@Param("startDate") LocalDateTime startDate);
 }

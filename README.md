@@ -1,4 +1,4 @@
-# Garbo Backend
+# Garbo Backend (`Garbo_backend`)
 
 Spring Boot backend for the Garbo Smart Waste Management System.
 
@@ -6,50 +6,59 @@ Spring Boot backend for the Garbo Smart Waste Management System.
 
 This service provides:
 
-- Authentication and role-based authorization (JWT + Spring Security)
-- Collection request and offer lifecycle APIs
-- Third-party collector workflows (feed, my offers, hide/clear rejected)
-- Backend-managed Cloudinary image uploads
-- Database schema management with Flyway migrations
+- **Auth**: JWT login + role-based authorization (Spring Security)
+- **Admin dashboard APIs**: analytics + management endpoints
+- **Collection workflows**: requests/offers lifecycle
+- **Realtime**: WebSocket endpoints (raw `/ws` + STOMP `/ws-stomp`)
+- **Persistence**: PostgreSQL via Spring Data JPA / Hibernate
 
-## Tech Stack
+## Tech stack
 
-- Java 21+
-- Spring Boot 3.2.x
-- Spring Security (JWT)
-- Spring Data JPA (Hibernate)
-- PostgreSQL
-- Flyway
-- Maven
+- **Java**: 17 (build is configured for Java 17)
+- **Spring Boot**: 3.2.x
+- **Spring Security**: JWT
+- **JPA**: Hibernate
+- **DB**: PostgreSQL (or H2 if you configure it)
+- **Build**: Maven
 
-## Project Structure
+## Ports and URLs (local)
+
+- **Backend HTTP port**: `8080` (see `application.yml`)
+- **Base URL**: `http://localhost:8080`
+
+WebSocket endpoints:
+
+- **Raw WebSocket**: `ws://localhost:8080/ws` (custom handler)
+- **STOMP**: `ws://localhost:8080/ws-stomp` (used by `SimpMessagingTemplate` publishing to `/topic/**`)
+
+## Project structure
 
 ```text
 src/main/java/com/garbo/
 ├── api/
-│   ├── controller/               # REST endpoints
-│   └── exception/                # API exception handling
+│   ├── controller/                 # REST endpoints
+│   └── websocket/                  # raw websocket handler
 ├── common/
-│   └── config/                   # General app configs
+│   └── config/                     # cross-cutting config (CORS, etc.)
 ├── core/
-│   ├── dto/                      # DTOs + API response wrappers
-│   │   └── collection/
-│   ├── entity/                   # JPA entities
-│   ├── enums/                    # Domain enums
-│   ├── repository/               # Spring Data repositories
-│   └── service/                  # Business logic
+│   ├── dto/                        # DTOs + response wrappers
+│   ├── entity/                     # JPA entities
+│   ├── enums/                      # domain enums
+│   ├── repository/                 # repositories (JPQL/native queries)
+│   └── service/                    # business logic
+├── domain/                         # OSRM/OR-Tools wrappers
 ├── infrastructure/
 │   ├── config/
-│   │   └── security/             # SecurityConfig, JWT filter/util, user details
-│   └── storage/                  # Cloudinary upload service
-└── Main.java                     # Application entrypoint
+│   │   ├── security/               # SecurityConfig, JWT filter/util, UserDetails
+│   │   └── StompWebSocketConfig    # STOMP broker config
+│   └── websocket/                  # broadcasters/session management
+└── Main.java                       # application entrypoint
 
 src/main/resources/
-├── application.yml               # Main runtime configuration
-└── db/migration/                 # Flyway SQL migration scripts
+└── application.yml                 # runtime configuration
 ```
 
-## Team Setup (First Time)
+## Prerequisites
 
 1. Create a local PostgreSQL database.
 2. Create `.env` from template:
@@ -109,73 +118,103 @@ Recommended local start (loads `.env` automatically):
 Alternative manual start:
 
 ```bash
+mvn clean compile
 mvn spring-boot:run
 ```
 
-Default API URL:
+To run on another port temporarily:
 
-```text
-http://127.0.0.1:8081
+```bash
+mvn spring-boot:run -Dspring-boot.run.arguments=--server.port=8081
 ```
 
-## Flyway Migrations
+## CORS (frontend connectivity)
 
-Migration location:
+The backend is configured to allow browser requests from local dev origins, including:
 
-```text
-src/main/resources/db/migration/
+- `http://localhost:3000`
+- `http://localhost:3001`
+
+This is required for `fetch()` preflight (`OPTIONS`) and login calls like `POST /api/auth/login`.
+
+If you change the frontend port, update allowed origins in `CorsConfig`.
+
+## Authentication
+
+### Login endpoint
+
+- `POST /api/auth/login`
+
+Request body:
+
+```json
+{ "email": "user@example.com", "password": "secret" }
 ```
 
-Current migrations:
+Response includes:
 
-- `V1__create_collection_request_module.sql`
-- `V2__add_collector_hidden_to_offers.sql`
+- `token` (JWT)
+- `role`
+- `mustChangePassword`
+- optional `council` for `AdminNew` users
 
-### How Flyway Applies Migrations
+## Council-scoped admin behavior
 
-On application startup:
+Current dashboard behavior relies on the authenticated admin council (returned by login and used in frontend requests):
 
-1. Flyway checks the `flyway_schema_history` table.
-2. New migration files not yet recorded are applied in version order.
-3. Applied versions are recorded and will not run again on the same DB.
+- superadmin can switch councils from the dashboard
+- admin users are restricted to their own council context
+- admin create flows (for example bins/vehicles from dashboard) enforce the admin council in payloads
 
-### What V2 Adds
+This implementation does **not** require database table changes.
 
-`V2__add_collector_hidden_to_offers.sql` adds persistence for collector-side hide/clear features:
+## User management endpoints used by dashboard
 
-- `collection_offers.collector_hidden BOOLEAN NOT NULL DEFAULT FALSE`
-- `collection_offers.collector_hidden_at TIMESTAMP WITH TIME ZONE`
-- `idx_co_collector_hidden` index for efficient collector filtered reads
+The dashboard now uses these secured user endpoints:
 
-### Verify Migration State
+- `GET /api/users`
+- `POST /api/users`
+- `PUT /api/users/{userId}`
+- `DELETE /api/users/{userId}`
 
-```sql
-SELECT installed_rank, version, description, script, success
-FROM flyway_schema_history
-ORDER BY installed_rank;
+Use `Authorization: Bearer <token>` for protected operations.
+
+### Change password
+
+- `POST /api/auth/change-password`
+
+Request body:
+
+```json
+{ "email": "user@example.com", "oldPassword": "old", "newPassword": "new" }
 ```
 
-## Important Team Rules
+## Common troubleshooting
 
-- Never edit an already-applied migration file.
-- Create a new file for every schema change:
+### Port already in use
 
-```text
-V<number>__short_description.sql
+If you see “Port 8080 was already in use”, stop the other process or change the port.
+
+Check who is listening:
+
+```bash
+lsof -nP -iTCP:8080 -sTCP:LISTEN
 ```
 
-- Keep one logical schema change per migration.
-- Keep seed/test users in seeder logic, not Flyway scripts.
+### CORS blocked in browser
 
-## Security Notes
+If you see “No `Access-Control-Allow-Origin` header”, make sure:
 
-- Authentication is JWT Bearer token-based.
-- `SecurityConfig` enforces authentication for all non-auth endpoints.
-- `JwtAuthenticationFilter` skips `/api/auth/**` and validates Bearer tokens for other routes.
+- backend is running on `8080`
+- frontend origin (e.g. `http://localhost:3001`) is allowed in `CorsConfig`
+- you’re calling the correct endpoint (`/api/auth/login`)
 
-If you get 401 unexpectedly after adding endpoints, restart the backend to ensure latest controller mappings are loaded.
+### Build fails with missing Lombok methods
 
-## Useful Commands
+The Maven compiler plugin is configured with Lombok annotation processing in `pom.xml`.
+If your IDE still shows errors, enable annotation processing in the IDE settings.
+
+## Useful commands
 
 Compile:
 
@@ -187,10 +226,4 @@ Run tests:
 
 ```bash
 mvn test
-```
-
-Check listening port:
-
-```bash
-lsof -iTCP:8081 -sTCP:LISTEN -n -P
 ```

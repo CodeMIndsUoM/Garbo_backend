@@ -2,20 +2,17 @@ package com.garbo.api.controller;
 
 import com.garbo.core.entity.Admin;
 import com.garbo.core.service.AdminService;
-import com.garbo.infrastructure.config.security.JwtUtil;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admins")
 public class AdminController {
-    @Autowired
-    private AdminService adminService;
+    final private AdminService adminService;
 
-    @Autowired
-    private JwtUtil jwtUtil;
+    public AdminController(AdminService adminService) {
+        this.adminService = adminService;
+    }
 
     @PostMapping
     public ResponseEntity<?> createAdmin(@RequestBody Admin admin) {
@@ -36,15 +33,7 @@ public class AdminController {
         }
         java.util.Optional<Admin> adminOpt = adminService.login(email, password);
         if (adminOpt.isPresent()) {
-            Admin admin = adminOpt.get();
-            String usernameForToken = admin.getEmail() != null ? admin.getEmail() : email;
-            String roleForToken = admin.getRole() != null ? admin.getRole() : "admin";
-            String token = jwtUtil.generateToken(usernameForToken, roleForToken);
-            return ResponseEntity.ok().body(java.util.Map.of(
-                    "success", true,
-                    "data", admin,
-                    "token", token
-            ));
+            return ResponseEntity.ok().body(java.util.Map.of("success", true, "data", adminOpt.get()));
         } else {
             return ResponseEntity.status(401).body(java.util.Map.of("success", false, "message", "Invalid credentials"));
         }
