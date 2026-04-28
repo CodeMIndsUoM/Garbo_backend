@@ -86,6 +86,9 @@ public class BinService {
             throw new EntityNotFoundException("Bin not found with ID: " + binId);
         }
 
+        // Trigger realtime websocket push for dashboards listening to bin-status changes.
+        eventPublisher.publishEvent(new BinChangedEvent("STATUS_REPORTED", binId));
+
         Bin updated = new Bin();
         updated.setId(binId);
         updated.setStatus(request.getStatus());
@@ -105,6 +108,9 @@ public class BinService {
         if (updatedRows == 0) {
             throw new EntityNotFoundException("Bin not found with ID: " + binId);
         }
+
+        // Trigger realtime websocket push for dashboards listening to bin-status changes.
+        eventPublisher.publishEvent(new BinChangedEvent("STATUS_UNDONE", binId));
 
         // Return a lightweight response object with final state expected by mobile.
         Bin updated = new Bin();
