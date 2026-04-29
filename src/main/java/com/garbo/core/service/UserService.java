@@ -5,6 +5,8 @@ import java.security.SecureRandom;
 import java.util.List;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +18,7 @@ import com.garbo.infrastructure.email.EmailService;
 
 @Service
 public class UserService {
+    private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     private final UserRepository userRepo;
     private final AdminNewRepository adminNewRepo;
@@ -51,7 +54,12 @@ public class UserService {
 
             AdminNew saved = this.adminNewRepo.save(adminNew);
 
-            emailService.sendAdminCredentials(saved.getEmail(), temp);
+            try {
+                emailService.sendAdminCredentials(saved.getEmail(), temp);
+            } catch (Exception ex) {
+                // Do not fail admin creation when SMTP/mail provider is unavailable.
+                log.error("Admin created, but failed to send credentials email to {}", saved.getEmail(), ex);
+            }
 
             return saved;
         } else {
