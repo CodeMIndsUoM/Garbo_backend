@@ -1,4 +1,4 @@
-package com.garbo.core.service;
+package com.garbo.core.service.shared;
 
 import com.garbo.api.exception.CollectionException;
 import com.garbo.core.dto.collection.CancelOfferDto;
@@ -50,19 +50,22 @@ public class CollectionRequestService {
     private final ThirdPartyCollectorRepository collectorRepository;
     private final UserRepository userRepository;
     private final CloudinaryUploadService cloudinaryUploadService;
+    private final CollectorDashboardService collectorDashboardService;
 
     public CollectionRequestService(CollectionRequestRepository requestRepository,
             CollectionOfferRepository offerRepository,
             CitizenRepository citizenRepository,
             ThirdPartyCollectorRepository collectorRepository,
             UserRepository userRepository,
-            CloudinaryUploadService cloudinaryUploadService) {
+            CloudinaryUploadService cloudinaryUploadService,
+            CollectorDashboardService collectorDashboardService) {
         this.requestRepository = requestRepository;
         this.offerRepository = offerRepository;
         this.citizenRepository = citizenRepository;
         this.collectorRepository = collectorRepository;
         this.userRepository = userRepository;
         this.cloudinaryUploadService = cloudinaryUploadService;
+        this.collectorDashboardService = collectorDashboardService;
     }
 
     @Transactional
@@ -306,92 +309,7 @@ public class CollectionRequestService {
     @Transactional(readOnly = true)
     public com.garbo.core.dto.collection.CollectorDashboardDto getCollectorDashboard(Long collectorId) {
         requireCurrentUser(collectorId);
-
-        int availableRequests = (int) requestRepository.countByStatus(RequestStatus.OPEN);
-        int activeJobs = (int) offerRepository.countByCollector_EmpIdAndStatusIn(collectorId,
-                List.of(OfferStatus.ACCEPTED, OfferStatus.IN_PROGRESS));
-        int completedJobs = (int) offerRepository.countByCollector_EmpIdAndStatusIn(collectorId,
-                List.of(OfferStatus.COMPLETED));
-
-        List<CollectionOffer> completedOffers = offerRepository
-                .findByCollector_EmpIdAndStatusOrderByCreatedAtDesc(collectorId, OfferStatus.COMPLETED);
-
-        double todaysRatingSum = 0;
-        int todaysRatedCount = 0;
-        int todaysWorkingMinutes = 0;
-        double todaysWasteCollectedKg = 0;
-
-        double overallRatingSum = 0;
-        int overallRatedCount = 0;
-
-        Instant startOfToday = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
-                .atStartOfDay(java.time.ZoneId.systemDefault()).toInstant();
-
-        for (CollectionOffer offer : completedOffers) {
-            boolean isToday = offer.getCompletedAt() != null && !offer.getCompletedAt().isBefore(startOfToday);
-
-            if (offer.getCitizenRating() != null && offer.getCitizenRating() > 0) {
-                overallRatingSum += offer.getCitizenRating();
-                overallRatedCount++;
-                if (isToday) {
-                    todaysRatingSum += offer.getCitizenRating();
-                    todaysRatedCount++;
-                }
-            }
-
-            if (isToday) {
-                if (offer.getCompletionWeightKg() != null) {
-                    todaysWasteCollectedKg += offer.getCompletionWeightKg();
-                }
-                if (offer.getStartedAt() != null && offer.getCompletedAt() != null) {
-                    todaysWorkingMinutes += java.time.Duration.between(offer.getStartedAt(), offer.getCompletedAt())
-                            .toMinutes();
-                }
-            }
-        }
-
-        double todaysRating = todaysRatedCount > 0 ? (todaysRatingSum / todaysRatedCount) : 0.0;
-        double overallRating = overallRatedCount > 0 ? (overallRatingSum / overallRatedCount) : 0.0;
-
-        List<CollectionOffer> allOffers = offerRepository.findByCollector_EmpIdOrderByCreatedAtDesc(collectorId);
-        int cancelledOffers = 0;
-        for (CollectionOffer offer : allOffers) {
-            if (offer.getStatus() == OfferStatus.CANCELLED || offer.getStatus() == OfferStatus.WITHDRAWN) {
-                cancelledOffers++;
-            }
-        }
-
-        int onTimeCount = 0;
-        for (CollectionOffer offer : completedOffers) {
-            if (offer.getProposedPickupAt() != null && offer.getCompletedAt() != null) {
-                if (offer.getCompletedAt().isBefore(offer.getProposedPickupAt().plus(java.time.Duration.ofHours(24)))) {
-                    onTimeCount++;
-                }
-            }
-        }
-
-        double responseRate = allOffers.isEmpty() ? 100.0
-                : Math.max(0.0, 100.0 - ((double) cancelledOffers / allOffers.size()) * 100.0);
-        double onTimeRate = completedOffers.isEmpty() ? 100.0 : ((double) onTimeCount / completedOffers.size()) * 100.0;
-
-        java.time.Instant memberSince = userRepository.findById(collectorId)
-                .map(u -> u.getCreatedAt())
-                .filter(java.util.Objects::nonNull)
-                .map(ldt -> ldt.atZone(java.time.ZoneId.systemDefault()).toInstant())
-                .orElse(null);
-
-        return new com.garbo.core.dto.collection.CollectorDashboardDto(
-                availableRequests,
-                activeJobs,
-                completedJobs,
-                todaysRating,
-                todaysWorkingMinutes,
-                todaysWasteCollectedKg,
-                responseRate,
-                onTimeRate,
-                overallRating,
-                overallRatedCount,
-                memberSince);
+        return collectorDashboardService.getCollectorDashboard(collectorId);
     }
 
     @Transactional

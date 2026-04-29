@@ -36,27 +36,55 @@ WebSocket endpoints:
 ```text
 src/main/java/com/garbo/
 ├── api/
-│   ├── controller/                 # REST endpoints
-│   └── websocket/                  # raw websocket handler
+│   ├── controller/                     # REST endpoints
+│   │   ├── citizen/                    # citizen-specific flow endpoints
+│   │   ├── field_mentor/               # field staff / bin-report endpoints
+│   │   ├── shared/                     # shared request/offer lifecycle endpoints
+│   │   ├── third_party_collector/      # third-party collector endpoints
+│   │   └── adminAnalytics/             # admin analytics endpoints
+│   ├── dto/
+│   │   └── common/                     # shared API response wrapper
+│   ├── exception/                      # global and flow-specific exception handling
+│   ├── mapper/                         # API-level mappers
+│   └── websocket/                      # raw websocket handler
 ├── common/
-│   └── config/                     # cross-cutting config (CORS, etc.)
+│   ├── config/                         # cross-cutting config such as CORS
+│   └── logging/                        # shared logging helpers
 ├── core/
-│   ├── dto/                        # DTOs + response wrappers
-│   ├── entity/                     # JPA entities
-│   ├── enums/                      # domain enums
-│   ├── repository/                 # repositories (JPQL/native queries)
-│   └── service/                    # business logic
-├── domain/                         # OSRM/OR-Tools wrappers
+│   ├── dto/                            # domain-facing DTOs
+│   │   └── collection/                 # collection request / offer DTOs
+│   ├── entity/                         # JPA entities
+│   ├── enums/                          # domain enums
+│   ├── repository/                     # repositories (JPQL/native queries)
+│   └── service/                        # business logic
+│       ├── citizen/                    # citizen-specific services
+│       ├── field_staff/                # field staff / bin services
+│       ├── route/                      # route session services
+│       ├── shared/                     # shared collection workflow services
+│       ├── third_party_collector/      # collector profile / collector-specific services
+│       └── AdminAnalytics/             # admin analytics services
+├── domain/                             # OSRM/OR-Tools wrappers
 ├── infrastructure/
 │   ├── config/
-│   │   ├── security/               # SecurityConfig, JWT filter/util, UserDetails
-│   │   └── StompWebSocketConfig    # STOMP broker config
-│   └── websocket/                  # broadcasters/session management
-└── Main.java                       # application entrypoint
+│   │   └── security/                   # SecurityConfig, JWT filter/util, UserDetails
+│   ├── email/                          # email integration
+│   ├── storage/                        # Cloudinary upload service
+│   └── websocket/                      # broadcasters/session management
+└── Main.java                           # application entrypoint
 
 src/main/resources/
-└── application.yml                 # runtime configuration
+├── application.yml                     # shared runtime configuration
+├── application-local.yml               # local profile config
+├── application-prod.yml                # prod profile config
+└── db/migration/                       # SQL migrations
 ```
+
+### Current organization notes
+
+- Controllers are now grouped by flow ownership instead of keeping all scoped endpoints in one flat controller package.
+- Shared collection lifecycle endpoints remain under `api/controller/shared`.
+- `ApiResponse` now lives in `api/dto/common`.
+- Shared collection workflow logic lives under `core/service/shared`, including the extracted `CollectorDashboardService`.
 
 ## Prerequisites
 

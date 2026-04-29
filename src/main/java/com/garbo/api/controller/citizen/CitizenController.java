@@ -1,11 +1,10 @@
-package com.garbo.api.controller;
+package com.garbo.api.controller.citizen;
 
-import com.garbo.core.dto.ApiResponse;
+import com.garbo.api.dto.common.ApiResponse;
 import com.garbo.core.dto.collection.CreateRequestDto;
 import com.garbo.core.dto.collection.RequestSummaryDto;
 import com.garbo.core.enums.RequestStatus;
-import com.garbo.core.service.CollectionRequestService;
-import com.garbo.core.service.CitizenService;
+import com.garbo.core.service.shared.CollectionRequestService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
@@ -27,20 +26,18 @@ import java.util.Map;
 //   Citizens create a collection request (with optional photo), see the
 //   list of their requests, and act on offers via OfferController
 //   (accept / reject / confirm-and-rate).
+// This controller owns citizen-scoped request creation/list/photo upload APIs.
 @RestController
 @RequestMapping("/api/citizens")
 @PreAuthorize("hasRole('CITIZEN')")
 public class CitizenController {
-    @SuppressWarnings("unused")
-    private final CitizenService citizenService;
     private final CollectionRequestService collectionRequestService;
 
-    public CitizenController(CitizenService citizenService,
-            CollectionRequestService collectionRequestService) {
-        this.citizenService = citizenService;
+    public CitizenController(CollectionRequestService collectionRequestService) {
         this.collectionRequestService = collectionRequestService;
     }
 
+    // Creates a new citizen collection request; business rules stay in service.
     @PostMapping("/{citizenId}/collection-requests")
     public ResponseEntity<ApiResponse<RequestSummaryDto>> createCollectionRequest(
             @PathVariable Long citizenId,
@@ -49,6 +46,7 @@ public class CitizenController {
                 .body(ApiResponse.success(collectionRequestService.createRequest(citizenId, request)));
     }
 
+    // Lists requests for the authenticated citizen; optional status filter is supported.
     @GetMapping("/{citizenId}/collection-requests")
     public ResponseEntity<ApiResponse<List<RequestSummaryDto>>> listCollectionRequests(
             @PathVariable Long citizenId,
@@ -56,6 +54,7 @@ public class CitizenController {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listCitizenRequests(citizenId, status)));
     }
 
+    // Uploads request photo first and returns URL, then Flutter sends URL in create request payload.
     @PostMapping(value = "/{citizenId}/request-photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadRequestPhoto(
             @PathVariable Long citizenId,
