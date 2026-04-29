@@ -79,14 +79,22 @@ public class AuthController {
             }
             response.put("mustChangePassword", mustChange);
             Object councilValue = null;
-            if ("admin".equals(role) && userOpt.isPresent() && userOpt.get() instanceof AdminNew) {
-                AdminNew admin = (AdminNew) userOpt.get();
-                String councilName = admin.getCouncil();
-                if (councilName != null) {
-                    Map<String, String> councilMap = new HashMap<>();
-                    councilMap.put("name", councilName);
-                    councilValue = councilMap;
+            if ("admin".equals(role)) {
+                if (userOpt.isPresent() && userOpt.get() instanceof AdminNew) {
+                    AdminNew admin = (AdminNew) userOpt.get();
+                    String councilName = admin.getCouncil();
+                    if (councilName != null) {
+                        Map<String, String> councilMap = new HashMap<>();
+                        councilMap.put("name", councilName);
+                        councilValue = councilMap;
+                    } else {
+                        councilValue = null;
+                    }
+                } else {
+                    councilValue = null;
                 }
+            } else {
+                councilValue = null;
             }
             response.put("council", councilValue);
 
