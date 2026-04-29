@@ -1,4 +1,4 @@
-package com.garbo.core.service;
+package com.garbo.core.service.field_staff;
 
 import com.garbo.api.dto.BinDTO;
 import com.garbo.core.dto.BinReportRequest;
@@ -18,6 +18,11 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+// Bin service includes multiple feature areas.
+// In this scoped refactor pass, mobile-critical methods are:
+//   - getAssignedBins
+//   - reportBinStatus
+//   - undoBinReport
 @Service
 public class BinService {
 
@@ -49,6 +54,7 @@ public class BinService {
         return binRepository.findByAssignedToEmpId(empId);
     }
 
+    // Shared report operation used by both anonymous JSON report and field-staff multipart report.
     @Transactional
     public Bin reportBinStatus(Long binId, Long reporterId, BinReportRequest request) {
         Bin bin = binRepository.findByNumericId(binId)
@@ -97,6 +103,7 @@ public class BinService {
         return updated;
     }
 
+    // Field-staff undo operation used by dedicated mobile undo endpoint.
     @Transactional
     public Bin undoBinReport(Long binId, Long reporterId) {
         if (reporterId != null) {

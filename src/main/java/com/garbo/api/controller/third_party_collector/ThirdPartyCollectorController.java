@@ -1,11 +1,11 @@
-package com.garbo.api.controller;
+package com.garbo.api.controller.third_party_collector;
 
-import com.garbo.core.dto.ApiResponse;
+import com.garbo.api.dto.common.ApiResponse;
 import com.garbo.core.dto.collection.OfferDto;
 import com.garbo.core.dto.collection.RequestSummaryDto;
 import com.garbo.core.enums.OfferStatus;
-import com.garbo.core.service.CollectionRequestService;
-import com.garbo.core.service.ThirdPartyCollectorService;
+import com.garbo.core.service.shared.CollectionRequestService;
+import com.garbo.core.service.third_party_collector.ThirdPartyCollectorService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,7 +30,6 @@ import java.util.List;
 @RequestMapping("/api/thirdpartycollectors")
 @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
 public class ThirdPartyCollectorController {
-    @SuppressWarnings("unused")
     private final ThirdPartyCollectorService thirdPartyCollectorService;
     private final CollectionRequestService collectionRequestService;
 
@@ -42,6 +39,7 @@ public class ThirdPartyCollectorController {
         this.collectionRequestService = collectionRequestService;
     }
 
+    // Collector feed of OPEN citizen requests (optional geo query for proximity).
     @GetMapping("/{collectorId}/feed")
     public ResponseEntity<ApiResponse<List<RequestSummaryDto>>> browseFeed(
             @PathVariable Long collectorId,
@@ -50,6 +48,7 @@ public class ThirdPartyCollectorController {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.browseFeed(collectorId, lat, lng)));
     }
 
+    // Collector's own offers list used by My Jobs screen.
     @GetMapping("/{collectorId}/my-offers")
     public ResponseEntity<ApiResponse<List<OfferDto>>> myOffers(
             @PathVariable Long collectorId,
@@ -65,6 +64,7 @@ public class ThirdPartyCollectorController {
         return ResponseEntity.ok(ApiResponse.success(Map.of("hiddenCount", hiddenCount)));
     }
 
+    // Collector jobs currently in ACCEPTED/IN_PROGRESS states.
     @GetMapping("/{collectorId}/active-jobs")
     public ResponseEntity<ApiResponse<List<OfferDto>>> activeJobs(@PathVariable Long collectorId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listActiveJobs(collectorId)));

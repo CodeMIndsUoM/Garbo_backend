@@ -1,6 +1,6 @@
 package com.garbo.infrastructure.config;
 
-import com.garbo.core.service.CollectionRequestService;
+import com.garbo.core.service.shared.CollectionRequestService;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
