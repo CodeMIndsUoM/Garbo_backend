@@ -1,10 +1,10 @@
-package com.garbo.api.controller;
+package com.garbo.api.controller.shared;
 
-import com.garbo.core.dto.ApiResponse;
+import com.garbo.api.dto.common.ApiResponse;
 import com.garbo.core.dto.collection.CancelOfferDto;
 import com.garbo.core.dto.collection.ConfirmDto;
 import com.garbo.core.dto.collection.OfferDto;
-import com.garbo.core.service.CollectionRequestService;
+import com.garbo.core.service.shared.CollectionRequestService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 // Shared offer lifecycle endpoints used by both flows:
 //   Citizen side -> accept / reject / confirm (+rate)
 //   Collector side -> withdraw / cancel / start / complete
+// This controller is intentionally shared so both sides operate on the same offer resource.
 @RestController
 @RequestMapping("/api/offers")
 public class OfferController {
@@ -29,18 +30,21 @@ public class OfferController {
         this.collectionRequestService = collectionRequestService;
     }
 
+    // Citizen accepts a pending offer and request moves to ASSIGNED.
     @PostMapping("/{offerId}/accept")
     @PreAuthorize("hasRole('CITIZEN')")
     public ResponseEntity<ApiResponse<OfferDto>> accept(@PathVariable Long offerId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.acceptOffer(offerId)));
     }
 
+    // Citizen rejects a pending offer.
     @PostMapping("/{offerId}/reject")
     @PreAuthorize("hasRole('CITIZEN')")
     public ResponseEntity<ApiResponse<OfferDto>> reject(@PathVariable Long offerId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.rejectOffer(offerId)));
     }
 
+    // Citizen confirms completed collection and submits rating/feedback.
     @PostMapping("/{offerId}/confirm")
     @PreAuthorize("hasRole('CITIZEN')")
     public ResponseEntity<ApiResponse<OfferDto>> confirm(
@@ -49,18 +53,22 @@ public class OfferController {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.confirmCompletion(offerId, request)));
     }
 
+    // Third-party collector withdraws a pending offer.
     @PostMapping("/{offerId}/withdraw")
     @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
     public ResponseEntity<ApiResponse<OfferDto>> withdraw(@PathVariable Long offerId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.withdrawOffer(offerId)));
     }
 
+    // Third-party collector hides historical offers from my-jobs view.
     @PostMapping("/{offerId}/hide")
     @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
     public ResponseEntity<ApiResponse<OfferDto>> hide(@PathVariable Long offerId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.hideOfferFromCollectorList(offerId)));
     }
 
+    // Third-party collector cancels accepted/in-progress work.
+    // Ownership/role checks are enforced in service layer.
     @PostMapping("/{offerId}/cancel")
     public ResponseEntity<ApiResponse<OfferDto>> cancel(
             @PathVariable Long offerId,
@@ -68,12 +76,14 @@ public class OfferController {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.cancelAcceptedOffer(offerId, request)));
     }
 
+    // Third-party collector starts accepted work.
     @PostMapping("/{offerId}/start")
     @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
     public ResponseEntity<ApiResponse<OfferDto>> start(@PathVariable Long offerId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.startOffer(offerId)));
     }
 
+    // Third-party collector completes work with location proof and optional photo/weight.
     @PostMapping(value = "/{offerId}/complete", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
     public ResponseEntity<ApiResponse<OfferDto>> complete(
