@@ -21,9 +21,8 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
     @Query("SELECT b FROM Bin b WHERE b.id IN :ids")
     List<Bin> findAllByTextIdsCastToBigInt(@Param("ids") List<Long> ids);
 
-    // Mobile APIs use numeric path IDs, while the bins table stores id as text.
-    // Cast the numeric input to text so lookup works without schema changes.
-    @Query(value = "SELECT * FROM bins WHERE id = CAST(:id AS TEXT)", nativeQuery = true)
+    // Mobile APIs use numeric path IDs matching the BIGINT database column
+    @Query(value = "SELECT * FROM bins WHERE id = :id", nativeQuery = true)
     Optional<Bin> findByNumericId(@Param("id") Long id);
 
     @Query("SELECT b FROM Bin b")
@@ -51,14 +50,13 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
 
     @Transactional
     @Modifying
-    // Avoid JPA id-type mismatch on update by using a native query with text cast.
-    @Query(value = "UPDATE bins SET status = :status, fill_level = :fillLevel, last_checked = NOW() WHERE id = CAST(:binId AS TEXT)", nativeQuery = true)
+    @Query(value = "UPDATE bins SET status = :status, fill_level = :fillLevel, last_checked = NOW() WHERE id = :binId", nativeQuery = true)
     int updateStatusForReport(@Param("binId") Long binId, @Param("status") String status, @Param("fillLevel") Integer fillLevel);
 
     @Transactional
     @Modifying
     // Undo returns the bin to default "notChecked" state for field-staff flow.
-    @Query(value = "UPDATE bins SET status = 'notChecked', fill_level = 0, last_checked = NULL WHERE id = CAST(:binId AS TEXT)", nativeQuery = true)
+    @Query(value = "UPDATE bins SET status = 'notChecked', fill_level = 0, last_checked = NULL WHERE id = :binId", nativeQuery = true)
     int resetStatusForUndo(@Param("binId") Long binId);
 
     @Query("SELECT b FROM Bin b WHERE b.id IN :selected")

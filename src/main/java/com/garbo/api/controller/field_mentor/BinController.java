@@ -1,9 +1,9 @@
-package com.garbo.api.controller;
+package com.garbo.api.controller.field_mentor;
 
-import com.garbo.core.dto.ApiResponse;
+import com.garbo.api.dto.common.ApiResponse;
 import com.garbo.core.dto.BinReportRequest;
 import com.garbo.core.entity.Bin;
-import com.garbo.core.service.BinService;
+import com.garbo.core.service.field_staff.BinService;
 import com.garbo.core.service.CurrentUserService;
 import com.garbo.infrastructure.storage.CloudinaryUploadService;
 import org.springframework.http.MediaType;
@@ -15,6 +15,11 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.HashMap;
 import java.util.Map;
 
+// Bin endpoints used in the scoped field mentor flow.
+// Main mobile usage:
+//   - POST /api/bins/{binId}/report (multipart) from field mentor app
+//   - POST /api/bins/{binId}/undo from field mentor app
+// The JSON report variant is kept for backward compatibility.
 @RestController
 @RequestMapping("/api/bins")
 public class BinController {
@@ -39,6 +44,8 @@ public class BinController {
         }
     }
 
+    // Backward-compatible JSON report endpoint.
+    // Reporter is null, so service records source as ANONYMOUS.
     @PostMapping("/{binId}/report")
     public ResponseEntity<ApiResponse<Map<String, Object>>> reportBinStatus(
             @PathVariable Long binId,
@@ -60,9 +67,10 @@ public class BinController {
         }
     }
 
+    // Primary field mentor report endpoint used by Flutter (multipart + optional photo).
     @PostMapping(value = "/{binId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('FIELD_MENTOR')")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> reportBinStatusFromFieldStaff(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> reportBinStatusFromFieldMentor(
             @PathVariable Long binId,
             @RequestParam("status") String status,
             @RequestParam("fillLevel") Integer fillLevel,
@@ -101,9 +109,10 @@ public class BinController {
         }
     }
 
+    // Dedicated undo endpoint used by Flutter to revert a report without resubmitting payload.
     @PostMapping("/{binId}/undo")
     @PreAuthorize("hasRole('FIELD_MENTOR')")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> undoBinReportFromFieldStaff(@PathVariable Long binId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> undoBinReportFromFieldMentor(@PathVariable Long binId) {
         try {
             Long reporterId = CurrentUserService.getCurrentEmpId()
                     .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
