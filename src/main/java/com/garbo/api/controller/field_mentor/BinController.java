@@ -1,7 +1,6 @@
 package com.garbo.api.controller.field_mentor;
 
 import com.garbo.api.dto.common.ApiResponse;
-import com.garbo.core.dto.BinReportRequest;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.service.field_staff.BinService;
 import com.garbo.core.service.CurrentUserService;
@@ -19,7 +18,6 @@ import java.util.Map;
 // Main mobile usage:
 //   - POST /api/bins/{binId}/report (multipart) from field mentor app
 //   - POST /api/bins/{binId}/undo from field mentor app
-// The JSON report variant is kept for backward compatibility.
 @RestController
 @RequestMapping("/api/bins")
 public class BinController {
@@ -44,29 +42,6 @@ public class BinController {
         }
     }
 
-    // Backward-compatible JSON report endpoint.
-    // Reporter is null, so service records source as ANONYMOUS.
-    @PostMapping("/{binId}/report")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> reportBinStatus(
-            @PathVariable Long binId,
-            @RequestBody BinReportRequest request) {
-        
-        try {
-            // Pass null for reporterId as this is a generic/anonymous report
-            Bin updatedBin = binService.reportBinStatus(binId, null, request);
-            
-            Map<String, Object> data = new HashMap<>();
-            data.put("id", updatedBin.getId());
-            data.put("status", updatedBin.getStatus());
-            data.put("fillLevel", updatedBin.getFillLevel());
-            data.put("lastChecked", updatedBin.getLastChecked());
-
-            return ResponseEntity.ok(ApiResponse.success(data));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "REPORT_FAILED"));
-        }
-    }
-
     // Primary field mentor report endpoint used by Flutter (multipart + optional photo).
     @PostMapping(value = "/{binId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('FIELD_MENTOR')")
@@ -83,7 +58,7 @@ public class BinController {
             Long reporterId = CurrentUserService.getCurrentEmpId()
                     .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
 
-            BinReportRequest request = new BinReportRequest();
+            com.garbo.core.dto.BinReportRequest request = new com.garbo.core.dto.BinReportRequest();
             request.setStatus(status);
             request.setFillLevel(fillLevel);
             request.setLatitude(latitude);
