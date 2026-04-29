@@ -24,15 +24,25 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "emp_id")
     private Long empId;
+
     @Column(name = "full_name")
     private String empName;
+
+    @Column(name = "email")
     private String email;
+
+    @Column(name = "password")
     private String password;
+
+    @Column(name = "role")
     private String role;
+
     @Column(name = "contact_number")
     private String phone;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
