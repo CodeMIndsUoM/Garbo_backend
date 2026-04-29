@@ -1,25 +1,19 @@
 spring:
-  config:
-    import: optional:file:.env[.properties]
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:local} # Default to local profile
-
   main:
     allow-bean-definition-overriding: true
-
-  servlet:
-    multipart:
-      max-file-size: 10MB
-      max-request-size: 10MB
-
-cloudinary:
-  cloud-name: ${CLOUDINARY_CLOUD_NAME:}
-  api-key: ${CLOUDINARY_API_KEY:}
-  api-secret: ${CLOUDINARY_API_SECRET:}
+  datasource:
+    url: jdbc:postgresql://ep-solitary-water-a1k4fpoz-pooler.ap-southeast-1.aws.neon.tech/GarboDB1_dev?sslmode=require&channelBinding=require
+    driver-class-name: org.postgresql.Driver
+    username: neondb_owner
+    password: npg_HeskrVL7l0Pj
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
 
 server:
-  port: ${SERVER_PORT:8081}
+  port: 8080
 
 logging:
   level:
-    root: ${LOGGING_LEVEL_ROOT:INFO}
+    root: DEBUG
