@@ -26,7 +26,7 @@ public class MonthlyReportSummaryDTO {
     private LocalDateTime createdAt;
     private Integer fileSizeKb;
 
-    // ── Computed display helpers ──────────────────────────────────────────────
+    // ── Computed display helpers 
     private String periodLabel;      // e.g. "October 2025"
     private String fileSizeDisplay;  // e.g. "2.4 MB"
 }
