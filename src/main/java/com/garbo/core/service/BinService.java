@@ -89,9 +89,10 @@ public class BinService {
     }
 
     public Bin createBin(Bin bin) {
-        if (binRepository.existsById((Long) bin.getId())) {
+        if (bin.getId() != null && binRepository.existsById(bin.getId())) {
             throw new IllegalArgumentException("Bin with ID " + bin.getId() + " already exists.");
         }
+        bin.setId(null);
         return binRepository.save(bin);
     }
 
@@ -127,7 +128,7 @@ public class BinService {
                     bin.setId(row.getId());
                     bin.setLatitude(row.getLat());
                     bin.setLng(row.getLng());
-                    bin.setFillLevel(row.getFillLevel());
+                    bin.setFillLevel(row.getFillLevel() != null ? row.getFillLevel() : 0);
                     bin.setPriority(row.getPriority());
                     bin.setZone(row.getZone());
                     return bin;

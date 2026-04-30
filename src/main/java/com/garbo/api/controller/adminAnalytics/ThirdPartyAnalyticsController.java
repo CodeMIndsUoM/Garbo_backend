@@ -1,7 +1,5 @@
 package com.garbo.api.controller.adminAnalytics;
 
-
-
 import com.garbo.api.dto.ThirdPartyAnalyseDTOs.ThirdPartyAnalyticsResponseDTO;
 import com.garbo.core.service.AdminAnalytics.ThirdPartyAnalyticsService;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +20,7 @@ public class ThirdPartyAnalyticsController {
      * GET /api/admin/thirdparty/analyze?period=TODAY
      * GET /api/admin/thirdparty/analyze?period=LAST_WEEK
      * GET /api/admin/thirdparty/analyze?period=LAST_MONTH
-     * GET /api/admin/thirdparty/analyze          (defaults to ALL)
+     * GET /api/admin/thirdparty/analyze          
      */
     @GetMapping("/thirdparty/analyze")
     public ResponseEntity<?> getThirdPartyAnalytics(
