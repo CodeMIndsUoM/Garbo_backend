@@ -79,8 +79,8 @@ public class RouteSessionController {
             }
 
             // ── Optimize (existing pipeline — unchanged) ────────────────────
-            RouteSessionSnapshotDTO snapshot =
-                    routeSessionService.optimizeAndBroadcast(request.toSessionRequest());
+                RouteSessionSnapshotDTO snapshot =
+                    routeSessionService.optimizeAndBroadcast(request);
 
             // ── Persist to DB ───────────────────────────────────────────────
             // Only persist when optimization actually succeeded.
