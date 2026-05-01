@@ -66,7 +66,11 @@ public class SecurityConfig {
                     // actual controller paths
                     .requestMatchers(HttpMethod.POST, "/api/admins/login").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/superadmins/login").permitAll()
+                        // field-staff bin report workflow must always use JWT
+                        .requestMatchers(HttpMethod.POST, "/api/bins/*/report").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/bins/*/undo").authenticated()
                         // allow bin operations for dashboard map interaction
+                        .requestMatchers(HttpMethod.GET, "/api/bins").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/bins/**").permitAll()

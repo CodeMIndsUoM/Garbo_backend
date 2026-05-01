@@ -1,4 +1,4 @@
-package com.garbo.core.service;
+package com.garbo.core.service.field_staff;
 
 import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.repository.FieldMentorRepository;

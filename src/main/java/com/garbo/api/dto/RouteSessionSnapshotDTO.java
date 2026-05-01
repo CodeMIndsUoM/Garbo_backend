@@ -3,7 +3,6 @@ package com.garbo.api.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -13,7 +12,7 @@ public class RouteSessionSnapshotDTO {
     public String sessionId;
     public Long userId;
     public long version;
-    public String status; // PROCESSING | READY | ERROR | SESSION_CREATED
+    public String status; // PROCESSING | READY | ERROR | WARNING | SESSION_CREATED
     public String trigger;
 
     public List<Long> selectedBinIds;
@@ -21,9 +20,12 @@ public class RouteSessionSnapshotDTO {
     public List<Long> removedBinIds;
 
     public Object route; // RouteResponseDTO or null during processing
-    public String message; // for errors (optional)
+    public String message; // error or warning message (optional)
 
-   
+    // ─────────────────────────────────────────────────────────────────────────
+    // FACTORY METHODS
+    // ─────────────────────────────────────────────────────────────────────────
+
     public static RouteSessionSnapshotDTO processing(
             String sessionId,
             Long userId,
@@ -95,34 +97,31 @@ public class RouteSessionSnapshotDTO {
         );
     }
 
-        public static RouteSessionSnapshotDTO warning(
-                        String sessionId,
-                        Long userId,
-                        long version,
-                        String trigger,
-                        List<Long> selectedBinIds,
-                        List<Long> addedBinIds,
-                        List<Long> removedBinIds,
-                        String message
-        ) {
-                return new RouteSessionSnapshotDTO(
-                                sessionId,
-                                userId,
-                                version,
-                                "WARNING",
-                                Instant.now(),
-                                trigger,
-                                message,
-                                selectedBinIds,
-                                addedBinIds,
-                                removedBinIds,
-                                null
-                );
-        }
-
-        public RouteSessionSnapshotDTO(String sessionId2, Long userId2, long version2, String string, Instant now,
-                        String trigger2, String message2, List<Long> selectedBinIds2, List<Long> addedBinIds2,
-                        List<Long> removedBinIds2, Object object) {
-                //TODO Auto-generated constructor stub
-        }
+    /**
+     * Fixed: previously passed Instant.now() as a 5th argument which had no
+     * matching constructor. Now uses the standard 10-arg constructor directly.
+     */
+    public static RouteSessionSnapshotDTO warning(
+            String sessionId,
+            Long userId,
+            long version,
+            String trigger,
+            List<Long> selectedBinIds,
+            List<Long> addedBinIds,
+            List<Long> removedBinIds,
+            String message
+    ) {
+        return new RouteSessionSnapshotDTO(
+                sessionId,
+                userId,
+                version,
+                "WARNING",
+                trigger,
+                selectedBinIds,
+                addedBinIds,
+                removedBinIds,
+                null,
+                message
+        );
+    }
 }
