@@ -21,4 +21,5 @@ public class StompWebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Dedicated STOMP endpoint for SimpMessagingTemplate-based broadcasts.
         registry.addEndpoint("/ws-stomp").setAllowedOriginPatterns("*");
     }
+    
 }

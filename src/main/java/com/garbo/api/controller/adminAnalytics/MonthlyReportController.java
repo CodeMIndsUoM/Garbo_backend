@@ -32,10 +32,9 @@ public class MonthlyReportController {
 
     private final MonthlyReportGeneratorService reportService;
 
-    // ─────────────────────────────────────────────────────────────────────────
+   
     // POST /api/admin/reports/generate
     // Called when frontend clicks "Generate Report"
-    // ─────────────────────────────────────────────────────────────────────────
     @PostMapping("/generate")
     public ResponseEntity<?> generateReport() {
         try {
@@ -51,10 +50,9 @@ public class MonthlyReportController {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    
     // GET /api/admin/reports
     // Returns list of all reports (no snapshot — lightweight)
-    // ─────────────────────────────────────────────────────────────────────────
     @GetMapping
     public ResponseEntity<?> getAllReports() {
         try {
@@ -69,11 +67,10 @@ public class MonthlyReportController {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    
     // GET /api/admin/reports/{id}
     // Returns full report including the deserialized snapshot
     // Used by frontend to render the printable report view
-    // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/{id}")
     public ResponseEntity<?> getReportById(@PathVariable Long id) {
         try {
@@ -94,11 +91,10 @@ public class MonthlyReportController {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    
     // GET /api/admin/reports/{id}/download
     // Returns raw JSON snapshot as an attachment — frontend can also
     // trigger print-to-PDF instead of using this endpoint directly
-    // ─────────────────────────────────────────────────────────────────────────
     @GetMapping("/{id}/download")
     public ResponseEntity<?> downloadReport(@PathVariable Long id) {
         try {

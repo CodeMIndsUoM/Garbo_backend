@@ -1,4 +1,4 @@
-package com.garbo.core.service;
+package com.garbo.core.service.third_party_collector;
 
 import com.garbo.core.entity.ThirdPartyCollector;
 import com.garbo.core.repository.ThirdPartyCollectorRepository;
