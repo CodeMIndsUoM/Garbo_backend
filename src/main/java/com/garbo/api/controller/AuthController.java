@@ -86,6 +86,17 @@ public class AuthController {
                     response.put("onDuty", collector.isOnDuty());
                     response.put("rewardPoints", collector.getRewardPoints());
                 }
+
+                if (user instanceof com.garbo.core.entity.ThirdPartyCollector) {
+                    com.garbo.core.entity.ThirdPartyCollector tpc =
+                            (com.garbo.core.entity.ThirdPartyCollector) user;
+                    if (tpc.getRegistrationStatus() != null) {
+                        response.put("registrationStatus", tpc.getRegistrationStatus().name());
+                    }
+                    if (tpc.getAssignedCouncil() != null) {
+                        response.put("assignedCouncil", tpc.getAssignedCouncil());
+                    }
+                }
             }
             response.put("mustChangePassword", mustChange);
             Object councilValue = null;

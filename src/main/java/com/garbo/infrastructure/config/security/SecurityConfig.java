@@ -101,6 +101,8 @@ public class SecurityConfig {
                         // monthly report generation (NO JWT)
                         .requestMatchers("/api/admin/reports/**").permitAll()
 
+                        // third-party collector self-registration (public, no JWT)
+                        .requestMatchers("/api/auth/thirdparty-register/**").permitAll()
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated() // all others need JWT
