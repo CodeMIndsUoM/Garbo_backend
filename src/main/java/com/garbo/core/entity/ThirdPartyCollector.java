@@ -32,6 +32,9 @@ public class ThirdPartyCollector extends User {
     @Column(name = "nic_photo_url")
     private String nicPhotoUrl;
 
+    @Column(name = "nic_photo_back_url")
+    private String nicPhotoBackUrl;
+
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 

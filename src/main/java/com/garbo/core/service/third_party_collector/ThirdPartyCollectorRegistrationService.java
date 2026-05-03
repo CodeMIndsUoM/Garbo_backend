@@ -40,6 +40,7 @@ public class ThirdPartyCollectorRegistrationService {
             String contractEnd,
             String defaultAddress,
             String nicPhotoUrl,
+            String nicPhotoBackUrl,
             String assignedCouncil) {
 
         Optional<ThirdPartyCollector> existing = repository.findByEmailIgnoreCase(email);
@@ -55,6 +56,7 @@ public class ThirdPartyCollectorRegistrationService {
         collector.setCompany(company);
         collector.setDefaultAddress(defaultAddress);
         collector.setNicPhotoUrl(nicPhotoUrl);
+        collector.setNicPhotoBackUrl(nicPhotoBackUrl);
         collector.setAssignedCouncil(assignedCouncil);
         collector.setRole("THIRD_PARTY_COLLECTOR");
         collector.setRegistrationStatus(RegistrationStatus.PENDING);
