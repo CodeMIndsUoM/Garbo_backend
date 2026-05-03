@@ -75,6 +75,17 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/bins/**").permitAll()
+                        // allow driver operations
+                        .requestMatchers(HttpMethod.GET, "/api/drivers/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/drivers/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/drivers/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/drivers/**").permitAll()
+                        // allow vehicle operations
+                        .requestMatchers(HttpMethod.GET, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").permitAll()
                         // allow websocket handshake + SockJS endpoints
                         .requestMatchers("/ws/**").permitAll()
                         // TEMP: allow route-session testing without JWT
