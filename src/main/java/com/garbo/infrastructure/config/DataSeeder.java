@@ -129,6 +129,7 @@ public class DataSeeder implements CommandLineRunner {
         thirdPartyCollector.setContractStart(contractStart);
         thirdPartyCollector.setContractEnd(contractEnd);
         thirdPartyCollector.setCompletedRequests(0);
+        thirdPartyCollector.setRegistrationStatus(com.garbo.core.enums.RegistrationStatus.APPROVED);
         userRepository.save(thirdPartyCollector);
         System.out.println("Seeded third-party collector: " + email);
     }
