@@ -26,17 +26,22 @@ public class VehicleService {
         return vehicleRepository.findAll();
     }
 
+    public List<Vehicle> getByCouncil(String council) {
+        return vehicleRepository.findByAssignedCouncil(council);
+    }
+
     public Vehicle create(Vehicle payload) {
-        if (payload.getVehicleCode() == null || payload.getVehicleCode().isBlank()) {
-            throw new IllegalArgumentException("Vehicle code is required");
-        }
         if (payload.getLicensePlate() == null || payload.getLicensePlate().isBlank()) {
             throw new IllegalArgumentException("License plate is required");
         }
-        vehicleRepository.findByVehicleCodeIgnoreCase(payload.getVehicleCode())
-                .ifPresent(v -> {
-                    throw new IllegalArgumentException("Vehicle code already exists");
-                });
+
+        String council = payload.getAssignedCouncil();
+        if (council == null || council.isBlank()) {
+            council = "Unassigned";
+            payload.setAssignedCouncil(council);
+        }
+        
+        // Removed vehicleCode generation as per user request
 
         LocalDateTime now = LocalDateTime.now();
         payload.setCreatedAt(now);
