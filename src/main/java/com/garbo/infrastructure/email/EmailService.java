@@ -16,10 +16,10 @@ public class EmailService {
     public void sendAdminCredentials(String toEmail, String tempPassword) {
         SimpleMailMessage msg = new SimpleMailMessage();
         msg.setTo(toEmail);
-        msg.setSubject("Your Admin Account Credentials");
+        msg.setSubject("Your Account Credentials");
         StringBuilder body = new StringBuilder();
         body.append("Hello,").append(System.lineSeparator()).append(System.lineSeparator());
-        body.append("Your admin account has been created.").append(System.lineSeparator());
+        body.append("Your account has been created.").append(System.lineSeparator());
         body.append("Email: ").append(toEmail == null ? "" : toEmail).append(System.lineSeparator());
         body.append("Temporary password: ").append(tempPassword == null ? "" : tempPassword)
                 .append(System.lineSeparator()).append(System.lineSeparator());
