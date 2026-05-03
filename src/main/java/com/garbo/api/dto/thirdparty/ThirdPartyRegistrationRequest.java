@@ -15,5 +15,6 @@ public class ThirdPartyRegistrationRequest {
     private String contractEnd;
     private String defaultAddress;
     private String nicPhotoUrl;
+    private String nicPhotoBackUrl;
     private String assignedCouncil;
 }

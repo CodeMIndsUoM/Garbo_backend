@@ -58,6 +58,7 @@ public class ThirdPartyCollectorRegistrationController {
                     request.getContractEnd(),
                     request.getDefaultAddress(),
                     request.getNicPhotoUrl(),
+                    request.getNicPhotoBackUrl(),
                     request.getAssignedCouncil());
 
             Map<String, Object> result = Map.of(
