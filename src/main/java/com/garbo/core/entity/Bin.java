@@ -30,6 +30,19 @@ public class Bin {
     @Column(length = 50)
     private String zone;
 
+
+    @Column(name = "bin_code", length = 100)
+    private String binCode;
+
+    @Column(name = "council", length = 100)
+    private String council;
+
+    @Column(name = "coordinates", length = 100)
+    private String coordinates;
+
+    @Column(name = "last_collection", length = 100)
+    private String lastCollection;
+
     @Column(name = "lat")
     private Double latitude;
 
@@ -54,6 +67,10 @@ public class Bin {
         return longitude;
     }
 
+    public String getType() {
+        return category;
+    }
+
     // Constructor for team's BinMapper/seeding code if needed
     public Bin(double latitude, double longitude, int fillLevel, String status) {
         this.latitude = latitude;
@@ -67,6 +84,10 @@ public class Bin {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public void setType(String type) {
+        this.category = type;
     }
 
     public void setStatus(String status) {
@@ -103,5 +124,9 @@ public class Bin {
 
     public void setLng(double lng) {
         this.longitude = lng;
+    }
+
+    public void setLat(Double lat) {
+        this.latitude = lat;
     }
 }
