@@ -2,7 +2,7 @@ package com.garbo.api.controller;
 
 import com.garbo.core.dto.ApiResponse;
 import com.garbo.core.entity.Bin;
-import com.garbo.core.service.BinService;
+import com.garbo.core.service.field_staff.BinService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

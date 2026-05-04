@@ -22,7 +22,6 @@ public class BinCollector extends User {
     private int missedCollections;
     private double rewardPoints;
     public void setAssignedZone(Object object) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setAssignedZone'");
+        this.assignedCouncil = object == null ? null : object.toString();
     }
 }
