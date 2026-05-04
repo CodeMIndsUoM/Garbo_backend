@@ -59,7 +59,7 @@ public class ThirdPartyCollectorRegistrationController {
                     request.getDefaultAddress(),
                     request.getNicPhotoUrl(),
                     request.getNicPhotoBackUrl(),
-                    request.getAssignedCouncil());
+                    request.getAssignedCouncils());
 
             Map<String, Object> result = Map.of(
                     "empId", collector.getEmpId(),

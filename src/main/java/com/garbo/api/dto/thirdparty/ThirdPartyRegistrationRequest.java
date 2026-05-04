@@ -1,6 +1,7 @@
 package com.garbo.api.dto.thirdparty;
 
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class ThirdPartyRegistrationRequest {
@@ -16,5 +17,5 @@ public class ThirdPartyRegistrationRequest {
     private String defaultAddress;
     private String nicPhotoUrl;
     private String nicPhotoBackUrl;
-    private String assignedCouncil;
+    private List<String> assignedCouncils;
 }
