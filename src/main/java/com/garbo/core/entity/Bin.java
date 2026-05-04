@@ -19,7 +19,7 @@ public class Bin {
     private String location;
 
     @Column(length = 20)
-    private String status = "notChecked"; // notChecked/full/half/empty
+    private String status = "empty"; // notChecked/full/half/empty
 
     @Column(name = "is_assigned")
     private Boolean isAssigned = false;

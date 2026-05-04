@@ -270,7 +270,7 @@ public class BinService {
 
     private void normalizeCreateModel(Bin bin) {
         if (bin.getStatus() == null || bin.getStatus().isBlank()) {
-            bin.setStatus("notChecked");
+            bin.setStatus("empty");
         } else {
             bin.setStatus(bin.getStatus().trim().toLowerCase(Locale.ROOT));
         }

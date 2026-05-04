@@ -40,7 +40,7 @@ public class VehicleService {
 
         String council = payload.getAssignedCouncil();
         if (council == null || council.isBlank()) {
-            council = "Unassigned";
+            council = CurrentUserService.getCurrentCouncil().orElse("Unassigned");
             payload.setAssignedCouncil(council);
         }
         
