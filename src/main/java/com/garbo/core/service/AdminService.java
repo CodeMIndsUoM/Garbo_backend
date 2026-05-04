@@ -33,9 +33,7 @@ public class AdminService {
 
         Optional<User> userOpt = userRepository.findFirstByEmailIgnoreCase(email);
         if (userOpt.isEmpty()) {
-            userOpt = userRepository.findByEmailNative(email);
-            if (userOpt.isEmpty())
-                return Optional.empty();
+            return Optional.empty();
         }
 
         User user = userOpt.get();
