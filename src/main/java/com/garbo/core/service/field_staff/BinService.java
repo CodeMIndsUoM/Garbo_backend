@@ -11,12 +11,19 @@ import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.service.event.BinChangedEvent;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 // Bin service includes multiple feature areas.
 // In this scoped refactor pass, mobile-critical methods are:
@@ -30,6 +37,8 @@ public class BinService {
 
     private final BinReportRepository binReportRepository;
     private final FieldMentorRepository fieldMentorRepository;
+    private final CouncilAccessService councilAccessService;
+    private static final Map<String, CouncilBounds> COUNCIL_BOUNDS = buildCouncilBounds();
 
     // ── kevin-RWS dependencies ────────────────────────────────────────────────
 
@@ -41,10 +50,12 @@ public class BinService {
 
     public BinService(BinRepository binRepository,
                       BinReportRepository binReportRepository,
-                      FieldMentorRepository fieldMentorRepository) {
+                      FieldMentorRepository fieldMentorRepository,
+                      CouncilAccessService councilAccessService) {
         this.binRepository = binRepository;
         this.binReportRepository = binReportRepository;
         this.fieldMentorRepository = fieldMentorRepository;
+        this.councilAccessService = councilAccessService;
     }
 
 
@@ -136,6 +147,65 @@ public class BinService {
         return binRepository.save(bin);
     }
 
+    public List<Bin> getBins(String council) {
+        List<Bin> bins = (council == null || council.isBlank())
+                ? binRepository.findAll()
+                : binRepository.findByCouncilIgnoreCase(council.trim());
+        bins.forEach(this::normalizeReadModel);
+        return bins;
+    }
+
+    public Bin createBinForCurrentUser(Bin payload) {
+        String email = currentEmail();
+        String council = councilAccessService.resolveCouncilForEmail(email)
+                .orElseThrow(() -> new AccessDeniedException("Your account has no assigned council"));
+        double[] latLng = resolveIncomingCoordinates(payload);
+        validateCoordinatesInCouncil(council, latLng[0], latLng[1]);
+
+        String generatedCode = generateNextBinCode(council);
+        payload.setBinCode(generatedCode);
+        payload.setCouncil(council);
+        payload.setLocation(latLng[0] + "," + latLng[1]);
+        payload.setCoordinates(latLng[0] + "," + latLng[1]);
+        payload.setLatitude(latLng[0]);
+        payload.setLongitude(latLng[1]);
+        payload.setLastChecked(LocalDateTime.now());
+        normalizeCreateModel(payload);
+
+        Bin saved = binRepository.save(payload);
+        normalizeReadModel(saved);
+        return saved;
+    }
+
+    public void deleteBinForCurrentUser(Long id) {
+        Bin bin = getBinWithCouncilAccess(id);
+        binRepository.deleteByIdNative(bin.getId());
+        eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
+    }
+
+    public Bin updatePriorityForCurrentUser(Long id, String priority) {
+        Bin bin = getBinWithCouncilAccess(id);
+        String normalized = (priority == null || priority.isBlank()) ? "medium" : priority.trim().toLowerCase(Locale.ROOT);
+        if (!normalized.equals("low") && !normalized.equals("medium") && !normalized.equals("high")) {
+            throw new IllegalArgumentException("Priority must be low, medium, or high");
+        }
+        bin.setPriority(normalized);
+        binRepository.updatePriorityNative(id, normalized);
+        eventPublisher.publishEvent(new BinChangedEvent("UPDATED", id));
+        normalizeReadModel(bin);
+        return bin;
+    }
+
+    public Bin updateZoneForCurrentUser(Long id, String zone) {
+        Bin bin = getBinWithCouncilAccess(id);
+        String safeZone = zone == null || zone.isBlank() ? "unassigned" : zone.trim();
+        bin.setZone(safeZone);
+        binRepository.updateZoneNative(id, safeZone);
+        eventPublisher.publishEvent(new BinChangedEvent("UPDATED", id));
+        normalizeReadModel(bin);
+        return bin;
+    }
+
 
     // ── Methods from kevin-RWS ────────────────────────────────────────────────
 
@@ -193,5 +263,147 @@ public class BinService {
         String safeZone = zone == null || zone.isBlank() ? "unassigned" : zone;
         binRepository.updateZoneNative(id, safeZone);
         eventPublisher.publishEvent(new BinChangedEvent("UPDATED", id));
+    }
+
+    private void normalizeCreateModel(Bin bin) {
+        if (bin.getStatus() == null || bin.getStatus().isBlank()) {
+            bin.setStatus("normal");
+        } else {
+            bin.setStatus(bin.getStatus().trim().toLowerCase(Locale.ROOT));
+        }
+        if (bin.getPriority() == null || bin.getPriority().isBlank()) {
+            bin.setPriority("medium");
+        } else {
+            bin.setPriority(bin.getPriority().trim().toLowerCase(Locale.ROOT));
+        }
+        if (bin.getZone() == null || bin.getZone().isBlank()) {
+            bin.setZone("unassigned");
+        }
+        if (bin.getCategory() == null || bin.getCategory().isBlank()) {
+            bin.setCategory("General Waste");
+        }
+        if (bin.getFillLevel() == null) {
+            bin.setFillLevel(0);
+        } else {
+            bin.setFillLevel(Math.max(0, Math.min(bin.getFillLevel(), 100)));
+        }
+    }
+
+    private void normalizeReadModel(Bin bin) {
+        if ((bin.getCoordinates() == null || bin.getCoordinates().isBlank())
+                && bin.getLatitude() != null && bin.getLongitude() != null) {
+            bin.setCoordinates(bin.getLatitude() + "," + bin.getLongitude());
+        }
+        if (bin.getLocation() == null || bin.getLocation().isBlank()) {
+            bin.setLocation(bin.getCoordinates());
+        }
+    }
+
+    private String currentEmail() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null || auth.getName().isBlank()) {
+            throw new AccessDeniedException("Authentication is required");
+        }
+        return auth.getName();
+    }
+
+    private Bin getBinWithCouncilAccess(Long id) {
+        Bin existing = binRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Bin not found"));
+        String email = currentEmail();
+        boolean superAdmin = councilAccessService.isSuperAdmin(email);
+        Optional<String> councilOpt = councilAccessService.resolveCouncilForEmail(email);
+        if (!superAdmin) {
+            String requesterCouncil = councilOpt.orElse("");
+            if (requesterCouncil.isBlank()
+                    || existing.getCouncil() == null
+                    || !existing.getCouncil().equalsIgnoreCase(requesterCouncil)) {
+                throw new AccessDeniedException("You can only manage bins from your council");
+            }
+        }
+        return existing;
+    }
+
+    private String generateNextBinCode(String council) {
+        List<Bin> councilBins = binRepository.findByCouncilIgnoreCase(council.trim());
+        String prefix = council.trim() + "-";
+        int nextNumber = councilBins.stream()
+                .map(Bin::getBinCode)
+                .filter(code -> code != null && code.regionMatches(true, 0, prefix, 0, prefix.length()))
+                .map(code -> code.substring(prefix.length()).trim())
+                .filter(s -> s.matches("\\d+"))
+                .mapToInt(Integer::parseInt)
+                .max()
+                .orElse(0) + 1;
+        return prefix + nextNumber;
+    }
+
+    private double[] parseLatLng(String rawLocation) {
+        String[] parts = rawLocation.split(",");
+        if (parts.length != 2) {
+            throw new IllegalArgumentException("Location must be in lat,lng format");
+        }
+        try {
+            double lat = Double.parseDouble(parts[0].trim());
+            double lng = Double.parseDouble(parts[1].trim());
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                throw new IllegalArgumentException("Latitude/longitude out of range");
+            }
+            return new double[] { lat, lng };
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Location must contain valid latitude and longitude");
+        }
+    }
+
+    private double[] resolveIncomingCoordinates(Bin payload) {
+        if (payload.getLocation() != null && !payload.getLocation().isBlank()) {
+            return parseLatLng(payload.getLocation());
+        }
+        if (payload.getLatitude() != null && payload.getLongitude() != null) {
+            double lat = payload.getLatitude();
+            double lng = payload.getLongitude();
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                throw new IllegalArgumentException("Latitude/longitude out of range");
+            }
+            return new double[] { lat, lng };
+        }
+        throw new IllegalArgumentException("Location is required as lat,lng");
+    }
+
+    private void validateCoordinatesInCouncil(String council, double lat, double lng) {
+        CouncilBounds bounds = COUNCIL_BOUNDS.get(council.toLowerCase(Locale.ROOT));
+        if (bounds == null) {
+            throw new IllegalArgumentException("Unsupported council for coordinate validation: " + council);
+        }
+        if (!bounds.contains(lat, lng)) {
+            throw new IllegalArgumentException("Coordinates are outside the council boundary");
+        }
+    }
+
+    private static Map<String, CouncilBounds> buildCouncilBounds() {
+        Map<String, CouncilBounds> bounds = new HashMap<>();
+        bounds.put("colombo", new CouncilBounds(6.83, 6.98, 79.82, 79.91));
+        bounds.put("dehiwala-mt. lavinia", new CouncilBounds(6.79, 6.88, 79.84, 79.92));
+        bounds.put("kaduwela", new CouncilBounds(6.91, 7.03, 79.96, 80.08));
+        bounds.put("moratuwa", new CouncilBounds(6.74, 6.83, 79.85, 79.92));
+        bounds.put("sri jayewardenepura kotte", new CouncilBounds(6.86, 6.93, 79.89, 79.95));
+        return bounds;
+    }
+
+    private static class CouncilBounds {
+        private final double minLat;
+        private final double maxLat;
+        private final double minLng;
+        private final double maxLng;
+
+        private CouncilBounds(double minLat, double maxLat, double minLng, double maxLng) {
+            this.minLat = minLat;
+            this.maxLat = maxLat;
+            this.minLng = minLng;
+            this.maxLng = maxLng;
+        }
+
+        private boolean contains(double lat, double lng) {
+            return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
+        }
     }
 }

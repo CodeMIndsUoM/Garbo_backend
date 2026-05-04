@@ -29,6 +29,7 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
     List<Bin> findAllValidBins();
 
     List<Bin> findByAssignedToEmpId(Long empId);
+    List<Bin> findByCouncilIgnoreCase(String council);
 
     @Query("SELECT b FROM Bin b")
     Collection<Bin> findAllForMap();

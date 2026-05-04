@@ -23,7 +23,7 @@ public class Driver {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "driver_code", unique = true, nullable = false)
+    @Column(name = "driver_code", nullable = false)
     private String driverCode;
 
     @Column(name = "name", nullable = false)
@@ -34,4 +34,13 @@ public class Driver {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "council")
+    private String council;
+
+    @Column(name = "email")
+    private String email;
+
+    @Column(name = "phone")
+    private String phone;
 }

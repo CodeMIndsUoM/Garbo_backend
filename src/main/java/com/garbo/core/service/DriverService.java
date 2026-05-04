@@ -22,21 +22,42 @@ public class DriverService {
         return driverRepository.findAll();
     }
 
+    public List<Driver> getByCouncil(String council) {
+        return driverRepository.findByCouncil(council);
+    }
+
     public Driver create(Driver payload) {
-        if (payload.getDriverCode() == null || payload.getDriverCode().isBlank()) {
-            throw new IllegalArgumentException("Driver code is required");
-        }
+        System.out.println("DriverService: Creating driver: " + payload.getName() + ", council: " + payload.getCouncil());
         if (payload.getName() == null || payload.getName().isBlank()) {
             throw new IllegalArgumentException("Driver name is required");
         }
-        driverRepository.findByDriverCodeIgnoreCase(payload.getDriverCode())
-                .ifPresent(d -> {
-                    throw new IllegalArgumentException("Driver code already exists");
-                });
+        
+        String council = payload.getCouncil();
+        if (council == null || council.isBlank()) {
+            council = "Unassigned";
+            payload.setCouncil(council);
+        }
+        
+        List<Driver> existingDrivers = driverRepository.findByCouncil(council);
+        System.out.println("DriverService: Found " + existingDrivers.size() + " existing drivers for council " + council);
+        int max = 0;
+        for (Driver d : existingDrivers) {
+            if (d.getDriverCode() != null && d.getDriverCode().startsWith("DRV-")) {
+                try {
+                    int num = Integer.parseInt(d.getDriverCode().substring(4));
+                    max = Math.max(max, num);
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        payload.setDriverCode("DRV-" + (max + 1));
+        System.out.println("DriverService: Assigned driver code " + payload.getDriverCode());
+
         LocalDateTime now = LocalDateTime.now();
         payload.setCreatedAt(now);
         payload.setUpdatedAt(now);
-        return driverRepository.save(payload);
+        Driver saved = driverRepository.save(payload);
+        System.out.println("DriverService: Saved driver with ID " + saved.getId());
+        return saved;
     }
 
     public Driver update(Long id, Driver payload) {
@@ -46,6 +67,15 @@ public class DriverService {
         }
         if (payload.getName() != null && !payload.getName().isBlank()) {
             existing.setName(payload.getName());
+        }
+        if (payload.getCouncil() != null) {
+            existing.setCouncil(payload.getCouncil());
+        }
+        if (payload.getEmail() != null) {
+            existing.setEmail(payload.getEmail());
+        }
+        if (payload.getPhone() != null) {
+            existing.setPhone(payload.getPhone());
         }
         existing.setUpdatedAt(LocalDateTime.now());
         return driverRepository.save(existing);
