@@ -9,6 +9,7 @@ import com.garbo.core.repository.BinReportRepository;
 import com.garbo.core.repository.BinRepository;
 import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.service.event.BinChangedEvent;
+import com.garbo.core.service.CouncilAccessService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.security.access.AccessDeniedException;
@@ -98,7 +99,9 @@ public class BinService {
         binReportRepository.save(report);
 
         // Update the bin via native query because bins.id is stored as text in DB.
-        int updatedRows = binRepository.updateStatusForReport(binId, request.getStatus(), request.getFillLevel());
+        Integer effectiveFillLevel = "full".equalsIgnoreCase(request.getStatus()) ? 100 :
+                                     "half".equalsIgnoreCase(request.getStatus()) ? 50 : 0;
+        int updatedRows = binRepository.updateStatusForReport(binId, request.getStatus(), effectiveFillLevel);
         if (updatedRows == 0) {
             throw new EntityNotFoundException("Bin not found with ID: " + binId);
         }
@@ -109,7 +112,7 @@ public class BinService {
         Bin updated = new Bin();
         updated.setId(binId);
         updated.setStatus(request.getStatus());
-        updated.setFillLevel(request.getFillLevel());
+        updated.setFillLevel(effectiveFillLevel);
         updated.setLastChecked(LocalDateTime.now());
         return updated;
     }
@@ -267,10 +270,20 @@ public class BinService {
 
     private void normalizeCreateModel(Bin bin) {
         if (bin.getStatus() == null || bin.getStatus().isBlank()) {
-            bin.setStatus("normal");
+            bin.setStatus("notChecked");
         } else {
             bin.setStatus(bin.getStatus().trim().toLowerCase(Locale.ROOT));
         }
+        
+        // Map status to fill level for legacy support/optimization
+        if ("full".equalsIgnoreCase(bin.getStatus())) {
+            bin.setFillLevel(100);
+        } else if ("half".equalsIgnoreCase(bin.getStatus())) {
+            bin.setFillLevel(50);
+        } else {
+            bin.setFillLevel(0);
+        }
+
         if (bin.getPriority() == null || bin.getPriority().isBlank()) {
             bin.setPriority("medium");
         } else {
@@ -278,14 +291,6 @@ public class BinService {
         }
         if (bin.getZone() == null || bin.getZone().isBlank()) {
             bin.setZone("unassigned");
-        }
-        if (bin.getCategory() == null || bin.getCategory().isBlank()) {
-            bin.setCategory("General Waste");
-        }
-        if (bin.getFillLevel() == null) {
-            bin.setFillLevel(0);
-        } else {
-            bin.setFillLevel(Math.max(0, Math.min(bin.getFillLevel(), 100)));
         }
     }
 

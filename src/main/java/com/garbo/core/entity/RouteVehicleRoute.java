@@ -24,7 +24,7 @@ public class RouteVehicleRoute {
      * References route_sessions.session_id.
      */
     @Column(name = "session_id", nullable = false)
-    private String sessionId;
+    private java.util.UUID sessionId;
 
     /**
      * The key from RouteResponseDTO.routes Map — e.g. "0", "1", "2".

@@ -113,7 +113,7 @@ public class FieldMentorController {
             map.put("location", locationName);
             map.put("address", addressName);
 
-            map.put("category", bin.getCategory() != null ? bin.getCategory() : "public");
+            map.put("category", "General Waste");
             map.put("status", bin.getStatus() != null ? bin.getStatus() : "notChecked");
             map.put("fillLevel", bin.getFillLevel());
             map.put("lastChecked", bin.getLastChecked());

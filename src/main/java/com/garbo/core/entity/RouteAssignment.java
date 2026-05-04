@@ -25,7 +25,7 @@ public class RouteAssignment {
      * Stored as a plain String (UUID) — no @ManyToOne to keep entity boundaries clean.
      */
     @Column(name = "session_id", nullable = false)
-    private String sessionId;
+    private java.util.UUID sessionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehicle_id", nullable = false)
@@ -33,19 +33,19 @@ public class RouteAssignment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "driver_id", nullable = false)
-    private Driver driver;
+    private BinCollector driver;
 
     /**
-     * Many-to-many with BinCollector via route_assignment_collectors junction table.
+     * Many-to-many with CollectorLabour via route_assignment_collectors junction table.
      * CascadeType.PERSIST allows saving new collector links when the assignment is saved.
      */
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(
         name = "route_assignment_collectors",
         joinColumns = @JoinColumn(name = "assignment_id"),
-        inverseJoinColumns = @JoinColumn(name = "collector_id")
+        inverseJoinColumns = @JoinColumn(name = "collector_labour_id")
     )
-    private List<BinCollector> collectors = new ArrayList<>();
+    private List<CollectorLabour> collectors = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
