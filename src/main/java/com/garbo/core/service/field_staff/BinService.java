@@ -8,6 +8,7 @@ import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.repository.BinReportRepository;
 import com.garbo.core.repository.BinRepository;
 import com.garbo.core.repository.FieldMentorRepository;
+import com.garbo.core.service.CouncilAccessService;
 import com.garbo.core.service.event.BinChangedEvent;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;

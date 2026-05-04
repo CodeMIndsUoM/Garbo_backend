@@ -19,7 +19,7 @@ import java.util.Map;
 // Main mobile usage:
 //   - POST /api/bins/{binId}/report (multipart) from field mentor app
 //   - POST /api/bins/{binId}/undo from field mentor app
-@RestController
+@RestController("fieldMentorBinController")
 @RequestMapping("/api/bins")
 public class BinController {
 
@@ -29,18 +29,6 @@ public class BinController {
     public BinController(BinService binService, CloudinaryUploadService cloudinaryUploadService) {
         this.binService = binService;
         this.cloudinaryUploadService = cloudinaryUploadService;
-    }
-
-    @PostMapping
-    public ResponseEntity<ApiResponse<Bin>> createBin(@RequestBody Bin bin) {
-        try {
-            Bin createdBin = binService.createBin(bin);
-            return ResponseEntity.ok(ApiResponse.success(createdBin));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "BIN_EXISTS"));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.error(e.getMessage(), "CREATE_FAILED"));
-        }
     }
 
     // Primary field mentor report endpoint used by Flutter (multipart + optional photo).
