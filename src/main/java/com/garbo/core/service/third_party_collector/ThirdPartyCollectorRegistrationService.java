@@ -41,7 +41,7 @@ public class ThirdPartyCollectorRegistrationService {
             String defaultAddress,
             String nicPhotoUrl,
             String nicPhotoBackUrl,
-            String assignedCouncil) {
+            List<String> assignedCouncils) {
 
         Optional<ThirdPartyCollector> existing = repository.findByEmailIgnoreCase(email);
         if (existing.isPresent()) {
@@ -57,7 +57,9 @@ public class ThirdPartyCollectorRegistrationService {
         collector.setDefaultAddress(defaultAddress);
         collector.setNicPhotoUrl(nicPhotoUrl);
         collector.setNicPhotoBackUrl(nicPhotoBackUrl);
-        collector.setAssignedCouncil(assignedCouncil);
+        if (assignedCouncils != null && !assignedCouncils.isEmpty()) {
+            collector.setAssignedCouncils(String.join(",", assignedCouncils));
+        }
         collector.setRole("THIRD_PARTY_COLLECTOR");
         collector.setRegistrationStatus(RegistrationStatus.PENDING);
         collector.setCompletedRequests(0);

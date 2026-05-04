@@ -1,6 +1,7 @@
 package com.garbo.api.controller.field_mentor;
 
 import com.garbo.api.dto.common.ApiResponse;
+import com.garbo.core.dto.BinReportRequest;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.service.field_staff.BinService;
 import com.garbo.core.service.CurrentUserService;
@@ -58,7 +59,7 @@ public class BinController {
             Long reporterId = CurrentUserService.getCurrentEmpId()
                     .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
 
-            com.garbo.core.dto.BinReportRequest request = new com.garbo.core.dto.BinReportRequest();
+            BinReportRequest request = new BinReportRequest();
             request.setStatus(status);
             request.setFillLevel(fillLevel);
             request.setLatitude(latitude);

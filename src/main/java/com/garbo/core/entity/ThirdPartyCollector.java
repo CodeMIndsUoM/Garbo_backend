@@ -38,8 +38,8 @@ public class ThirdPartyCollector extends User {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
-    @Column(name = "assigned_council")
-    private String assignedCouncil;
+    @Column(name = "assigned_councils")
+    private String assignedCouncils;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_status")

@@ -93,8 +93,8 @@ public class AuthController {
                     if (tpc.getRegistrationStatus() != null) {
                         response.put("registrationStatus", tpc.getRegistrationStatus().name());
                     }
-                    if (tpc.getAssignedCouncil() != null) {
-                        response.put("assignedCouncil", tpc.getAssignedCouncil());
+                    if (tpc.getAssignedCouncils() != null) {
+                        response.put("assignedCouncils", tpc.getAssignedCouncils());
                     }
                 }
             }
