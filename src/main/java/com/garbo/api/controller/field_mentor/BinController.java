@@ -1,6 +1,7 @@
 package com.garbo.api.controller.field_mentor;
 
 import com.garbo.api.dto.common.ApiResponse;
+import com.garbo.core.dto.BinReportRequest;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.service.field_staff.BinService;
 import com.garbo.core.service.CurrentUserService;
@@ -18,7 +19,7 @@ import java.util.Map;
 // Main mobile usage:
 //   - POST /api/bins/{binId}/report (multipart) from field mentor app
 //   - POST /api/bins/{binId}/undo from field mentor app
-@RestController
+@RestController("fieldMentorBinController")
 @RequestMapping("/api/bins")
 public class BinController {
 
@@ -28,18 +29,6 @@ public class BinController {
     public BinController(BinService binService, CloudinaryUploadService cloudinaryUploadService) {
         this.binService = binService;
         this.cloudinaryUploadService = cloudinaryUploadService;
-    }
-
-    @PostMapping
-    public ResponseEntity<ApiResponse<Bin>> createBin(@RequestBody Bin bin) {
-        try {
-            Bin createdBin = binService.createBin(bin);
-            return ResponseEntity.ok(ApiResponse.success(createdBin));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "BIN_EXISTS"));
-        } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(ApiResponse.error(e.getMessage(), "CREATE_FAILED"));
-        }
     }
 
     // Primary field mentor report endpoint used by Flutter (multipart + optional photo).
@@ -58,7 +47,7 @@ public class BinController {
             Long reporterId = CurrentUserService.getCurrentEmpId()
                     .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
 
-            com.garbo.core.dto.BinReportRequest request = new com.garbo.core.dto.BinReportRequest();
+            BinReportRequest request = new BinReportRequest();
             request.setStatus(status);
             request.setFillLevel(fillLevel);
             request.setLatitude(latitude);

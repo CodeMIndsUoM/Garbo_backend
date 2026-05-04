@@ -92,9 +92,13 @@ public class FieldMentorController {
     @GetMapping("/me/bins")
     @PreAuthorize("hasRole('FIELD_MENTOR')")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAssignedBins() {
-        Long empId = CurrentUserService.getCurrentEmpId()
-                .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
-        List<Bin> bins = binService.getAssignedBins(empId);
+        String council = CurrentUserService.getCurrentCouncil()
+            .orElse(null);
+        if (council == null || council.isBlank()) {
+            return ResponseEntity.status(403)
+                .body(ApiResponse.error("No council assigned for field mentor", "COUNCIL_NOT_FOUND"));
+        }
+        List<Bin> bins = binService.getBins(council);
 
         List<Map<String, Object>> allowedBins = bins.stream().map(bin -> {
             Map<String, Object> map = new HashMap<>();

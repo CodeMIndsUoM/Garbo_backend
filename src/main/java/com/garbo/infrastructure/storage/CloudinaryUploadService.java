@@ -62,6 +62,14 @@ public class CloudinaryUploadService {
                 "Bin report photo is required");
     }
 
+    public String uploadNicPhoto(MultipartFile file) {
+        return uploadImage(
+                file,
+                "garbo/nic-photos",
+                "nic-" + System.currentTimeMillis() + "-",
+                "NIC photo is required");
+    }
+
     private String uploadImage(
             MultipartFile file,
             String folder,

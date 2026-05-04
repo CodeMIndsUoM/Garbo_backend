@@ -82,11 +82,7 @@ public class UserService {
             Optional<User> byEmail = userRepo.findFirstByEmailIgnoreCase(e);
 
             if (byEmail.isEmpty()) {
-                Optional<User> nativeUser = userRepo.findByEmailNative(e);
-                if (nativeUser.isEmpty()) {
-                    return Optional.empty();
-                }
-                byEmail = nativeUser;
+                return Optional.empty();
             }
 
             User user = byEmail.get();
@@ -139,7 +135,7 @@ public class UserService {
             return found;
         }
 
-        return userRepo.findByEmailNative(e);
+        return Optional.empty();
     }
 
     public Optional<User> updateUser(Long userId, User payload) {
