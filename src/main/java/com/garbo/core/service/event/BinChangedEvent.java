@@ -6,10 +6,9 @@ import lombok.Getter;
 @Getter
 @AllArgsConstructor
 public class BinChangedEvent {
-    public BinChangedEvent(String changeType2, Object id) {
-        this.changeType = "";
-        this.binId = null;
-        //TODO Auto-generated constructor stub
+    public BinChangedEvent(String changeType, Object id) {
+        this.changeType = changeType;
+        this.binId = null; // or (Long) id if appropriate
     }
     private final String changeType;
     private final Long binId;

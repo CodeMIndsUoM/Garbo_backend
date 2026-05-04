@@ -14,7 +14,9 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
     // ── Basic finders (HEAD) ──────────────────────────────────────────────────
 
-    Optional<Vehicle> findByVehicleCodeIgnoreCase(String vehicleCode);
+    List<Vehicle> findByAssignedCouncil(String assignedCouncil);
+
+
 
 
     // ── Dashboard analytics (kevin-RWS) ──────────────────────────────────────
@@ -26,8 +28,8 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     long countByStatusAndIsActiveTrue(String status);
 
     // Table: All active vehicles for the fleet list
-    List<Vehicle> findAllByIsActiveTrueOrderByVehicleCodeAsc();
+    List<Vehicle> findAllByIsActiveTrueOrderByIdAsc();
 
     // Optional: filter by status for table
-    List<Vehicle> findAllByStatusAndIsActiveTrueOrderByVehicleCodeAsc(String status);
+    List<Vehicle> findAllByStatusAndIsActiveTrueOrderByIdAsc(String status);
 }
