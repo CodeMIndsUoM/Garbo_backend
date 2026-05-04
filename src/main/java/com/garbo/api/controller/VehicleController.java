@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.garbo.core.entity.Vehicle;
 import com.garbo.core.service.VehicleService;
 
+import org.springframework.web.bind.annotation.RequestParam;
+
 @RestController
 @RequestMapping("/api/vehicles")
 @CrossOrigin(origins = "*")
@@ -30,7 +32,10 @@ public class VehicleController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAll() {
+    public ResponseEntity<?> getAll(@RequestParam(required = false) String council) {
+        if (council != null && !council.isBlank()) {
+            return ResponseEntity.ok(Map.of("success", true, "data", vehicleService.getByCouncil(council)));
+        }
         return ResponseEntity.ok(Map.of("success", true, "data", vehicleService.getAll()));
     }
 

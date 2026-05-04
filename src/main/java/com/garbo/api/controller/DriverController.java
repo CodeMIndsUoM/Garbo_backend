@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.garbo.core.entity.Driver;
 import com.garbo.core.service.DriverService;
 
+import org.springframework.web.bind.annotation.RequestParam;
+
 @RestController
 @RequestMapping("/api/drivers")
 @CrossOrigin(origins = "*")
@@ -29,16 +31,27 @@ public class DriverController {
     }
 
     @GetMapping
-    public ResponseEntity<?> getAll() {
+    public ResponseEntity<?> getAll(@RequestParam(required = false) String council) {
+        if (council != null && !council.isBlank()) {
+            return ResponseEntity.ok(Map.of("success", true, "data", driverService.getByCouncil(council)));
+        }
         return ResponseEntity.ok(Map.of("success", true, "data", driverService.getAll()));
     }
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Driver payload) {
+        System.out.println("DriverController: Received create request for " + payload.getName());
         try {
-            return ResponseEntity.ok(Map.of("success", true, "data", driverService.create(payload)));
+            Driver created = driverService.create(payload);
+            System.out.println("DriverController: Successfully created driver with ID " + created.getId());
+            return ResponseEntity.ok(Map.of("success", true, "data", created));
         } catch (IllegalArgumentException e) {
+            System.out.println("DriverController: Validation error: " + e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("success", false, "message", e.getMessage()));
+        } catch (Exception e) {
+            System.out.println("DriverController: Unexpected error: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "Internal server error"));
         }
     }
 

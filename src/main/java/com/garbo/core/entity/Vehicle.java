@@ -26,9 +26,6 @@ public class Vehicle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "vehicle_code", unique = true, nullable = false)
-    private String vehicleCode;
-
     @Column(name = "license_plate", nullable = false)
     private String licensePlate;
 

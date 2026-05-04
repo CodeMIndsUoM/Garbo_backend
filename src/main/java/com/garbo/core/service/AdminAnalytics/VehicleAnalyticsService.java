@@ -30,11 +30,11 @@ public class VehicleAnalyticsService {
         long maintenance  = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_MAINTENANCE);
 
         //  Fleet table 
-        List<Vehicle> vehicles = vehicleRepository.findAllByIsActiveTrueOrderByVehicleCodeAsc();
+        List<Vehicle> vehicles = vehicleRepository.findAllByIsActiveTrueOrderByIdAsc();
 
         List<VehicleRowDTO> rows = vehicles.stream()
             .map(v -> new VehicleRowDTO(
-                v.getVehicleCode(),
+                String.valueOf(v.getId()),
                 v.getLicensePlate(),
                 v.getType(),
                 formatStatus(v.getStatus())   // "on_route" → "On Route"
@@ -55,16 +55,16 @@ public class VehicleAnalyticsService {
         List<Vehicle> vehicles;
 
         if (statusFilter == null || statusFilter.equalsIgnoreCase("all")) {
-            vehicles = vehicleRepository.findAllByIsActiveTrueOrderByVehicleCodeAsc();
+            vehicles = vehicleRepository.findAllByIsActiveTrueOrderByIdAsc();
         } else {
-            vehicles = vehicleRepository.findAllByStatusAndIsActiveTrueOrderByVehicleCodeAsc(
+            vehicles = vehicleRepository.findAllByStatusAndIsActiveTrueOrderByIdAsc(
                 statusFilter.toLowerCase().replace(" ", "_")  // "On Route" → "on_route"
             );
         }
 
         List<VehicleRowDTO> rows = vehicles.stream()
             .map(v -> new VehicleRowDTO(
-                v.getVehicleCode(),
+                String.valueOf(v.getId()),
                 v.getLicensePlate(),
                 v.getType(),
                 formatStatus(v.getStatus())
