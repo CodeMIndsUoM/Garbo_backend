@@ -26,11 +26,15 @@ public class VehicleService {
     }
 
     public List<Vehicle> getAll() {
-        return vehicleRepository.findAll();
+        List<Vehicle> list = vehicleRepository.findAll();
+        populateDriverNames(list);
+        return list;
     }
 
     public List<Vehicle> getByCouncil(String council) {
-        return vehicleRepository.findByAssignedCouncil(council);
+        List<Vehicle> list = vehicleRepository.findByAssignedCouncil(council);
+        populateDriverNames(list);
+        return list;
     }
 
     public Vehicle create(Vehicle payload) {
@@ -72,7 +76,9 @@ public class VehicleService {
         existing.setUpdatedAt(LocalDateTime.now());
         normalizeVehicle(existing);
         validateDriver(existing.getAssignedDriverId());
-        return vehicleRepository.save(existing);
+        Vehicle saved = vehicleRepository.save(existing);
+        populateDriverNames(List.of(saved));
+        return saved;
     }
 
     public Vehicle updateStatus(Long id, String status) {
@@ -80,7 +86,9 @@ public class VehicleService {
         existing.setStatus(status);
         existing.setUpdatedAt(LocalDateTime.now());
         normalizeVehicle(existing);
-        return vehicleRepository.save(existing);
+        Vehicle saved = vehicleRepository.save(existing);
+        populateDriverNames(List.of(saved));
+        return saved;
     }
 
     public void delete(Long id) {
@@ -106,5 +114,28 @@ public class VehicleService {
         if (vehicle.getIsActive() == null) {
             vehicle.setIsActive(true);
         }
+    }
+
+    private void populateDriverNames(List<Vehicle> vehicles) {
+        List<Long> driverIds = vehicles.stream()
+                .map(Vehicle::getAssignedDriverId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (driverIds.isEmpty()) return;
+
+        java.util.Map<Long, String> driverMap = binCollectorRepository.findAllById(driverIds)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.garbo.core.entity.BinCollector::getEmpId,
+                        com.garbo.core.entity.BinCollector::getEmpName,
+                        (existing, replacement) -> existing
+                ));
+
+        vehicles.forEach(v -> {
+            if (v.getAssignedDriverId() != null) {
+                v.setAssignedDriverName(driverMap.get(v.getAssignedDriverId()));
+            }
+        });
     }
 }
