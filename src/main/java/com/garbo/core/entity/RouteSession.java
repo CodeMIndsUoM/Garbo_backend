@@ -16,7 +16,7 @@ public class RouteSession {
 
     @Id
     @Column(name = "session_id", nullable = false, updatable = false)
-    private String sessionId;
+    private java.util.UUID sessionId;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;

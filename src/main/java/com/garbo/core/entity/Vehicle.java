@@ -47,9 +47,6 @@ public class Vehicle {
     @Column(name = "current_location")
     private String currentLocation;
 
-    @Column(name = "fuel_level")
-    private Integer fuelLevel = 100; // 0-100%
-
     @Column(name = "is_active")
     private Boolean isActive = true;
 
