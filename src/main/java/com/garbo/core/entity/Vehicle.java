@@ -44,6 +44,9 @@ public class Vehicle {
     @Column(name = "assigned_driver_id")
     private Long assignedDriverId;
 
+    @jakarta.persistence.Transient
+    private String assignedDriverName;
+
     @Column(name = "current_location")
     private String currentLocation;
 
