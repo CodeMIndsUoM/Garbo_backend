@@ -18,8 +18,10 @@ public class StompWebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Dedicated STOMP endpoint for SimpMessagingTemplate-based broadcasts.
-        registry.addEndpoint("/ws-stomp").setAllowedOriginPatterns("*");
+        // Main STOMP endpoint used by the Map dashboard and mobile apps.
+        // Enabled SockJS to handle the /info request and fallbacks.
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
-    
 }

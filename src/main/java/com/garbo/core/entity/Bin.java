@@ -18,11 +18,11 @@ public class Bin {
 
     private String location;
 
-    @Column(name = "type", length = 20)
-    private String category; // public/park/commercial/medical/education
-
     @Column(length = 20)
-    private String status = "notChecked"; // notChecked/full/half/empty
+    private String status = "empty"; // notChecked/full/half/empty
+
+    @Column(name = "is_assigned")
+    private Boolean isAssigned = false;
 
     @Column(name = "fill_level")
     private Integer fillLevel;
@@ -40,8 +40,6 @@ public class Bin {
     @Column(name = "coordinates", length = 100)
     private String coordinates;
 
-    @Column(name = "last_collection", length = 100)
-    private String lastCollection;
 
     @Column(name = "lat")
     private Double latitude;
@@ -68,7 +66,7 @@ public class Bin {
     }
 
     public String getType() {
-        return category;
+        return "General Waste"; // Default for compatibility
     }
 
     // Constructor for team's BinMapper/seeding code if needed
@@ -83,11 +81,11 @@ public class Bin {
     }
 
     public void setCategory(String category) {
-        this.category = category;
+        // No-op
     }
 
     public void setType(String type) {
-        this.category = type;
+        // No-op
     }
 
     public void setStatus(String status) {
