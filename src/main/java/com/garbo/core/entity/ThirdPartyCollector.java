@@ -1,7 +1,11 @@
 package com.garbo.core.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.garbo.core.enums.RegistrationStatus;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 import lombok.Data;
@@ -24,4 +28,20 @@ public class ThirdPartyCollector extends User {
     private LocalDate contractStart;
     private LocalDate contractEnd;
     private int completedRequests;
+
+    @Column(name = "nic_photo_url")
+    private String nicPhotoUrl;
+
+    @Column(name = "nic_photo_back_url")
+    private String nicPhotoBackUrl;
+
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    @Column(name = "assigned_councils")
+    private String assignedCouncils;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "registration_status")
+    private RegistrationStatus registrationStatus;
 }
