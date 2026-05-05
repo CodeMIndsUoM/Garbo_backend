@@ -3,6 +3,7 @@ package com.garbo.api.controller;
 import com.garbo.api.dto.RouteAssignmentRequestDTO;
 import com.garbo.api.dto.RouteSessionSnapshotDTO;
 import com.garbo.core.repository.RouteBinStopRepository;
+import com.garbo.core.entity.RouteVehicleRoute;
 import com.garbo.core.repository.RouteAssignmentRepository;
 import com.garbo.core.repository.RouteVehicleRouteRepository;
 import com.garbo.core.service.route.RouteAssignmentService;
@@ -156,7 +157,11 @@ public class RouteSessionController {
     @GetMapping("/{sessionId}/routes")
     public ResponseEntity<?> getPersistedRoutes(@PathVariable String sessionId) {
         try {
-            var vehicleRoutes = vehicleRouteRepository.findBySessionIdWithStops(UUID.fromString(sessionId));
+            var vehicleRoutes = vehicleRouteRepository
+                    .findBySessionIdWithStops(UUID.fromString(sessionId))
+                    .stream()
+                    .map(RouteVehicleRoute::toDTO)
+                    .toList();
             return ResponseEntity.ok(vehicleRoutes);
         } catch (Exception e) {
             log.error("Failed to fetch routes for session {}", sessionId, e);

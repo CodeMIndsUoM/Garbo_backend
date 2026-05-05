@@ -1,10 +1,10 @@
 package com.garbo.core.entity;
 
+import com.garbo.api.dto.RouteVehicleRouteDTO;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,16 +20,9 @@ public class RouteVehicleRoute {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /**
-     * References route_sessions.session_id.
-     */
     @Column(name = "session_id", nullable = false)
     private java.util.UUID sessionId;
 
-    /**
-     * The key from RouteResponseDTO.routes Map — e.g. "0", "1", "2".
-     * Kept as a String so it exactly matches the DTO structure for easy mapping.
-     */
     @Column(name = "vehicle_key", nullable = false, length = 50)
     private String vehicleKey;
 
@@ -42,10 +35,6 @@ public class RouteVehicleRoute {
     @Column(name = "estimated_duration_seconds")
     private Double estimatedDurationSeconds;
 
-    /**
-     * Ordered list of bin stops for this vehicle route.
-     * orphanRemoval = true so stops are deleted if this route is removed.
-     */
     @OneToMany(
         mappedBy = "vehicleRoute",
         cascade = CascadeType.ALL,
@@ -61,5 +50,21 @@ public class RouteVehicleRoute {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public RouteVehicleRouteDTO toDTO() {
+        RouteVehicleRouteDTO dto = new RouteVehicleRouteDTO();
+        dto.setId(this.id);
+        dto.setSessionId(this.sessionId);
+        dto.setVehicleKey(this.vehicleKey);
+        dto.setCapacity(this.capacity);
+        dto.setTotalBins(this.totalBins);
+        dto.setEstimatedDurationSeconds(this.estimatedDurationSeconds);
+        dto.setBinStops(
+            this.binStops.stream()
+                .map(RouteBinStop::toDTO)
+                .toList()
+        );
+        return dto;
     }
 }
