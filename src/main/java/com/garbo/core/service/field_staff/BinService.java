@@ -209,7 +209,8 @@ public class BinService {
         payload.setLastChecked(LocalDateTime.now());
         normalizeCreateModel(payload);
 
-
+        Bin saved = binRepository.save(payload);
+        eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
         return saved;
     }
 

@@ -2,10 +2,12 @@ package com.garbo.core.service.shared;
 
 import com.garbo.core.dto.collection.CollectorDashboardDto;
 import com.garbo.core.entity.CollectionOffer;
+import com.garbo.core.entity.ThirdPartyCollector;
 import com.garbo.core.enums.OfferStatus;
 import com.garbo.core.enums.RequestStatus;
 import com.garbo.core.repository.CollectionOfferRepository;
 import com.garbo.core.repository.CollectionRequestRepository;
+import com.garbo.core.repository.ThirdPartyCollectorRepository;
 import com.garbo.core.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 
 @Service
@@ -22,19 +25,27 @@ public class CollectorDashboardService {
     private final CollectionRequestRepository requestRepository;
     private final CollectionOfferRepository offerRepository;
     private final UserRepository userRepository;
+    private final ThirdPartyCollectorRepository collectorRepository;
 
     public CollectorDashboardService(
             CollectionRequestRepository requestRepository,
             CollectionOfferRepository offerRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ThirdPartyCollectorRepository collectorRepository) {
         this.requestRepository = requestRepository;
         this.offerRepository = offerRepository;
         this.userRepository = userRepository;
+        this.collectorRepository = collectorRepository;
     }
 
     @Transactional(readOnly = true)
     public CollectorDashboardDto getCollectorDashboard(Long collectorId) {
-        int availableRequests = (int) requestRepository.countByStatus(RequestStatus.OPEN);
+        List<String> assignedCouncils = collectorRepository.findById(collectorId)
+                .map(this::normalizedAssignedCouncils)
+                .orElse(List.of());
+        int availableRequests = assignedCouncils.isEmpty()
+                ? 0
+                : (int) requestRepository.countByStatusAndCouncilIn(RequestStatus.OPEN, assignedCouncils);
         int activeJobs = (int) offerRepository.countByCollector_EmpIdAndStatusIn(
                 collectorId,
                 List.of(OfferStatus.ACCEPTED, OfferStatus.IN_PROGRESS));
@@ -145,5 +156,17 @@ public class CollectorDashboardService {
             double todaysWasteCollectedKg,
             double overallRating,
             int overallRatedCount) {
+    }
+
+    private List<String> normalizedAssignedCouncils(ThirdPartyCollector collector) {
+        if (collector.getAssignedCouncils() == null || collector.getAssignedCouncils().trim().isEmpty()) {
+            return List.of();
+        }
+        return List.of(collector.getAssignedCouncils().split(","))
+                .stream()
+                .map(council -> council == null ? "" : council.trim().toLowerCase(Locale.ROOT))
+                .filter(council -> !council.isBlank())
+                .distinct()
+                .toList();
     }
 }
