@@ -46,7 +46,7 @@ public interface RouteBinStopRepository extends JpaRepository<RouteBinStop, Long
           AND s.binId = :binId
     """)
     Optional<RouteBinStop> findBySessionIdAndBinId(
-        @Param("sessionId") String sessionId,
+        @Param("sessionId") java.util.UUID sessionId,
         @Param("binId") Long binId
     );
 
@@ -91,7 +91,7 @@ public interface RouteBinStopRepository extends JpaRepository<RouteBinStop, Long
         WHERE vr.sessionId = :sessionId
         GROUP BY s.status
     """)
-    List<Object[]> countByStatusForSession(@Param("sessionId") String sessionId);
+    List<Object[]> countByStatusForSession(@Param("sessionId") java.util.UUID sessionId);
 
     /**
      * Find all PENDING stops across all vehicle routes of a session.
@@ -104,5 +104,10 @@ public interface RouteBinStopRepository extends JpaRepository<RouteBinStop, Long
           AND s.status = 'PENDING'
         ORDER BY s.vehicleRoute.vehicleKey ASC, s.stopOrder ASC
     """)
-    List<RouteBinStop> findPendingBySessionId(@Param("sessionId") String sessionId);
+    List<RouteBinStop> findPendingBySessionId(@Param("sessionId") java.util.UUID sessionId);
+
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM RouteBinStop s WHERE s.vehicleRoute.id IN (SELECT vr.id FROM RouteVehicleRoute vr WHERE vr.sessionId = :sessionId)")
+    void deleteBySessionId(@Param("sessionId") java.util.UUID sessionId);
 }

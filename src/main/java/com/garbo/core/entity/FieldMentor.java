@@ -19,7 +19,6 @@ public class FieldMentor extends User {
     private boolean onDuty;
     private double rewardPoints;
     public void setAssignedZone(String string) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'setAssignedZone'");
+        this.assignedCouncil = string;
     }
 }

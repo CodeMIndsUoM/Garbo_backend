@@ -1,6 +1,6 @@
 package com.garbo.api.exception;
 
-import com.garbo.core.dto.ApiResponse;
+import com.garbo.api.dto.common.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;

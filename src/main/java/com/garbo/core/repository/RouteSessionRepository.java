@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface RouteSessionRepository extends JpaRepository<RouteSession, String> {
+public interface RouteSessionRepository extends JpaRepository<RouteSession, java.util.UUID> {
 
     /**
      * Find the most recently created session for a given user.
@@ -39,7 +39,7 @@ public interface RouteSessionRepository extends JpaRepository<RouteSession, Stri
     @Modifying
     @Query("UPDATE RouteSession s SET s.status = :status, s.version = :version, s.updatedAt = CURRENT_TIMESTAMP WHERE s.sessionId = :sessionId")
     int updateStatus(
-        @Param("sessionId") String sessionId,
+        @Param("sessionId") java.util.UUID sessionId,
         @Param("status") String status,
         @Param("version") Long version
     );

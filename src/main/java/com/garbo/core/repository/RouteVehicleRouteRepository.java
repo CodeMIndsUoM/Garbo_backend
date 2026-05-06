@@ -15,7 +15,7 @@ public interface RouteVehicleRouteRepository extends JpaRepository<RouteVehicleR
      * Find all vehicle routes for a session, ordered by vehicleKey.
      * Mirrors the Map<Integer, VehicleRoute> structure from RouteResponseDTO.
      */
-    List<RouteVehicleRoute> findBySessionIdOrderByVehicleKeyAsc(String sessionId);
+    List<RouteVehicleRoute> findBySessionIdOrderByVehicleKeyAsc(java.util.UUID sessionId);
 
     /**
      * Find vehicle routes for a session with their bin stops eagerly loaded.
@@ -28,11 +28,11 @@ public interface RouteVehicleRouteRepository extends JpaRepository<RouteVehicleR
         WHERE vr.sessionId = :sessionId
         ORDER BY vr.vehicleKey ASC, bs.stopOrder ASC
     """)
-    List<RouteVehicleRoute> findBySessionIdWithStops(@Param("sessionId") String sessionId);
+    List<RouteVehicleRoute> findBySessionIdWithStops(@Param("sessionId") java.util.UUID sessionId);
 
     /**
      * Delete all vehicle routes (and their stops via cascade) for a session.
      * Called before re-persisting a recomputed route so old data is replaced cleanly.
      */
-    void deleteBySessionId(String sessionId);
+    void deleteBySessionId(java.util.UUID sessionId);
 }

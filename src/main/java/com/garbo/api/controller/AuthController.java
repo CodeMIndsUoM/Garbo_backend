@@ -4,6 +4,7 @@ import com.garbo.infrastructure.config.security.CustomUserDetailsService;
 import com.garbo.infrastructure.config.security.JwtUtil;
 import com.garbo.core.service.UserService;
 import com.garbo.core.entity.AdminNew;
+import com.garbo.core.entity.BinCollector;
 import com.garbo.core.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -71,11 +72,31 @@ public class AuthController {
             response.put("role", role);
             response.put("email", email);
 
-            // Fetch user entity to include mustChangePassword flag (do not block login)
+            // Fetch user entity to include mustChangePassword flag and user info
             java.util.Optional<User> userOpt = userService.getByEmail(email);
             boolean mustChange = false;
             if (userOpt.isPresent()) {
-                mustChange = userOpt.get().isMustChangePassword();
+                User user = userOpt.get();
+                mustChange = user.isMustChangePassword();
+                response.put("empId", user.getEmpId());
+                response.put("empName", user.getEmpName());
+                
+                if (user instanceof BinCollector) {
+                    BinCollector collector = (BinCollector) user;
+                    response.put("onDuty", collector.isOnDuty());
+                    response.put("rewardPoints", collector.getRewardPoints());
+                }
+
+                if (user instanceof com.garbo.core.entity.ThirdPartyCollector) {
+                    com.garbo.core.entity.ThirdPartyCollector tpc =
+                            (com.garbo.core.entity.ThirdPartyCollector) user;
+                    if (tpc.getRegistrationStatus() != null) {
+                        response.put("registrationStatus", tpc.getRegistrationStatus().name());
+                    }
+                    if (tpc.getAssignedCouncils() != null) {
+                        response.put("assignedCouncils", tpc.getAssignedCouncils());
+                    }
+                }
             }
             response.put("mustChangePassword", mustChange);
             Object councilValue = null;
