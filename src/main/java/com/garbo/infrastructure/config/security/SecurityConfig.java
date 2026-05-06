@@ -66,12 +66,26 @@ public class SecurityConfig {
                     // actual controller paths
                     .requestMatchers(HttpMethod.POST, "/api/admins/login").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/superadmins/login").permitAll()
+                        // field-staff bin report workflow must always use JWT
+                        .requestMatchers(HttpMethod.POST, "/api/bins/*/report").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/bins/*/undo").authenticated()
                         // allow bin operations for dashboard map interaction
                         .requestMatchers(HttpMethod.GET, "/api/bins").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/bins/**").permitAll()
                         .requestMatchers(HttpMethod.DELETE, "/api/bins/**").permitAll()
+                        // allow driver operations
+                        .requestMatchers(HttpMethod.GET, "/api/drivers/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/drivers/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/drivers/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/drivers/**").permitAll()
+                        // allow vehicle operations
+                        .requestMatchers(HttpMethod.GET, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").permitAll()
                         // allow websocket handshake + SockJS endpoints
                         .requestMatchers("/ws/**").permitAll()
                         // TEMP: allow route-session testing without JWT
@@ -98,6 +112,8 @@ public class SecurityConfig {
                         // monthly report generation (NO JWT)
                         .requestMatchers("/api/admin/reports/**").permitAll()
 
+                        // third-party collector self-registration (public, no JWT)
+                        .requestMatchers("/api/auth/thirdparty-register/**").permitAll()
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated() // all others need JWT

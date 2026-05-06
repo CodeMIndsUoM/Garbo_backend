@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 @Data
 public class RouteSessionState {
-    private final String sessionId;
+    private final java.util.UUID sessionId;
     private final Long userId;
     private volatile String workShift;
     private RouteSessionCreateRequestDTO config;
@@ -22,7 +22,7 @@ public class RouteSessionState {
     private volatile CompletableFuture<?> runningFuture;
     private volatile List<Long> activeBinIds = new ArrayList<>();
 
-    public RouteSessionState(String sessionId, Long userId, RouteSessionCreateRequestDTO config) {
+    public RouteSessionState(java.util.UUID sessionId, Long userId, RouteSessionCreateRequestDTO config) {
         this.sessionId = sessionId;
         this.userId = userId;
         this.config = config;

@@ -44,6 +44,10 @@ public class CurrentUserService {
         return userRepository.findFirstByEmailIgnoreCase(emailOpt.get());
     }
 
+    public static Optional<Long> getCurrentEmpId() {
+        return getCurrentUser().map(User::getEmpId);
+    }
+
     public static Optional<String> getCurrentCouncil() {
         Optional<User> uOpt = getCurrentUser();
         if (uOpt.isEmpty())

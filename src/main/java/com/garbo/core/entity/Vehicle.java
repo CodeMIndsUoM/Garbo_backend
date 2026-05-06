@@ -26,9 +26,6 @@ public class Vehicle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "vehicle_code", unique = true, nullable = false)
-    private String vehicleCode;
-
     @Column(name = "license_plate", nullable = false)
     private String licensePlate;
 
@@ -47,11 +44,11 @@ public class Vehicle {
     @Column(name = "assigned_driver_id")
     private Long assignedDriverId;
 
+    @jakarta.persistence.Transient
+    private String assignedDriverName;
+
     @Column(name = "current_location")
     private String currentLocation;
-
-    @Column(name = "fuel_level")
-    private Integer fuelLevel = 100; // 0-100%
 
     @Column(name = "is_active")
     private Boolean isActive = true;
