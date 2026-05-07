@@ -1,8 +1,10 @@
 package com.garbo.core.service.third_party_collector;
 
 import com.garbo.core.entity.ThirdPartyCollector;
+import com.garbo.core.entity.Council;
 import com.garbo.core.enums.RegistrationStatus;
 import com.garbo.core.repository.ThirdPartyCollectorRepository;
+import com.garbo.core.repository.CouncilRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -19,12 +21,15 @@ public class ThirdPartyCollectorRegistrationService {
     private static final Logger log = LoggerFactory.getLogger(ThirdPartyCollectorRegistrationService.class);
 
     private final ThirdPartyCollectorRepository repository;
+    private final CouncilRepository councilRepository;
     private final PasswordEncoder passwordEncoder;
 
     public ThirdPartyCollectorRegistrationService(
             ThirdPartyCollectorRepository repository,
+            CouncilRepository councilRepository,
             PasswordEncoder passwordEncoder) {
         this.repository = repository;
+        this.councilRepository = councilRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -145,6 +150,6 @@ public class ThirdPartyCollectorRegistrationService {
     }
 
     public List<String> getAvailableCouncils() {
-        return repository.findDistinctCouncils();
+        return councilRepository.findByIsActiveTrue().stream().map(Council::getName).toList();
     }
 }
