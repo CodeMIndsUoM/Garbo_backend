@@ -1,7 +1,7 @@
 package com.garbo.api.controller.field_mentor;
 
 import com.garbo.api.dto.common.ApiResponse;
-import com.garbo.core.entity.Bin;
+
 import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.service.field_staff.BinService;
 import com.garbo.core.service.CurrentUserService;
@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
+
 import java.util.List;
 import java.util.Map;
 
@@ -35,13 +35,15 @@ public class FieldMentorController {
             String role = CurrentUserService.getCurrentRole().orElse("");
             // Only admin may create FieldMentor
             if (!role.equals("admin")) {
-                return ResponseEntity.status(403).body(ApiResponse.error("Only admin can create field mentors", "FORBIDDEN"));
+                return ResponseEntity.status(403)
+                        .body(ApiResponse.error("Only admin can create field mentors", "FORBIDDEN"));
             }
 
             // For admin, require admin council and force assignment
             java.util.Optional<String> councilOpt = CurrentUserService.getCurrentCouncil();
             if (councilOpt.isEmpty()) {
-                return ResponseEntity.status(400).body(ApiResponse.error("Admin council not found", "COUNCIL_NOT_FOUND"));
+                return ResponseEntity.status(400)
+                        .body(ApiResponse.error("Admin council not found", "COUNCIL_NOT_FOUND"));
             }
 
             String adminCouncil = councilOpt.get();
@@ -64,7 +66,8 @@ public class FieldMentorController {
             } else if (role.equals("admin")) {
                 java.util.Optional<String> councilOpt = CurrentUserService.getCurrentCouncil();
                 if (councilOpt.isEmpty()) {
-                    return ResponseEntity.status(400).body(ApiResponse.error("Admin council not found", "COUNCIL_NOT_FOUND"));
+                    return ResponseEntity.status(400)
+                            .body(ApiResponse.error("Admin council not found", "COUNCIL_NOT_FOUND"));
                 }
                 String council = councilOpt.get();
                 java.util.List<FieldMentor> byCouncil = fieldMentorService.findByCouncil(council);
@@ -93,37 +96,13 @@ public class FieldMentorController {
     @PreAuthorize("hasRole('FIELD_MENTOR')")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAssignedBins() {
         String council = CurrentUserService.getCurrentCouncil()
-            .orElse(null);
+                .orElse(null);
         if (council == null || council.isBlank()) {
             return ResponseEntity.status(403)
-                .body(ApiResponse.error("No council assigned for field mentor", "COUNCIL_NOT_FOUND"));
+                    .body(ApiResponse.error("No council assigned for field mentor", "COUNCIL_NOT_FOUND"));
         }
-        List<Bin> bins = binService.getBins(council);
-
-        List<Map<String, Object>> allowedBins = bins.stream().map(bin -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("id", bin.getId());
-
-            String fullLocation = bin.getLocation() != null ? bin.getLocation() : "Unknown";
-            // Split "Galle Road, Colombo 03" into location="Galle Road" and
-            // address="Colombo 03"
-            String locationName = fullLocation;
-            String addressName = fullLocation;
-            if (fullLocation.contains(",")) {
-                int commaIdx = fullLocation.indexOf(",");
-                locationName = fullLocation.substring(0, commaIdx).trim();
-                addressName = fullLocation.substring(commaIdx + 1).trim();
-            }
-            map.put("location", locationName);
-            map.put("address", addressName);
-
-            map.put("category", "General Waste");
-            map.put("status", bin.getStatus() != null ? bin.getStatus() : "notChecked");
-            map.put("fillLevel", bin.getFillLevel());
-            map.put("lastChecked", bin.getLastChecked());
-            return map;
-        }).toList();
-
-        return ResponseEntity.ok(ApiResponse.success(allowedBins));
+        return ResponseEntity.ok(ApiResponse.success(
+                binService.getFormattedBinsForCouncil(council)));
     }
+
 }

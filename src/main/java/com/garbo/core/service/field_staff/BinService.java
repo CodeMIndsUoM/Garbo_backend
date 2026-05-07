@@ -51,15 +51,14 @@ public class BinService {
     private ApplicationEventPublisher eventPublisher;
 
     public BinService(BinRepository binRepository,
-                      BinReportRepository binReportRepository,
-                      FieldMentorRepository fieldMentorRepository,
-                      CouncilAccessService councilAccessService) {
+            BinReportRepository binReportRepository,
+            FieldMentorRepository fieldMentorRepository,
+            CouncilAccessService councilAccessService) {
         this.binRepository = binRepository;
         this.binReportRepository = binReportRepository;
         this.fieldMentorRepository = fieldMentorRepository;
         this.councilAccessService = councilAccessService;
     }
-
 
     // ── Methods from HEAD ─────────────────────────────────────────────────────
 
@@ -67,7 +66,8 @@ public class BinService {
         return binRepository.findByAssignedToEmpId(empId);
     }
 
-    // Shared report operation used by both anonymous JSON report and field-staff multipart report.
+    // Shared report operation used by both anonymous JSON report and field-staff
+    // multipart report.
     @Transactional
     public Bin reportBinStatus(Long binId, Long reporterId, BinReportRequest request) {
         Bin bin = binRepository.findByNumericId(binId)
@@ -107,7 +107,8 @@ public class BinService {
             throw new EntityNotFoundException("Bin not found with ID: " + binId);
         }
 
-        // Trigger realtime websocket push for dashboards listening to bin-status changes.
+        // Trigger realtime websocket push for dashboards listening to bin-status
+        // changes.
         eventPublisher.publishEvent(new BinChangedEvent("STATUS_REPORTED", binId));
 
         Bin updated = new Bin();
@@ -131,7 +132,8 @@ public class BinService {
             throw new EntityNotFoundException("Bin not found with ID: " + binId);
         }
 
-        // Trigger realtime websocket push for dashboards listening to bin-status changes.
+        // Trigger realtime websocket push for dashboards listening to bin-status
+        // changes.
         eventPublisher.publishEvent(new BinChangedEvent("STATUS_UNDONE", binId));
 
         // Return a lightweight response object with final state expected by mobile.
@@ -159,6 +161,40 @@ public class BinService {
         return bins;
     }
 
+    /**
+     * Format bins for API response with human-readable display codes.
+     * Transforms Bin entities into Map<String, Object> for JSON serialization.
+     */
+    public List<Map<String, Object>> getFormattedBinsForCouncil(String council) {
+        List<Bin> bins = getBins(council);
+        return bins.stream().map(bin -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", bin.getId());
+            map.put("binCode", bin.getBinCode());
+            map.put("council", bin.getCouncil());
+            map.put("displayCode", formatDisplayCode(bin));
+
+            String fullLocation = bin.getLocation() != null ? bin.getLocation() : "Unknown";
+            // Split "Galle Road, Colombo 03" into location="Galle Road" and address="Colombo 03"
+            String locationName = fullLocation;
+            String addressName = fullLocation;
+            if (fullLocation.contains(",")) {
+                int commaIdx = fullLocation.indexOf(",");
+                locationName = fullLocation.substring(0, commaIdx).trim();
+                addressName = fullLocation.substring(commaIdx + 1).trim();
+            }
+            map.put("location", locationName);
+            map.put("address", addressName);
+
+            map.put("category", bin.getCategory() != null ? bin.getCategory() : "public");
+            map.put("status", bin.getStatus() != null ? bin.getStatus() : "notChecked");
+            map.put("fillLevel", bin.getFillLevel());
+            map.put("lastChecked", bin.getLastChecked());
+            return map;
+        }).toList();
+                
+    }
+
     public Bin createBinForCurrentUser(Bin payload) {
         String email = currentEmail();
         String council = councilAccessService.resolveCouncilForEmail(email)
@@ -177,7 +213,7 @@ public class BinService {
         normalizeCreateModel(payload);
 
         Bin saved = binRepository.save(payload);
-        normalizeReadModel(saved);
+        eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
         return saved;
     }
 
@@ -327,6 +363,46 @@ public class BinService {
             }
         }
         return existing;
+    }
+
+    /**
+     * Format a Bin into a display code (e.g., "BIN-03|Moratuwa").
+     * Extracts numeric suffix from binCode and appends council name.
+     * Fallback: uses full binCode or bin ID if extraction fails.
+     */
+    public String formatDisplayCode(Bin bin) {
+        String binCode = bin.getBinCode();
+        String council = bin.getCouncil();
+
+        String codePart = null;
+        if (binCode != null && !binCode.isBlank()) {
+            String trimmed = binCode.trim();
+            int lastDash = trimmed.lastIndexOf('-');
+            String numericSuffix = lastDash >= 0 && lastDash < trimmed.length() - 1
+                ? trimmed.substring(lastDash + 1).trim()
+                : trimmed;
+            if (numericSuffix.matches("\\d+")) {
+                codePart = String.format("BIN-%02d", Integer.parseInt(numericSuffix));
+            }
+        }
+
+        String councilPart = council;
+        if (councilPart == null || councilPart.isBlank()) {
+            if (binCode != null && !binCode.isBlank() && binCode.contains("-")) {
+                councilPart = binCode.substring(0, binCode.lastIndexOf('-')).trim();
+            }
+        }
+
+        if (codePart != null && councilPart != null && !councilPart.isBlank()) {
+            return codePart + "|" + councilPart;
+        }
+        if (binCode != null && !binCode.isBlank() && councilPart != null && !councilPart.isBlank()) {
+            return binCode.trim() + "|" + councilPart;
+        }
+        if (binCode != null && !binCode.isBlank()) {
+            return binCode.trim();
+        }
+        return bin.getId() != null ? "BIN-" + bin.getId() : "Unknown";
     }
 
     private String generateNextBinCode(String council) {

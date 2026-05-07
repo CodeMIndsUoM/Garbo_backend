@@ -20,7 +20,8 @@ import java.time.LocalDate;
         name = "collection_requests",
         indexes = {
                 @Index(name = "idx_cr_status_created", columnList = "status, created_at"),
-                @Index(name = "idx_cr_citizen_status", columnList = "citizen_id, status")
+                @Index(name = "idx_cr_citizen_status", columnList = "citizen_id, status"),
+                @Index(name = "idx_cr_council_status_created", columnList = "council, status, created_at")
         }
 )
 public class CollectionRequest {
@@ -31,6 +32,14 @@ public class CollectionRequest {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "citizen_id", referencedColumnName = "emp_id", nullable = false)
     private Citizen citizen;
+
+    @Column(length = 120)
+    private String council;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "council_id")
+    private Council councilEntity;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -93,4 +102,3 @@ public class CollectionRequest {
         updatedAt = Instant.now();
     }
 }
-
