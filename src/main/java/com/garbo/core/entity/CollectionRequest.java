@@ -36,6 +36,11 @@ public class CollectionRequest {
     @Column(length = 120)
     private String council;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "council_id")
+    private Council councilEntity;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private WasteType wasteType;

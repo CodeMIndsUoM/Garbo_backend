@@ -487,16 +487,21 @@ public class CollectionRequestService {
             return true;
         }
         if ("THIRD_PARTY_COLLECTOR".equals(viewer.getRole())) {
+            boolean hasOffer = offerRepository.findFirstByRequest_IdAndCollector_EmpIdAndStatusIn(
+                    request.getId(), viewer.getEmpId(), List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED,
+                            OfferStatus.REJECTED, OfferStatus.WITHDRAWN, OfferStatus.CANCELLED,
+                            OfferStatus.IN_PROGRESS, OfferStatus.COMPLETED))
+                    .isPresent();
+            
+            if (hasOffer) {
+                return true;
+            }
+
             ThirdPartyCollector collector = collectorRepository.findById(viewer.getEmpId()).orElse(null);
             if (collector == null || !collectorCanAccessCouncil(collector, request)) {
                 return false;
             }
-            return request.getStatus() == RequestStatus.OPEN
-                    || offerRepository.findFirstByRequest_IdAndCollector_EmpIdAndStatusIn(
-                            request.getId(), viewer.getEmpId(), List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED,
-                                    OfferStatus.REJECTED, OfferStatus.WITHDRAWN, OfferStatus.CANCELLED,
-                                    OfferStatus.IN_PROGRESS, OfferStatus.COMPLETED))
-                            .isPresent();
+            return request.getStatus() == RequestStatus.OPEN;
         }
         return false;
     }

@@ -18,4 +18,9 @@ public class Citizen extends User {
     private String area;
     private String council;
     private int reportCount;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @jakarta.persistence.ManyToOne(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinColumn(name = "council_id")
+    private Council councilEntity;
 }
