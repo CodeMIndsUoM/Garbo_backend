@@ -1,7 +1,6 @@
 package com.garbo.core.repository;
 
 import com.garbo.core.entity.Complaint;
-import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.User;
 
 

@@ -1,8 +1,8 @@
 package com.garbo.api.controller.citizen;
 
 import com.garbo.api.dto.common.ApiResponse;
-import com.garbo.core.dto.collection.CreateRequestDto;
-import com.garbo.core.dto.collection.RequestSummaryDto;
+import com.garbo.api.dto.collection.CreateRequestDto;
+import com.garbo.api.dto.collection.RequestSummaryDto;
 import com.garbo.core.enums.RequestStatus;
 import com.garbo.core.service.shared.CollectionRequestService;
 import jakarta.validation.Valid;

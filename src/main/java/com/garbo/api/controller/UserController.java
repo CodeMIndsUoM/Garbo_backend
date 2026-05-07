@@ -71,7 +71,7 @@ public class UserController {
                 if (contactNumber != null)
                     admin.setPhone(contactNumber.toString());
                 // Only superadmin may create AdminNew via this endpoint
-                String callerRole = currentUserService.getCurrentRole().orElse("");
+                String callerRole = com.garbo.core.service.CurrentUserService.getCurrentRole().orElse("");
                 if (!callerRole.equals("superadmin")) {
                     return ResponseEntity.status(403).body(Map.of(
                             "success", false,

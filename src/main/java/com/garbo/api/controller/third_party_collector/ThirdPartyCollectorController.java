@@ -1,8 +1,8 @@
 package com.garbo.api.controller.third_party_collector;
 
 import com.garbo.api.dto.common.ApiResponse;
-import com.garbo.core.dto.collection.OfferDto;
-import com.garbo.core.dto.collection.RequestSummaryDto;
+import com.garbo.api.dto.collection.OfferDto;
+import com.garbo.api.dto.collection.RequestSummaryDto;
 import com.garbo.core.enums.OfferStatus;
 import com.garbo.core.service.shared.CollectionRequestService;
 import com.garbo.core.service.third_party_collector.ThirdPartyCollectorService;
@@ -71,7 +71,7 @@ public class ThirdPartyCollectorController {
     }
 
     @GetMapping("/{collectorId}/dashboard")
-    public ResponseEntity<ApiResponse<com.garbo.core.dto.collection.CollectorDashboardDto>> getDashboard(
+    public ResponseEntity<ApiResponse<com.garbo.api.dto.collection.CollectorDashboardDto>> getDashboard(
             @PathVariable Long collectorId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.getCollectorDashboard(collectorId)));
     }

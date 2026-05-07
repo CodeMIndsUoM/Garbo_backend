@@ -1,15 +1,15 @@
 package com.garbo.core.service.shared;
 
 import com.garbo.api.exception.CollectionException;
-import com.garbo.core.dto.collection.CancelOfferDto;
-import com.garbo.core.dto.collection.CancelRequestDto;
-import com.garbo.core.dto.collection.CompleteOfferDto;
-import com.garbo.core.dto.collection.ConfirmDto;
-import com.garbo.core.dto.collection.CreateOfferDto;
-import com.garbo.core.dto.collection.CreateRequestDto;
-import com.garbo.core.dto.collection.OfferDto;
-import com.garbo.core.dto.collection.RequestDetailDto;
-import com.garbo.core.dto.collection.RequestSummaryDto;
+import com.garbo.api.dto.collection.CancelOfferDto;
+import com.garbo.api.dto.collection.CancelRequestDto;
+import com.garbo.api.dto.collection.CompleteOfferDto;
+import com.garbo.api.dto.collection.ConfirmDto;
+import com.garbo.api.dto.collection.CreateOfferDto;
+import com.garbo.api.dto.collection.CreateRequestDto;
+import com.garbo.api.dto.collection.OfferDto;
+import com.garbo.api.dto.collection.RequestDetailDto;
+import com.garbo.api.dto.collection.RequestSummaryDto;
 import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.CollectionOffer;
 import com.garbo.core.entity.CollectionRequest;
@@ -314,7 +314,7 @@ public class CollectionRequestService {
     }
 
     @Transactional(readOnly = true)
-    public com.garbo.core.dto.collection.CollectorDashboardDto getCollectorDashboard(Long collectorId) {
+    public com.garbo.api.dto.collection.CollectorDashboardDto getCollectorDashboard(Long collectorId) {
         requireCurrentUser(collectorId);
         return collectorDashboardService.getCollectorDashboard(collectorId);
     }
