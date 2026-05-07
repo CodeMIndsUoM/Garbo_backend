@@ -1,7 +1,7 @@
 package com.garbo.core.service.field_staff;
 
 import com.garbo.api.dto.BinDTO;
-import com.garbo.core.dto.BinReportRequest;
+import com.garbo.api.dto.BinReportRequest;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.BinReport;
 import com.garbo.core.entity.FieldMentor;

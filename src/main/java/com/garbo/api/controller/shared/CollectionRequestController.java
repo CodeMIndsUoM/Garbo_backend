@@ -1,11 +1,11 @@
 package com.garbo.api.controller.shared;
 
 import com.garbo.api.dto.common.ApiResponse;
-import com.garbo.core.dto.collection.CancelRequestDto;
-import com.garbo.core.dto.collection.CreateOfferDto;
-import com.garbo.core.dto.collection.OfferDto;
-import com.garbo.core.dto.collection.RequestDetailDto;
-import com.garbo.core.dto.collection.RequestSummaryDto;
+import com.garbo.api.dto.collection.CancelRequestDto;
+import com.garbo.api.dto.collection.CreateOfferDto;
+import com.garbo.api.dto.collection.OfferDto;
+import com.garbo.api.dto.collection.RequestDetailDto;
+import com.garbo.api.dto.collection.RequestSummaryDto;
 import com.garbo.core.service.shared.CollectionRequestService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

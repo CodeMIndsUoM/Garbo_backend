@@ -1,4 +1,4 @@
-package com.garbo.core.dto;
+package com.garbo.api.dto;
 
 import lombok.Data;
 

@@ -1,6 +1,6 @@
 package com.garbo.api.controller;
 
-import com.garbo.core.dto.ApiResponse;
+import com.garbo.api.dto.ApiResponse;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.service.field_staff.BinService;
 import org.springframework.http.ResponseEntity;

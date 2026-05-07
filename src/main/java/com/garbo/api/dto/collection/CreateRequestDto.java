@@ -1,4 +1,4 @@
-package com.garbo.core.dto.collection;
+package com.garbo.api.dto.collection;
 
 import com.garbo.core.enums.PreferredSlot;
 import com.garbo.core.enums.WasteType;
