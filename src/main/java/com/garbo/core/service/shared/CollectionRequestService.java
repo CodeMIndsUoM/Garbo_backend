@@ -33,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class CollectionRequestService {
@@ -75,9 +76,11 @@ public class CollectionRequestService {
 
         Citizen citizen = citizenRepository.findById(citizenId)
                 .orElseThrow(() -> notFound("Citizen not found"));
+        String council = requireCitizenCouncil(citizen);
 
         CollectionRequest request = new CollectionRequest();
         request.setCitizen(citizen);
+        request.setCouncil(council);
         request.setWasteType(dto.wasteType());
         request.setQuantityLabel(dto.quantityLabel().trim());
         request.setQuantityKgEstimate(dto.quantityKgEstimate());
@@ -217,12 +220,16 @@ public class CollectionRequestService {
     public List<RequestSummaryDto> browseFeed(Long collectorId, Double lat, Double lng) {
         requireCurrentUser(collectorId);
         validateCoordinates(lat, lng, false);
-        collectorRepository.findById(collectorId)
+        ThirdPartyCollector collector = collectorRepository.findById(collectorId)
                 .orElseThrow(() -> notFound("Collector not found"));
+        List<String> assignedCouncils = normalizedAssignedCouncils(collector);
+        if (assignedCouncils.isEmpty()) {
+            return List.of();
+        }
 
         final List<CollectionRequest> openRequests = (lat == null || lng == null)
-                ? requestRepository.findByStatusOrderByCreatedAtDesc(RequestStatus.OPEN)
-                : requestRepository.findOpenFeedNear(lat, lng);
+                ? requestRepository.findOpenFeedByCouncils(assignedCouncils)
+                : requestRepository.findOpenFeedNearByCouncils(lat, lng, assignedCouncils);
 
         return openRequests.stream()
                 .filter(request -> !offerRepository.existsByRequest_IdAndCollector_EmpIdAndStatusNot(
@@ -323,6 +330,7 @@ public class CollectionRequestService {
         }
         ThirdPartyCollector collector = collectorRepository.findById(collectorId)
                 .orElseThrow(() -> notFound("Collector not found"));
+        requireCollectorCouncilAccess(collector, request);
         offerRepository
                 .findFirstByRequest_IdAndCollector_EmpIdAndStatusIn(requestId, collectorId, ACTIVE_OFFER_STATUSES)
                 .ifPresent(existing -> {
@@ -479,12 +487,21 @@ public class CollectionRequestService {
             return true;
         }
         if ("THIRD_PARTY_COLLECTOR".equals(viewer.getRole())) {
-            return request.getStatus() == RequestStatus.OPEN
-                    || offerRepository.findFirstByRequest_IdAndCollector_EmpIdAndStatusIn(
-                            request.getId(), viewer.getEmpId(), List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED,
-                                    OfferStatus.REJECTED, OfferStatus.WITHDRAWN, OfferStatus.CANCELLED,
-                                    OfferStatus.IN_PROGRESS, OfferStatus.COMPLETED))
-                            .isPresent();
+            boolean hasOffer = offerRepository.findFirstByRequest_IdAndCollector_EmpIdAndStatusIn(
+                    request.getId(), viewer.getEmpId(), List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED,
+                            OfferStatus.REJECTED, OfferStatus.WITHDRAWN, OfferStatus.CANCELLED,
+                            OfferStatus.IN_PROGRESS, OfferStatus.COMPLETED))
+                    .isPresent();
+            
+            if (hasOffer) {
+                return true;
+            }
+
+            ThirdPartyCollector collector = collectorRepository.findById(viewer.getEmpId()).orElse(null);
+            if (collector == null || !collectorCanAccessCouncil(collector, request)) {
+                return false;
+            }
+            return request.getStatus() == RequestStatus.OPEN;
         }
         return false;
     }
@@ -542,6 +559,50 @@ public class CollectionRequestService {
             throw badRequest("Latitude and longitude are required");
         }
         validateCoordinates(dto.latitude(), dto.longitude(), true);
+    }
+
+    private String requireCitizenCouncil(Citizen citizen) {
+        if (isBlank(citizen.getCouncil())) {
+            throw badRequest("Citizen must be assigned to a council before creating a collection request");
+        }
+        return citizen.getCouncil().trim();
+    }
+
+    private void requireCollectorCouncilAccess(ThirdPartyCollector collector, CollectionRequest request) {
+        if (!collectorCanAccessCouncil(collector, request)) {
+            throw forbidden("Collector is not assigned to this request council");
+        }
+    }
+
+    private boolean collectorCanAccessCouncil(ThirdPartyCollector collector, CollectionRequest request) {
+        String requestCouncil = effectiveRequestCouncil(request);
+        if (isBlank(requestCouncil)) {
+            return false;
+        }
+        return normalizedAssignedCouncils(collector).contains(normalizeCouncil(requestCouncil));
+    }
+
+    private String effectiveRequestCouncil(CollectionRequest request) {
+        if (!isBlank(request.getCouncil())) {
+            return request.getCouncil();
+        }
+        return request.getCitizen() != null ? request.getCitizen().getCouncil() : null;
+    }
+
+    private List<String> normalizedAssignedCouncils(ThirdPartyCollector collector) {
+        if (collector == null || isBlank(collector.getAssignedCouncils())) {
+            return List.of();
+        }
+        return List.of(collector.getAssignedCouncils().split(","))
+                .stream()
+                .map(this::normalizeCouncil)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private String normalizeCouncil(String council) {
+        return council == null ? "" : council.trim().toLowerCase(Locale.ROOT);
     }
 
     private void validateCreateOffer(CreateOfferDto dto) {

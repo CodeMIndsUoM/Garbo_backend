@@ -41,6 +41,15 @@ public class ThirdPartyCollector extends User {
     @Column(name = "assigned_councils")
     private String assignedCouncils;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @jakarta.persistence.ManyToMany(fetch = jakarta.persistence.FetchType.LAZY)
+    @jakarta.persistence.JoinTable(
+        name = "third_party_collector_assigned_councils",
+        joinColumns = @jakarta.persistence.JoinColumn(name = "collector_id"),
+        inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "council_id")
+    )
+    private java.util.Set<Council> councilEntities = new java.util.HashSet<>();
+
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_status")
     private RegistrationStatus registrationStatus;

@@ -18,6 +18,8 @@ public class Bin {
 
     private String location;
 
+    @Column(name = "type", length = 20)
+    private String category;
     @Column(length = 20)
     private String status = "empty"; // notChecked/full/half/empty
 
@@ -29,7 +31,6 @@ public class Bin {
 
     @Column(length = 50)
     private String zone;
-
 
     @Column(name = "bin_code", length = 100)
     private String binCode;
@@ -76,13 +77,12 @@ public class Bin {
         this.fillLevel = fillLevel;
         this.status = status;
     }
+
     public void setLocation(String location) {
         this.location = location;
     }
 
-    public void setCategory(String category) {
-        // No-op
-    }
+
 
     public void setType(String type) {
         // No-op
