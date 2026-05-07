@@ -44,7 +44,7 @@ public class ThirdPartyCollector extends User {
     @com.fasterxml.jackson.annotation.JsonIgnore
     @jakarta.persistence.ManyToMany(fetch = jakarta.persistence.FetchType.LAZY)
     @jakarta.persistence.JoinTable(
-        name = "collector_assigned_councils",
+        name = "third_party_collector_assigned_councils",
         joinColumns = @jakarta.persistence.JoinColumn(name = "collector_id"),
         inverseJoinColumns = @jakarta.persistence.JoinColumn(name = "council_id")
     )
