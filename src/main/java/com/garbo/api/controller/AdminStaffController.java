@@ -1,7 +1,7 @@
 package com.garbo.api.controller;
 
 import com.garbo.api.dto.staff.StaffCreateRequest;
-import com.garbo.api.dto.staff.UserSummaryDto;
+
 import com.garbo.api.dto.staff.StaffListDto;
 import com.garbo.core.service.AdminStaffService;
 import com.garbo.core.service.CurrentUserService;
