@@ -342,6 +342,7 @@ public class CollectionRequestService {
         offer.setCollector(collector);
         offer.setPricePerUnit(dto.pricePerUnit());
         offer.setPriceUnit(dto.priceUnit());
+        offer.setExchangeItem(blankToNull(dto.exchangeItem()));
         offer.setProposedPickupAt(dto.proposedPickupAt());
         offer.setMessageToCitizen(blankToNull(dto.messageToCitizen()));
         offer.setStatus(OfferStatus.PENDING);
@@ -606,10 +607,20 @@ public class CollectionRequestService {
     }
 
     private void validateCreateOffer(CreateOfferDto dto) {
-        if (dto == null || dto.pricePerUnit() == null || dto.priceUnit() == null || dto.proposedPickupAt() == null) {
-            throw badRequest("Price, price unit and proposed pickup time are required");
+        if (dto == null || dto.proposedPickupAt() == null) {
+            throw badRequest("Proposed pickup time is required");
         }
-        if (dto.pricePerUnit() <= 0) {
+        
+        boolean hasPrice = dto.pricePerUnit() != null && dto.priceUnit() != null;
+        boolean hasExchangeItem = !isBlank(dto.exchangeItem());
+        
+        if (!hasPrice && !hasExchangeItem) {
+            throw badRequest("Either price (with unit) or an exchange item must be provided");
+        }
+        if (hasPrice && hasExchangeItem) {
+            throw badRequest("Please provide either price or exchange item, not both");
+        }
+        if (hasPrice && dto.pricePerUnit() <= 0) {
             throw badRequest("Price must be greater than zero");
         }
         if (dto.proposedPickupAt().isBefore(Instant.now().minus(5, ChronoUnit.MINUTES))) {
