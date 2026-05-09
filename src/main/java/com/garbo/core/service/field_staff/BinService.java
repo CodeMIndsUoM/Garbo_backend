@@ -187,6 +187,11 @@ public class BinService {
             map.put("status", bin.getStatus() != null ? bin.getStatus() : "notChecked");
             map.put("fillLevel", bin.getFillLevel());
             map.put("lastChecked", bin.getLastChecked());
+            map.put("lat", bin.getLatitude());
+            map.put("lng", bin.getLongitude());
+            if (bin.getAssignedTo() != null) {
+                map.put("assignedToName", bin.getAssignedTo().getEmpName());
+            }
             return map;
         }).toList();
                 
