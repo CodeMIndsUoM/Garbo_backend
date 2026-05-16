@@ -34,19 +34,22 @@ public class CollectionRequestController {
         this.collectionRequestService = collectionRequestService;
     }
 
-    // Returns full request view used by citizen details and collector my-jobs context.
+    // Returns full request view used by citizen details and collector my-jobs
+    // context.
     @GetMapping("/{requestId}")
     public ResponseEntity<ApiResponse<RequestDetailDto>> detail(@PathVariable Long requestId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.getRequestDetail(requestId)));
     }
 
-    // Returns offers for a request; currently optional in Flutter (detail already includes offers).
+    // Returns offers for a request; currently optional in Flutter (detail already
+    // includes offers).
     @GetMapping("/{requestId}/offers")
     public ResponseEntity<ApiResponse<List<OfferDto>>> offers(@PathVariable Long requestId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listOffersByRequest(requestId)));
     }
 
-    // Citizen-side cancel endpoint for request-level cancellation before/around assignment stage.
+    // Citizen-side cancel endpoint for request-level cancellation before/around
+    // assignment stage.
     @PostMapping("/{requestId}/cancel")
     @PreAuthorize("hasRole('CITIZEN')")
     public ResponseEntity<ApiResponse<RequestSummaryDto>> cancel(
@@ -65,40 +68,3 @@ public class CollectionRequestController {
                 .body(ApiResponse.success(collectionRequestService.sendOffer(requestId, request)));
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

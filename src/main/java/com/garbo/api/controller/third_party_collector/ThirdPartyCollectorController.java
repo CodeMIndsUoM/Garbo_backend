@@ -56,6 +56,7 @@ public class ThirdPartyCollectorController {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listMyOffers(collectorId, status)));
     }
 
+    // Bulk hide rejected/withdrawn/cancelled/completed offers from collector list.
     @PostMapping("/{collectorId}/my-offers/hide")
     public ResponseEntity<ApiResponse<Map<String, Integer>>> hideMyOffers(
             @PathVariable Long collectorId,
@@ -76,6 +77,7 @@ public class ThirdPartyCollectorController {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.getCollectorDashboard(collectorId)));
     }
 
+    // Collector profile for app profile view/edit.
     @GetMapping("/{collectorId}/profile")
     public ResponseEntity<ApiResponse<ThirdPartyCollector>> getProfile(@PathVariable Long collectorId) {
         return thirdPartyCollectorService.getProfile(collectorId)
@@ -83,6 +85,7 @@ public class ThirdPartyCollectorController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Updates collector profile fields.
     @PutMapping("/{collectorId}/profile")
     public ResponseEntity<ApiResponse<ThirdPartyCollector>> updateProfile(
             @PathVariable Long collectorId,

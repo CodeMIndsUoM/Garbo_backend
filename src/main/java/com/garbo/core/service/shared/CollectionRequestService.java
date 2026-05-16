@@ -37,8 +37,11 @@ import java.util.Locale;
 
 @Service
 public class CollectionRequestService {
+    // Active offer statuses used to block duplicate offers per collector per
+    // request.
     private static final List<OfferStatus> ACTIVE_OFFER_STATUSES = List.of(OfferStatus.PENDING, OfferStatus.ACCEPTED,
             OfferStatus.IN_PROGRESS);
+    // Offer statuses that can be hidden from the collector's My Jobs list.
     private static final List<OfferStatus> HIDEABLE_OFFER_STATUSES = List.of(
             OfferStatus.REJECTED,
             OfferStatus.WITHDRAWN,
@@ -71,6 +74,7 @@ public class CollectionRequestService {
 
     @Transactional
     public RequestSummaryDto createRequest(Long citizenId, CreateRequestDto dto) {
+        // Citizen creates a new OPEN request; validation enforces required fields.
         requireCurrentUser(citizenId);
         validateCreateRequest(dto);
 
@@ -100,12 +104,14 @@ public class CollectionRequestService {
 
     @Transactional(readOnly = true)
     public String uploadCitizenRequestPhoto(Long citizenId, MultipartFile photo) {
+        // Upload request photo and return a hosted URL for request payload use.
         requireCurrentUser(citizenId);
         return cloudinaryUploadService.uploadRequestPhoto(photo, citizenId);
     }
 
     @Transactional(readOnly = true)
     public List<RequestSummaryDto> listCitizenRequests(Long citizenId, RequestStatus status) {
+        // Citizen's own requests; includes offer count for list UI.
         requireCurrentUser(citizenId);
         List<CollectionRequest> requests = status == null
                 ? requestRepository.findByCitizen_EmpIdOrderByCreatedAtDesc(citizenId)
@@ -118,6 +124,8 @@ public class CollectionRequestService {
 
     @Transactional(readOnly = true)
     public RequestDetailDto getRequestDetail(Long requestId) {
+        // Shared detail view: citizen owner or eligible collector can see full offer
+        // list.
         User viewer = currentUser();
         CollectionRequest request = getRequest(requestId);
         if (!canViewRequest(viewer, request)) {
@@ -128,6 +136,7 @@ public class CollectionRequestService {
 
     @Transactional(readOnly = true)
     public List<OfferDto> listOffersByRequest(Long requestId) {
+        // Citizen-only offer list (used when detail already includes offers).
         User viewer = currentUser();
         CollectionRequest request = getRequest(requestId);
         requireCitizenOwner(viewer, request);
@@ -138,6 +147,7 @@ public class CollectionRequestService {
 
     @Transactional
     public OfferDto acceptOffer(Long offerId) {
+        // Citizen accepts one offer; request becomes ASSIGNED, others auto-rejected.
         User viewer = currentUser();
         CollectionOffer offer = getOffer(offerId);
         CollectionRequest request = offer.getRequest();
@@ -165,6 +175,7 @@ public class CollectionRequestService {
 
     @Transactional
     public OfferDto rejectOffer(Long offerId) {
+        // Citizen rejects a pending offer without closing the request.
         User viewer = currentUser();
         CollectionOffer offer = getOffer(offerId);
         requireCitizenOwner(viewer, offer.getRequest());
@@ -177,6 +188,7 @@ public class CollectionRequestService {
 
     @Transactional
     public RequestSummaryDto cancelRequest(Long requestId, CancelRequestDto dto) {
+        // Citizen cancels request; pending offers rejected, accepted offer cancelled.
         User viewer = currentUser();
         CollectionRequest request = getRequest(requestId);
         requireCitizenOwner(viewer, request);
@@ -198,6 +210,7 @@ public class CollectionRequestService {
 
     @Transactional
     public OfferDto confirmCompletion(Long offerId, ConfirmDto dto) {
+        // Citizen confirms a completed offer and submits rating/feedback.
         User viewer = currentUser();
         CollectionOffer offer = getOffer(offerId);
         CollectionRequest request = offer.getRequest();
@@ -218,6 +231,8 @@ public class CollectionRequestService {
 
     @Transactional(readOnly = true)
     public List<RequestSummaryDto> browseFeed(Long collectorId, Double lat, Double lng) {
+        // Collector feed: OPEN requests in assigned councils, optionally sorted by
+        // distance.
         requireCurrentUser(collectorId);
         validateCoordinates(lat, lng, false);
         ThirdPartyCollector collector = collectorRepository.findById(collectorId)
@@ -232,6 +247,7 @@ public class CollectionRequestService {
                 : requestRepository.findOpenFeedNearByCouncils(lat, lng, assignedCouncils);
 
         return openRequests.stream()
+                // Hide requests if collector already has a non-withdrawn offer.
                 .filter(request -> !offerRepository.existsByRequest_IdAndCollector_EmpIdAndStatusNot(
                         request.getId(), collectorId, OfferStatus.WITHDRAWN))
                 .map(request -> RequestSummaryDto.from(request,
@@ -241,6 +257,7 @@ public class CollectionRequestService {
 
     @Transactional(readOnly = true)
     public List<OfferDto> listMyOffers(Long collectorId, OfferStatus status) {
+        // Collector's own offers list; hidden offers are excluded.
         requireCurrentUser(collectorId);
         List<CollectionOffer> offers = status == null
                 ? offerRepository.findByCollector_EmpIdAndCollectorHiddenFalseOrderByCreatedAtDesc(collectorId)
@@ -252,6 +269,7 @@ public class CollectionRequestService {
 
     @Transactional
     public OfferDto hideOfferFromCollectorList(Long offerId) {
+        // Hide a single historical offer from collector list (soft hide flag).
         User viewer = currentUser();
         CollectionOffer offer = getOffer(offerId);
         requireCollectorOwner(viewer, offer);
@@ -267,6 +285,7 @@ public class CollectionRequestService {
 
     @Transactional
     public int hideOffersFromCollectorList(Long collectorId, List<OfferStatus> statuses) {
+        // Bulk hide offers by status for collector list cleanup.
         requireCurrentUser(collectorId);
 
         List<OfferStatus> allowedStatuses;
@@ -305,6 +324,7 @@ public class CollectionRequestService {
 
     @Transactional(readOnly = true)
     public List<OfferDto> listActiveJobs(Long collectorId) {
+        // Collector active jobs = ACCEPTED or IN_PROGRESS offers.
         requireCurrentUser(collectorId);
         return offerRepository.findByCollector_EmpIdAndStatusInOrderByCreatedAtDesc(
                 collectorId, List.of(OfferStatus.ACCEPTED, OfferStatus.IN_PROGRESS))
@@ -315,12 +335,15 @@ public class CollectionRequestService {
 
     @Transactional(readOnly = true)
     public com.garbo.api.dto.collection.CollectorDashboardDto getCollectorDashboard(Long collectorId) {
+        // Summary metrics for collector home dashboard.
         requireCurrentUser(collectorId);
         return collectorDashboardService.getCollectorDashboard(collectorId);
     }
 
     @Transactional
     public OfferDto sendOffer(Long requestId, CreateOfferDto dto) {
+        // Collector sends offer for an OPEN request; only one active offer per
+        // collector.
         User viewer = currentUser();
         Long collectorId = viewer.getEmpId();
         validateCreateOffer(dto);
@@ -351,6 +374,7 @@ public class CollectionRequestService {
 
     @Transactional
     public OfferDto withdrawOffer(Long offerId) {
+        // Collector withdraws a pending offer.
         User viewer = currentUser();
         CollectionOffer offer = getOffer(offerId);
         requireCollectorOwner(viewer, offer);
@@ -363,6 +387,8 @@ public class CollectionRequestService {
 
     @Transactional
     public OfferDto cancelAcceptedOffer(Long offerId, CancelOfferDto dto) {
+        // Collector cancels accepted/in-progress work; request reopens and rejected
+        // offers return to pending.
         User viewer = currentUser();
         CollectionOffer offer = getOffer(offerId);
         requireCollectorOwner(viewer, offer);
@@ -392,6 +418,7 @@ public class CollectionRequestService {
 
     @Transactional
     public OfferDto startOffer(Long offerId) {
+        // Collector starts work (ACCEPTED -> IN_PROGRESS).
         User viewer = currentUser();
         CollectionOffer offer = getOffer(offerId);
         requireCollectorOwner(viewer, offer);
@@ -406,6 +433,7 @@ public class CollectionRequestService {
 
     @Transactional
     public OfferDto completeOffer(Long offerId, CompleteOfferDto dto) {
+        // Collector completes work with proof; request becomes COMPLETED.
         User viewer = currentUser();
         CollectionOffer offer = getOffer(offerId);
         requireCollectorOwner(viewer, offer);
@@ -443,6 +471,7 @@ public class CollectionRequestService {
             Double latitude,
             Double longitude,
             String notes) {
+        // Multipart completion path (photo + geo + optional weight).
         User viewer = currentUser();
         CollectionOffer offer = getOffer(offerId);
         requireCollectorOwner(viewer, offer);
@@ -477,6 +506,7 @@ public class CollectionRequestService {
 
     @Transactional
     public int expireStalePendingOffers() {
+        // Scheduled cleanup for old pending offers.
         Instant cutoff = Instant.now().minus(7, ChronoUnit.DAYS);
         List<CollectionOffer> staleOffers = offerRepository.findByStatusAndCreatedAtBefore(OfferStatus.PENDING, cutoff);
         staleOffers.forEach(offer -> offer.setStatus(OfferStatus.WITHDRAWN));
@@ -484,6 +514,8 @@ public class CollectionRequestService {
     }
 
     private boolean canViewRequest(User viewer, CollectionRequest request) {
+        // Citizen owner can always view; collector can view if has offer or request is
+        // OPEN in assigned council.
         if (request.getCitizen().getEmpId().equals(viewer.getEmpId())) {
             return true;
         }
@@ -493,7 +525,7 @@ public class CollectionRequestService {
                             OfferStatus.REJECTED, OfferStatus.WITHDRAWN, OfferStatus.CANCELLED,
                             OfferStatus.IN_PROGRESS, OfferStatus.COMPLETED))
                     .isPresent();
-            
+
             if (hasOffer) {
                 return true;
             }
@@ -610,10 +642,10 @@ public class CollectionRequestService {
         if (dto == null || dto.proposedPickupAt() == null) {
             throw badRequest("Proposed pickup time is required");
         }
-        
+
         boolean hasPrice = dto.pricePerUnit() != null && dto.priceUnit() != null;
         boolean hasExchangeItem = !isBlank(dto.exchangeItem());
-        
+
         if (!hasPrice && !hasExchangeItem) {
             throw badRequest("Either price (with unit) or an exchange item must be provided");
         }
