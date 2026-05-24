@@ -104,15 +104,26 @@ public class BinService {
             throw new EntityNotFoundException("Bin not found with ID: " + binId);
         }
 
+        LocalDateTime checkedAt = LocalDateTime.now();
+        bin.setStatus(request.getStatus());
+        bin.setFillLevel(request.getFillLevel());
+        bin.setLastChecked(checkedAt);
+
         // Trigger realtime websocket push for dashboards listening to bin-status
         // changes.
-        eventPublisher.publishEvent(new BinChangedEvent("STATUS_REPORTED", binId));
+        eventPublisher.publishEvent(new BinChangedEvent(
+                "STATUS_REPORTED",
+                binId,
+                request.getStatus(),
+                request.getFillLevel(),
+                checkedAt
+        ));
 
         Bin updated = new Bin();
         updated.setId(binId);
         updated.setStatus(request.getStatus());
         updated.setFillLevel(request.getFillLevel());
-        updated.setLastChecked(LocalDateTime.now());
+        updated.setLastChecked(checkedAt);
         return updated;
     }
 
@@ -131,7 +142,13 @@ public class BinService {
 
         // Trigger realtime websocket push for dashboards listening to bin-status
         // changes.
-        eventPublisher.publishEvent(new BinChangedEvent("STATUS_UNDONE", binId));
+        eventPublisher.publishEvent(new BinChangedEvent(
+                "STATUS_UNDONE",
+                binId,
+                "notChecked",
+                0,
+                null
+        ));
 
         // Return a lightweight response object with final state expected by mobile.
         Bin updated = new Bin();
