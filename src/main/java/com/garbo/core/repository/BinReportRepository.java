@@ -2,15 +2,22 @@ package com.garbo.core.repository;
 
 import com.garbo.core.entity.BinReport;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
 public interface BinReportRepository extends JpaRepository<BinReport, Long> {
+
+    @Transactional
+    @Modifying
+    @Query("UPDATE BinReport r SET r.photoUrl = :photoUrl WHERE r.id = :reportId")
+    int updatePhotoUrl(@Param("reportId") Long reportId, @Param("photoUrl") String photoUrl);
 
     //  KPI: Total reports today 
     @Query("SELECT COUNT(r) FROM BinReport r WHERE r.reportedAt >= :start AND r.reportedAt < :end")

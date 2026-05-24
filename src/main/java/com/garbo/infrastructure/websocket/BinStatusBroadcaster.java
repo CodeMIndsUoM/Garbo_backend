@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Converts bin-status domain events into websocket pushes for dashboards.
@@ -47,6 +48,10 @@ public class BinStatusBroadcaster {
             return;
         }
 
+        CompletableFuture.runAsync(() -> broadcastBinStatus(event, changeType));
+    }
+
+    private void broadcastBinStatus(BinChangedEvent event, String changeType) {
         binRepository.findByNumericId(event.getBinId()).ifPresentOrElse(bin -> {
             BinStatusUpdatedPayload payload = buildPayload(bin, event, changeType);
             WebSocketMessage<BinStatusUpdatedPayload> message = new WebSocketMessage<>(
