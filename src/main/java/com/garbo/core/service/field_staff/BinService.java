@@ -68,7 +68,7 @@ public class BinService {
     // Shared report operation used by both anonymous JSON report and field-staff
     // multipart report.
     @Transactional
-    public Bin reportBinStatus(Long binId, Long reporterId, BinReportRequest request) {
+    public BinStatusReportResult reportBinStatus(Long binId, Long reporterId, BinReportRequest request) {
         Bin bin = binRepository.findByNumericId(binId)
                 .orElseThrow(() -> new EntityNotFoundException("Bin not found with ID: " + binId));
 
@@ -96,7 +96,7 @@ public class BinService {
             report.setSource("ANONYMOUS");
         }
 
-        binReportRepository.save(report);
+        BinReport savedReport = binReportRepository.save(report);
 
         // Update the bin via native query because bins.id is stored as text in DB.
         int updatedRows = binRepository.updateStatusForReport(binId, request.getStatus(), request.getFillLevel());
@@ -124,7 +124,7 @@ public class BinService {
         updated.setStatus(request.getStatus());
         updated.setFillLevel(request.getFillLevel());
         updated.setLastChecked(checkedAt);
-        return updated;
+        return new BinStatusReportResult(updated, savedReport.getId());
     }
 
     // Field-staff undo operation used by dedicated mobile undo endpoint.
@@ -486,6 +486,9 @@ public class BinService {
         bounds.put("moratuwa", new CouncilBounds(6.74, 6.83, 79.85, 79.92));
         bounds.put("sri jayewardenepura kotte", new CouncilBounds(6.86, 6.93, 79.89, 79.95));
         return bounds;
+    }
+
+    public record BinStatusReportResult(Bin bin, Long reportId) {
     }
 
     private static class CouncilBounds {
