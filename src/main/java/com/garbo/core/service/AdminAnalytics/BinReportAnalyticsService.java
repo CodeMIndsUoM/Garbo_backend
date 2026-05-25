@@ -1,4 +1,3 @@
-// BinReportAnalyticsService.java
 package com.garbo.core.service.AdminAnalytics;
 
 import com.garbo.api.dto.binReportAnalyticsDTOs.BinReportAnalyticsDTO;
@@ -20,28 +19,39 @@ public class BinReportAnalyticsService {
 
     private final BinReportRepository binReportRepository;
 
-    public BinReportAnalyticsDTO getAnalytics() {
+    public BinReportAnalyticsDTO getAnalytics(String council) {
 
-        //  Time boundaries 
-        LocalDate today     = LocalDate.now();
-        LocalDateTime dayStart  = today.atStartOfDay();
-        LocalDateTime dayEnd    = today.plusDays(1).atStartOfDay();
-        LocalDateTime weekStart = today.minusDays(6).atStartOfDay();
+        // Time boundaries
+        LocalDate today      = LocalDate.now();
+        LocalDateTime dayStart   = today.atStartOfDay();
+        LocalDateTime dayEnd     = today.plusDays(1).atStartOfDay();
+        LocalDateTime weekStart  = today.minusDays(6).atStartOfDay();
 
-        //  KPIs 
-        long totalReports    = binReportRepository.countReportsBetween(dayStart, dayEnd);
-        long affectedBins    = binReportRepository.countDistinctBinsBetween(dayStart, dayEnd);
-        long uniqueReporters = binReportRepository.countDistinctReportersBetween(dayStart, dayEnd);
+        boolean hasCouncil = council != null && !council.isBlank();
 
-        //  Hourly frequency (today) 
-        // PostgreSQL returns EXTRACT result as Double, count as Long
-        List<Object[]> hourlyRaw = binReportRepository.countByHourBetween(dayStart, dayEnd);
+        // KPIs
+        long totalReports    = hasCouncil
+            ? binReportRepository.countReportsBetweenByCouncil(dayStart, dayEnd, council)
+            : binReportRepository.countReportsBetween(dayStart, dayEnd);
+
+        long affectedBins    = hasCouncil
+            ? binReportRepository.countDistinctBinsBetweenByCouncil(dayStart, dayEnd, council)
+            : binReportRepository.countDistinctBinsBetween(dayStart, dayEnd);
+
+        long uniqueReporters = hasCouncil
+            ? binReportRepository.countDistinctReportersBetweenByCouncil(dayStart, dayEnd, council)
+            : binReportRepository.countDistinctReportersBetween(dayStart, dayEnd);
+
+        // Hourly frequency (today)
+        List<Object[]> hourlyRaw = hasCouncil
+            ? binReportRepository.countByHourBetweenByCouncil(dayStart, dayEnd, council)
+            : binReportRepository.countByHourBetween(dayStart, dayEnd);
 
         Map<Integer, Long> hourMap = new LinkedHashMap<>();
         for (int h = 0; h < 24; h++) hourMap.put(h, 0L);
 
         for (Object[] row : hourlyRaw) {
-            int  hour  = ((Number) row[0]).intValue();  // Double → int (PG EXTRACT returns Double)
+            int  hour  = ((Number) row[0]).intValue();
             long count = ((Number) row[1]).longValue();
             hourMap.put(hour, count);
         }
@@ -51,15 +61,15 @@ public class BinReportAnalyticsService {
             hourlyList.add(new HourlyCount(String.format("%02d:00", h), c))
         );
 
-        //  Daily frequency (last 7 days) 
-        // PostgreSQL native query returns DATE() as java.sql.Date, not LocalDate
-        List<Object[]> dailyRaw = binReportRepository.countByDayBetween(weekStart, dayEnd);
+        // Daily frequency (last 7 days)
+        List<Object[]> dailyRaw = hasCouncil
+            ? binReportRepository.countByDayBetweenByCouncil(weekStart, dayEnd, council)
+            : binReportRepository.countByDayBetween(weekStart, dayEnd);
 
         Map<LocalDate, Long> dayMap = new LinkedHashMap<>();
         for (int i = 6; i >= 0; i--) dayMap.put(today.minusDays(i), 0L);
 
         for (Object[] row : dailyRaw) {
-            // Native query returns java.sql.Date — must convert to LocalDate
             LocalDate date = ((Date) row[0]).toLocalDate();
             long count     = ((Number) row[1]).longValue();
             if (dayMap.containsKey(date)) dayMap.put(date, count);
