@@ -1,6 +1,5 @@
 package com.garbo.core.service.AdminAnalytics;
 
-
 import com.garbo.api.dto.ComplaintDTOs.ComplaintAnalyticsResponseDTO;
 import com.garbo.api.dto.ComplaintDTOs.ComplaintChartPointDTO;
 import com.garbo.api.dto.ComplaintDTOs.ComplaintSummaryDTO;
@@ -20,57 +19,68 @@ public class ComplaintAnalyticsService {
 
     private final ComplaintRepository repo;
 
-    public ComplaintAnalyticsResponseDTO getAnalytics(String filter) {
+    public ComplaintAnalyticsResponseDTO getAnalytics(String filter, String councilId) {
 
         if (filter == null) filter = "TODAY";
         filter = filter.toUpperCase();
 
-        //  1. KPI summary — always today 
-        List<Object[]> summaryList = repo.getTodaySummary();
-        Object[] s = (summaryList != null && !summaryList.isEmpty())
-                ? summaryList.get(0)
-                : new Object[]{0L, 0L, 0L};
+        boolean filtered = councilId != null && !councilId.isBlank();
 
-        long newCount    = toLong(s[0]);
-        long inProgress  = toLong(s[1]);
-        long resolved    = toLong(s[2]);
-        long total       = newCount + inProgress + resolved;
-        double resRate   = total > 0
-                ? Math.round((resolved * 1000.0 / total)) / 10.0
-                : 0.0;
+        // ── 1. KPI summary — always today ────────────────────────────────────
+        List<Object[]> summaryList = filtered
+            ? repo.getTodaySummaryByCouncil(councilId)
+            : repo.getTodaySummary();
+
+        Object[] s = (summaryList != null && !summaryList.isEmpty())
+            ? summaryList.get(0)
+            : new Object[]{0L, 0L};
+
+        long pendingCount  = toLong(s[0]);
+        long acceptedCount = toLong(s[1]);
+        long total         = pendingCount + acceptedCount;
+        double resRate     = total > 0
+            ? Math.round((acceptedCount * 1000.0 / total)) / 10.0
+            : 0.0;
 
         ComplaintSummaryDTO summary = ComplaintSummaryDTO.builder()
-                .newCount(newCount)
-                .inProgressCount(inProgress)
-                .resolvedCount(resolved)
-                .resolutionRate(resRate)
-                .build();
+            .pendingCount(pendingCount)
+            .acceptedCount(acceptedCount)
+            .resolutionRate(resRate)
+            .build();
 
-        //  2. Chart data — varies by filter 
+        // ── 2. Chart data — varies by filter ─────────────────────────────────
         List<Object[]> rawChart;
-        switch (filter) {
-            case "WEEK"  -> rawChart = repo.getWeekChart(LocalDateTime.now().minusDays(7));
-            case "MONTH" -> rawChart = repo.getMonthChart(LocalDateTime.now().minusDays(30));
-            default      -> rawChart = repo.getTodayChart();
+
+        if (filtered) {
+            rawChart = switch (filter) {
+                case "WEEK"  -> repo.getWeekChartByCouncil(LocalDateTime.now().minusDays(7), councilId);
+                case "MONTH" -> repo.getMonthChartByCouncil(LocalDateTime.now().minusDays(30), councilId);
+                default      -> repo.getTodayChartByCouncil(councilId);
+            };
+        } else {
+            rawChart = switch (filter) {
+                case "WEEK"  -> repo.getWeekChart(LocalDateTime.now().minusDays(7));
+                case "MONTH" -> repo.getMonthChart(LocalDateTime.now().minusDays(30));
+                default      -> repo.getTodayChart();
+            };
         }
 
         List<ComplaintChartPointDTO> chartData = new ArrayList<>();
         if (rawChart != null) {
             for (Object[] row : rawChart) {
                 chartData.add(ComplaintChartPointDTO.builder()
-                        .label(String.valueOf(row[0]))
-                        .newCount(toLong(row[1]))
-                        .inProgress(toLong(row[2]))
-                        .resolved(toLong(row[3]))
-                        .build());
+                    .label(String.valueOf(row[0]))
+                    .pendingCount(toLong(row[1]))
+                    .acceptedCount(toLong(row[2]))
+                    .build());
             }
         }
 
         return ComplaintAnalyticsResponseDTO.builder()
-                .period(filter)
-                .summary(summary)
-                .chartData(chartData)
-                .build();
+            .period(filter)
+            .summary(summary)
+            .chartData(chartData)
+            .build();
     }
 
     private long toLong(Object val) {

@@ -16,14 +16,13 @@ public class AnalyticsController {
 
     @GetMapping
     public ResponseEntity<?> getDashboard(
-            @RequestParam(defaultValue = "DAY") String filter) {
+            @RequestParam(defaultValue = "DAY") String filter,
+            @RequestParam(required = false) String council) {
         try {
-            DashboardResponseDTO result = service.getDashboard(filter.toUpperCase());
+            DashboardResponseDTO result = service.getDashboard(filter.toUpperCase(), council);
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            // Full error chain printed to console
             e.printStackTrace();
-            // Exact error message returned to Postman
             return ResponseEntity.status(500).body(
                 "ERROR: " + e.getMessage() +
                 "\nCAUSE: " + (e.getCause() != null ? e.getCause().getMessage() : "null") +

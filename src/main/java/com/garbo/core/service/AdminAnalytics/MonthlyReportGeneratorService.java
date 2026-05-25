@@ -1,7 +1,7 @@
 package com.garbo.core.service.AdminAnalytics;
 
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.garbo.api.dto.ZoneCollectionDTO;
 import com.garbo.api.dto.binAnalyzeDTOs.BinAnalyticsResponseDTO;
 import com.garbo.api.dto.binAnalyzeDTOs.ZoneAnalyticsDTO;
 import com.garbo.api.dto.reportDTOs.MonthlyReportDetailDTO;
@@ -10,6 +10,7 @@ import com.garbo.api.dto.reportDTOs.ReportSnapshotPayload;
 import com.garbo.core.entity.MonthlyReport;
 import com.garbo.core.repository.MonthlyReportRepository;
 import com.garbo.core.service.AnalyticsService;
+import com.garbo.core.service.AdminAnalytics.ZoneCollectionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,52 +29,57 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MonthlyReportGeneratorService {
 
-    //  Analytics services 
+    // ── Analytics services ────────────────────────────────────────────────────
     private final AnalyticsService           analyticsService;
     private final BinAnalyticsService        binAnalyticsService;
     private final ComplaintAnalyticsService  complaintAnalyticsService;
     private final StaffAnalyticsService      staffAnalyticsService;
     private final ThirdPartyAnalyticsService thirdPartyAnalyticsService;
     private final VehicleAnalyticsService    vehicleAnalyticsService;
+    private final ZoneCollectionService      zoneCollectionService;
 
-    //  Persistence 
+    // ── Persistence ───────────────────────────────────────────────────────────
     private final MonthlyReportRepository reportRepository;
     private final ObjectMapper            objectMapper;
 
-    // GENERATE
-   
+    // ── GENERATE ──────────────────────────────────────────────────────────────
 
-    /**
-     * Calls every required analytics service, assembles the snapshot, persists it,
-     * and returns a summary DTO.
-     *
-     * The "period" is always the last 30 days from now.
-     */
     @Transactional
-    public MonthlyReportSummaryDTO generateReport() {
+    public MonthlyReportSummaryDTO generateReport(String councilId) {
+
+        boolean filtered = councilId != null && !councilId.isBlank();
 
         LocalDate today       = LocalDate.now();
         LocalDate periodStart = today.minusDays(30);
         String periodLabel    = buildPeriodLabel(periodStart, today);
-        String title          = "Monthly Report — " + periodLabel;
+        String title          = filtered
+            ? "Monthly Report — " + councilId + " — " + periodLabel
+            : "Monthly Report — " + periodLabel;
 
-        log.info("Generating report: {} ({} → {})", title, periodStart, today);
+        log.info("Generating report: {} ({} → {}) council={}",
+                 title, periodStart, today, councilId);
 
-        //  1. Call analytics services 
-        var collection  = analyticsService.getDashboard("MONTH");
-        var binAnalytics = binAnalyticsService.getAnalytics();
-        var complaints  = complaintAnalyticsService.getAnalytics("MONTH");
-        var staff       = staffAnalyticsService.getAnalytics();
-        var thirdParty  = thirdPartyAnalyticsService.getAnalytics("LAST_MONTH");
-        var vehicles    = vehicleAnalyticsService.getAnalytics();
+        // ── 1. Call analytics services ────────────────────────────────────────
+        var collection   = analyticsService.getDashboard("MONTH", filtered ? councilId : null);
+        var binAnalytics = binAnalyticsService.getAnalytics(filtered ? councilId : null);
+        var complaints   = complaintAnalyticsService.getAnalytics("MONTH", filtered ? councilId : null);
+        var staff        = staffAnalyticsService.getAnalytics(filtered ? councilId : null);
+        var thirdParty   = thirdPartyAnalyticsService.getAnalytics("LAST_MONTH", filtered ? councilId : null);
+        var vehicles     = vehicleAnalyticsService.getAnalytics(filtered ? councilId : null);
 
-        //  2. Build extra snapshots 
-        Map<String, Integer> binZoneSnapshot    = buildBinZoneSnapshot(binAnalytics);
+        // ── 2. Zone collection (monthly) ──────────────────────────────────────
+        List<ZoneCollectionDTO> zoneCollection = zoneCollectionService.getZoneCollection(
+            "MONTHLY", filtered ? councilId : null
+        );
+
+        // ── 3. Build extra snapshots ──────────────────────────────────────────
+        Map<String, Integer> binZoneSnapshot     = buildBinZoneSnapshot(binAnalytics);
         Map<String, Long>    vehicleTypeSnapshot = buildVehicleTypeSnapshot(vehicles.getVehicles());
 
-        // 3. Assemble payload
+        // ── 4. Assemble payload ───────────────────────────────────────────────
         ReportSnapshotPayload payload = ReportSnapshotPayload.builder()
                 .collection(collection)
+                .zoneCollection(zoneCollection)
                 .binAnalytics(binAnalytics)
                 .complaints(complaints)
                 .staff(staff)
@@ -85,7 +91,7 @@ public class MonthlyReportGeneratorService {
                 .periodLabel(periodLabel)
                 .build();
 
-        //  4. Serialize to JSON 
+        // ── 5. Serialize to JSON ──────────────────────────────────────────────
         String snapshotJson;
         try {
             snapshotJson = objectMapper.writeValueAsString(payload);
@@ -95,7 +101,7 @@ public class MonthlyReportGeneratorService {
 
         int fileSizeKb = snapshotJson.getBytes().length / 1024;
 
-        //  5. Persist 
+        // ── 6. Persist ────────────────────────────────────────────────────────
         MonthlyReport entity = MonthlyReport.builder()
                 .title(title)
                 .periodStart(periodStart)
@@ -111,7 +117,7 @@ public class MonthlyReportGeneratorService {
         return toSummary(saved);
     }
 
-    // LIST
+    // ── LIST ──────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public List<MonthlyReportSummaryDTO> getAllReports() {
@@ -121,7 +127,7 @@ public class MonthlyReportGeneratorService {
                 .collect(Collectors.toList());
     }
 
-    // GET BY ID
+    // ── GET BY ID ─────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public MonthlyReportDetailDTO getReportById(Long id) {
@@ -149,7 +155,7 @@ public class MonthlyReportGeneratorService {
                 .build();
     }
 
-    // RAW SNAPSHOT (for download endpoint)
+    // ── RAW SNAPSHOT ──────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public String getRawSnapshot(Long id) {
@@ -158,11 +164,8 @@ public class MonthlyReportGeneratorService {
                 .getSnapshot();
     }
 
-    // HELPERS
+    // ── HELPERS ───────────────────────────────────────────────────────────────
 
-    /**
-     * Bin count per zone from the already-computed BinAnalyticsResponseDTO.
-     */
     private Map<String, Integer> buildBinZoneSnapshot(BinAnalyticsResponseDTO binAnalytics) {
         Map<String, Integer> map = new LinkedHashMap<>();
         if (binAnalytics != null && binAnalytics.getZoneData() != null) {
@@ -173,14 +176,9 @@ public class MonthlyReportGeneratorService {
         return map;
     }
 
-    /**
-     * Vehicle count grouped by type from the fleet row list.
-     */
     private Map<String, Long> buildVehicleTypeSnapshot(
             List<com.garbo.api.dto.VehicleAnalyticsDTOs.VehicleAnalyticsDTO.VehicleRowDTO> rows) {
-
         if (rows == null) return Map.of();
-
         return rows.stream()
                 .collect(Collectors.groupingBy(
                         r -> r.getType() != null ? r.getType() : "Unknown",

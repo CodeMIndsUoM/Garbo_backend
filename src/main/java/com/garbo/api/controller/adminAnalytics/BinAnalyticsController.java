@@ -1,6 +1,5 @@
 package com.garbo.api.controller.adminAnalytics;
 
-
 import com.garbo.api.dto.binAnalyzeDTOs.BinAnalyticsResponseDTO;
 import com.garbo.core.service.AdminAnalytics.BinAnalyticsService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,13 +15,13 @@ public class BinAnalyticsController {
     private BinAnalyticsService service;
 
     @GetMapping
-    public ResponseEntity<?> getAnalytics() {
+    public ResponseEntity<?> getAnalytics(
+            @RequestParam(required = false) String councilId) {
         try {
-            return ResponseEntity.ok(service.getAnalytics());
+            return ResponseEntity.ok(service.getAnalytics(councilId));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body("Error: " + e.getMessage());
         }
     }
 }
-

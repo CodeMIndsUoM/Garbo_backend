@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -16,96 +17,71 @@ public class BinAnalyticsService {
     @Autowired
     private BinRepository binRepository;
 
-    public BinAnalyticsResponseDTO getAnalytics() {
+    public BinAnalyticsResponseDTO getAnalytics(String councilId) {
 
-        // ✅ ONLY VALID ZONES
-        List<String> validZones = List.of("A", "B", "C", "D", "E");
+        boolean filtered = councilId != null && !councilId.isBlank();
 
-        // ✅ LOAD FILTERED DATA FROM DB (IMPORTANT)
-        List<Bin> allBins = binRepository.findAllValidBins();
+        // ── Load bins ─────────────────────────────────────────────────────────
+        List<Bin> allBins = filtered
+            ? binRepository.findAllByCouncil(councilId)
+            : binRepository.findAllValidBins();
 
-        // KPI CALCULATIONS
-        long totalBins = allBins.size();
+        // ── KPIs ──────────────────────────────────────────────────────────────
+        long totalBins  = allBins.size();
+        long urgentBins = filtered
+            ? binRepository.countFullBinsByCouncil(councilId)
+            : binRepository.countFullBins();
 
-        long urgentBins = allBins.stream()
-                .filter(b -> getFillLevelAsInt(b) > 75)
-                .count();
+        // ── Zones — dynamic from DB ───────────────────────────────────────────
+        List<String> zones = filtered
+            ? binRepository.findDistinctZonesByCouncil(councilId)
+            : binRepository.findDistinctZones();
 
-        double avgFillLevel = allBins.stream()
-                .mapToInt(this::getFillLevelAsInt)
-                .average()
-                .orElse(0.0);
+        // Sort zones naturally (1, 2, 3 ... 10 instead of 1, 10, 2)
+        zones.sort(Comparator.comparingInt(z -> {
+            try { return Integer.parseInt(z.trim()); }
+            catch (NumberFormatException e) { return Integer.MAX_VALUE; }
+        }));
 
-        // ZONE ANALYTICS
+        // ── Zone breakdown ────────────────────────────────────────────────────
         List<ZoneAnalyticsDTO> zoneData = new ArrayList<>();
 
-        for (String zone : validZones) {
-
+        for (String zone : zones) {
             List<Bin> bins = allBins.stream()
-                    .filter(b -> zone.equalsIgnoreCase((String) b.getZone()))
-                    .toList();
+                .filter(b -> zone.equalsIgnoreCase(b.getZone()))
+                .toList();
 
-            int below30 = 0;
-            int fill30_50 = 0;
-            int fill50_75 = 0;
-            int above75 = 0;
-
-            int high = 0;
-            int medium = 0;
-            int low = 0;
+            int empty      = 0;
+            int half       = 0;
+            int full       = 0;
+            int notChecked = 0;
+            int high       = 0;
+            int medium     = 0;
+            int low        = 0;
 
             for (Bin b : bins) {
+                String status = b.getStatus() == null ? "notChecked" : b.getStatus().toLowerCase();
+                switch (status) {
+                    case "empty"      -> empty++;
+                    case "half"       -> half++;
+                    case "full"       -> full++;
+                    default           -> notChecked++;
+                }
 
-                int fill = getFillLevelAsInt(b);
-
-                // Fill level ranges
-                if (fill < 30) below30++;
-                else if (fill < 50) fill30_50++;
-                else if (fill < 75) fill50_75++;
-                else above75++;
-
-                // Priority
-                if ("HIGH".equalsIgnoreCase((String) b.getPriority())) high++;
-                else if ("MEDIUM".equalsIgnoreCase((String) b.getPriority())) medium++;
-                else low++;
+                String priority = b.getPriority();
+                if ("HIGH".equalsIgnoreCase(priority))        high++;
+                else if ("MEDIUM".equalsIgnoreCase(priority)) medium++;
+                else                                           low++;
             }
 
-            // ✅ IMPORTANT: Match frontend "Zone A"
-            String displayZone = "Zone " + zone;
-
             zoneData.add(new ZoneAnalyticsDTO(
-                    displayZone,
-                    bins.size(),
-                    below30,
-                    fill30_50,
-                    fill50_75,
-                    above75,
-                    high,
-                    medium,
-                    low
+                zone,
+                bins.size(),
+                empty, half, full, notChecked,
+                high, medium, low
             ));
         }
 
-        return new BinAnalyticsResponseDTO(
-                totalBins,
-                urgentBins,
-                avgFillLevel,
-                zoneData
-        );
-    }
-
-    private int getFillLevelAsInt(Bin bin) {
-        Object fillLevel = bin.getFillLevel();
-        if (fillLevel instanceof Number number) {
-            return number.intValue();
-        }
-        if (fillLevel instanceof String value) {
-            try {
-                return Integer.parseInt(value);
-            } catch (NumberFormatException ignored) {
-                return 0;
-            }
-        }
-        return 0;
+        return new BinAnalyticsResponseDTO(totalBins, urgentBins, zoneData);
     }
 }
