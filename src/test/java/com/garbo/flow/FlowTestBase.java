@@ -1,4 +1,4 @@
-package com.garbo.flow;
+package test.java.com.garbo.flow;
 
 import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.FieldMentor;
