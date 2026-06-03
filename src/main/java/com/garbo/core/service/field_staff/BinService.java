@@ -222,10 +222,23 @@ public class BinService {
 
     public Bin createBinForCurrentUser(Bin payload) {
         String email = currentEmail();
-        String council = councilAccessService.resolveCouncilForEmail(email)
-                .orElseThrow(() -> new AccessDeniedException("Your account has no assigned council"));
+        String council = councilAccessService.resolveCouncilForEmail(email).orElse(null);
         double[] latLng = resolveIncomingCoordinates(payload);
-        validateCoordinatesInCouncil(council, latLng[0], latLng[1]);
+
+        if (council == null) {
+            // Verify if user is Superadmin
+            if (councilAccessService.isSuperAdmin(email)) {
+                // Automatically resolve council from the coordinates
+                council = resolveCouncilFromCoordinates(latLng[0], latLng[1]);
+                if (council == null) {
+                    throw new IllegalArgumentException("Coordinates are outside any supported municipal council boundary");
+                }
+            } else {
+                throw new AccessDeniedException("Your account has no assigned council");
+            }
+        } else {
+            validateCoordinatesInCouncil(council, latLng[0], latLng[1]);
+        }
 
         String generatedCode = generateNextBinCode(council);
         payload.setBinCode(generatedCode);
@@ -524,6 +537,52 @@ public class BinService {
     }
 
     public record BinStatusReportResult(Bin bin, Long reportId) {
+    }
+
+    private String resolveCouncilFromCoordinates(double lat, double lng) {
+        // Query all council boundary points from DB
+        List<CouncilBoundary> allBoundaries = councilBoundaryRepository.findAll();
+        if (allBoundaries == null || allBoundaries.isEmpty()) {
+            // Fallback to legacy rectangular bounds
+            for (Map.Entry<String, CouncilBounds> entry : COUNCIL_BOUNDS.entrySet()) {
+                if (entry.getValue().contains(lat, lng)) {
+                    return getStandardCouncilName(entry.getKey());
+                }
+            }
+            return null;
+        }
+
+        // Group boundaries by council name (case-insensitive key)
+        Map<String, List<CouncilBoundary>> grouped = new HashMap<>();
+        for (CouncilBoundary pt : allBoundaries) {
+            String cKey = pt.getCouncil().toLowerCase(Locale.ROOT);
+            grouped.computeIfAbsent(cKey, k -> new java.util.ArrayList<>()).add(pt);
+        }
+
+        // Sort each boundary's points by pointOrder to form a valid polygon
+        for (List<CouncilBoundary> pts : grouped.values()) {
+            pts.sort(java.util.Comparator.comparingInt(CouncilBoundary::getPointOrder));
+        }
+
+        // Perform point-in-polygon checks
+        for (Map.Entry<String, List<CouncilBoundary>> entry : grouped.entrySet()) {
+            if (isPointInPolygon(lat, lng, entry.getValue())) {
+                return entry.getValue().get(0).getCouncil();
+            }
+        }
+
+        return null;
+    }
+
+    private String getStandardCouncilName(String lowercaseName) {
+        switch (lowercaseName) {
+            case "colombo": return "Colombo";
+            case "dehiwala-mt. lavinia": return "Dehiwala-Mt. Lavinia";
+            case "kaduwela": return "Kaduwela";
+            case "moratuwa": return "Moratuwa";
+            case "sri jayewardenepura kotte": return "Sri Jayewardenepura Kotte";
+            default: return lowercaseName;
+        }
     }
 
     private static class CouncilBounds {
