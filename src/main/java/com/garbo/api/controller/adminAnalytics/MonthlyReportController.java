@@ -14,15 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 
-/**
- * REST controller for monthly report generation and retrieval.
- *
- * Endpoints:
- *   POST   /api/admin/reports/generate          → generate report for last 30 days
- *   GET    /api/admin/reports                   → list all reports (summary)
- *   GET    /api/admin/reports/{id}              → full report with snapshot
- *   GET    /api/admin/reports/{id}/download     → raw JSON snapshot as downloadable file
- */
 @Slf4j
 @RestController
 @RequestMapping("/api/admin/reports")
@@ -32,13 +23,12 @@ public class MonthlyReportController {
 
     private final MonthlyReportGeneratorService reportService;
 
-   
-    // POST /api/admin/reports/generate
-    // Called when frontend clicks "Generate Report"
+    // ── POST /api/admin/reports/generate ─────────────────────────────────────
     @PostMapping("/generate")
-    public ResponseEntity<?> generateReport() {
+    public ResponseEntity<?> generateReport(
+            @RequestParam(required = false) String councilId) {
         try {
-            MonthlyReportSummaryDTO result = reportService.generateReport();
+            MonthlyReportSummaryDTO result = reportService.generateReport(councilId);
             return ResponseEntity.status(HttpStatus.CREATED).body(result);
         } catch (Exception e) {
             log.error("Report generation failed", e);
@@ -50,9 +40,7 @@ public class MonthlyReportController {
         }
     }
 
-    
-    // GET /api/admin/reports
-    // Returns list of all reports (no snapshot — lightweight)
+    // ── GET /api/admin/reports ────────────────────────────────────────────────
     @GetMapping
     public ResponseEntity<?> getAllReports() {
         try {
@@ -67,10 +55,7 @@ public class MonthlyReportController {
         }
     }
 
-    
-    // GET /api/admin/reports/{id}
-    // Returns full report including the deserialized snapshot
-    // Used by frontend to render the printable report view
+    // ── GET /api/admin/reports/{id} ───────────────────────────────────────────
     @GetMapping("/{id}")
     public ResponseEntity<?> getReportById(@PathVariable Long id) {
         try {
@@ -91,26 +76,15 @@ public class MonthlyReportController {
         }
     }
 
-    
-    // GET /api/admin/reports/{id}/download
-    // Returns raw JSON snapshot as an attachment — frontend can also
-    // trigger print-to-PDF instead of using this endpoint directly
+    // ── GET /api/admin/reports/{id}/download ──────────────────────────────────
     @GetMapping("/{id}/download")
     public ResponseEntity<?> downloadReport(@PathVariable Long id) {
         try {
             String json = reportService.getRawSnapshot(id);
-
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.setContentDispositionFormData(
-                "attachment",
-                "garbo-report-" + id + ".json"
-            );
-
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(json);
-
+            headers.setContentDispositionFormData("attachment", "garbo-report-" + id + ".json");
+            return ResponseEntity.ok().headers(headers).body(json);
         } catch (RuntimeException e) {
             if (e.getMessage() != null && e.getMessage().startsWith("Report not found")) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(

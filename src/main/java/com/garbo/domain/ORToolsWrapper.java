@@ -7,6 +7,7 @@ import com.google.protobuf.Duration;
 
 import java.util.*;
 
+// Google OR-Tools wrapper that solves vehicle routing optimization problems with vehicle capacities and travel costs.
 public class ORToolsWrapper {
 
     private static final int SOLVER_TIME_LIMIT_SECONDS = 8;

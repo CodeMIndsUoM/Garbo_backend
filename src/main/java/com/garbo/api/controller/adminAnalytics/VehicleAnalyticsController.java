@@ -19,14 +19,12 @@ public class VehicleAnalyticsController {
 
     private final VehicleAnalyticsService vehicleAnalyticsService;
 
-    /**
-     * GET /api/admin/vehicles/analytics
-     * Returns KPIs + full fleet list
-     */
     @GetMapping("/analytics")
-    public ResponseEntity<?> getAnalytics() {
+    public ResponseEntity<?> getAnalytics(
+        @RequestParam(value = "councilId", required = false) String councilId
+    ) {
         try {
-            return ResponseEntity.ok(vehicleAnalyticsService.getAnalytics());
+            return ResponseEntity.ok(vehicleAnalyticsService.getAnalytics(councilId));
         } catch (Exception e) {
             log.error("Failed to fetch vehicle analytics", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
@@ -37,16 +35,13 @@ public class VehicleAnalyticsController {
         }
     }
 
-    /**
-     * GET /api/admin/vehicles/analytics?status=On Route
-     * Returns KPIs + filtered fleet list by status
-     */
     @GetMapping("/analytics/filter")
     public ResponseEntity<?> getAnalyticsByStatus(
-        @RequestParam(value = "status", defaultValue = "all") String status
+        @RequestParam(value = "status",    defaultValue = "all") String status,
+        @RequestParam(value = "councilId", required = false)     String councilId
     ) {
         try {
-            return ResponseEntity.ok(vehicleAnalyticsService.getAnalyticsByStatus(status));
+            return ResponseEntity.ok(vehicleAnalyticsService.getAnalyticsByStatus(status, councilId));
         } catch (Exception e) {
             log.error("Failed to fetch filtered vehicle analytics", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
