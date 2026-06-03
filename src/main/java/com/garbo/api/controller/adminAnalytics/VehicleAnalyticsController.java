@@ -1,6 +1,6 @@
 package com.garbo.api.controller.adminAnalytics;
 
-import com.garbo.api.dto.VehicleAnalyticsDTOs.VehicleAnalyticsDTO;
+
 import com.garbo.core.service.AdminAnalytics.VehicleAnalyticsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
