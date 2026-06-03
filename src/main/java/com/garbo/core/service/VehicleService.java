@@ -8,26 +8,33 @@ import java.util.NoSuchElementException;
 import org.springframework.stereotype.Service;
 
 import com.garbo.core.entity.Vehicle;
-import com.garbo.core.repository.DriverRepository;
+import com.garbo.core.repository.BinCollectorRepository;
 import com.garbo.core.repository.VehicleRepository;
+import com.garbo.core.repository.RouteAssignmentRepository;
 
 @Service
 public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
-    private final DriverRepository driverRepository;
+    private final BinCollectorRepository binCollectorRepository;
+    private final RouteAssignmentRepository routeAssignmentRepository;
 
-    public VehicleService(VehicleRepository vehicleRepository, DriverRepository driverRepository) {
+    public VehicleService(VehicleRepository vehicleRepository, BinCollectorRepository binCollectorRepository, RouteAssignmentRepository routeAssignmentRepository) {
         this.vehicleRepository = vehicleRepository;
-        this.driverRepository = driverRepository;
+        this.binCollectorRepository = binCollectorRepository;
+        this.routeAssignmentRepository = routeAssignmentRepository;
     }
 
     public List<Vehicle> getAll() {
-        return vehicleRepository.findAll();
+        List<Vehicle> list = vehicleRepository.findAll();
+        populateDriverNames(list);
+        return list;
     }
 
     public List<Vehicle> getByCouncil(String council) {
-        return vehicleRepository.findByAssignedCouncil(council);
+        List<Vehicle> list = vehicleRepository.findByAssignedCouncil(council);
+        populateDriverNames(list);
+        return list;
     }
 
     public Vehicle create(Vehicle payload) {
@@ -37,7 +44,7 @@ public class VehicleService {
 
         String council = payload.getAssignedCouncil();
         if (council == null || council.isBlank()) {
-            council = "Unassigned";
+            council = CurrentUserService.getCurrentCouncil().orElse("Unassigned");
             payload.setAssignedCouncil(council);
         }
         
@@ -66,11 +73,12 @@ public class VehicleService {
         existing.setAssignedCouncil(payload.getAssignedCouncil());
         existing.setAssignedDriverId(payload.getAssignedDriverId());
         existing.setCurrentLocation(payload.getCurrentLocation());
-        existing.setFuelLevel(payload.getFuelLevel());
         existing.setUpdatedAt(LocalDateTime.now());
         normalizeVehicle(existing);
         validateDriver(existing.getAssignedDriverId());
-        return vehicleRepository.save(existing);
+        Vehicle saved = vehicleRepository.save(existing);
+        populateDriverNames(List.of(saved));
+        return saved;
     }
 
     public Vehicle updateStatus(Long id, String status) {
@@ -78,19 +86,22 @@ public class VehicleService {
         existing.setStatus(status);
         existing.setUpdatedAt(LocalDateTime.now());
         normalizeVehicle(existing);
-        return vehicleRepository.save(existing);
+        Vehicle saved = vehicleRepository.save(existing);
+        populateDriverNames(List.of(saved));
+        return saved;
     }
 
     public void delete(Long id) {
         if (!vehicleRepository.existsById(id)) {
             throw new NoSuchElementException("Vehicle not found");
         }
+        routeAssignmentRepository.deleteByVehicleId(id);
         vehicleRepository.deleteById(id);
     }
 
     private void validateDriver(Long driverId) {
-        if (driverId != null && !driverRepository.existsById(driverId)) {
-            throw new IllegalArgumentException("Assigned driver does not exist");
+        if (driverId != null && !binCollectorRepository.existsById(driverId)) {
+            throw new IllegalArgumentException("Assigned bin collector (driver) does not exist");
         }
     }
 
@@ -100,14 +111,31 @@ public class VehicleService {
         } else {
             vehicle.setStatus(vehicle.getStatus().trim().toLowerCase(Locale.ROOT));
         }
-        if (vehicle.getFuelLevel() == null) {
-            vehicle.setFuelLevel(100);
-        } else {
-            int bounded = Math.max(0, Math.min(vehicle.getFuelLevel(), 100));
-            vehicle.setFuelLevel(bounded);
-        }
         if (vehicle.getIsActive() == null) {
-            vehicle.setIsActive(!"inactive".equalsIgnoreCase(vehicle.getStatus()));
+            vehicle.setIsActive(true);
         }
+    }
+
+    private void populateDriverNames(List<Vehicle> vehicles) {
+        List<Long> driverIds = vehicles.stream()
+                .map(Vehicle::getAssignedDriverId)
+                .filter(java.util.Objects::nonNull)
+                .distinct()
+                .toList();
+        if (driverIds.isEmpty()) return;
+
+        java.util.Map<Long, String> driverMap = binCollectorRepository.findAllById(driverIds)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        com.garbo.core.entity.BinCollector::getEmpId,
+                        com.garbo.core.entity.BinCollector::getEmpName,
+                        (existing, replacement) -> existing
+                ));
+
+        vehicles.forEach(v -> {
+            if (v.getAssignedDriverId() != null) {
+                v.setAssignedDriverName(driverMap.get(v.getAssignedDriverId()));
+            }
+        });
     }
 }
