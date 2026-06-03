@@ -2,6 +2,7 @@ package com.garbo.core.repository;
 
 import com.garbo.core.entity.BinReport;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -11,6 +12,10 @@ import java.util.List;
 
 @Repository
 public interface BinReportRepository extends JpaRepository<BinReport, Long> {
+
+    @Modifying
+    @Query("DELETE FROM BinReport r WHERE r.bin.id = :binId")
+    int deleteByBinId(@Param("binId") Long binId);
 
     // ── All councils ───────────────────────────────────────────────────────────
 
