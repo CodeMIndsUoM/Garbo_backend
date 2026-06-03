@@ -197,6 +197,7 @@ public class RouteAssignmentService {
         if (request == null || !request.hasValidTeam()) {
             throw new IllegalArgumentException("Invalid request");
         }
+        
     }
 
     private Map<String, Object> getRouteMap(RouteSessionSnapshotDTO snapshot) {

@@ -24,7 +24,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 
 @Service
 public class BinService {
@@ -171,8 +170,10 @@ public class BinService {
         return saved;
     }
 
+    @Transactional
     public void deleteBinForCurrentUser(Long id) {
         Bin bin = getBinWithCouncilAccess(id);
+        binReportRepository.deleteByBinId(bin.getId());
         binRepository.deleteByIdNative(bin.getId());
         eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
     }
@@ -216,7 +217,9 @@ public class BinService {
         return saved;
     }
 
+    @Transactional
     public void deleteBin(Long id) {
+        binReportRepository.deleteByBinId(id);
         binRepository.deleteByIdNative(id);
         eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
     }
