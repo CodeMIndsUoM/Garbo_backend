@@ -62,6 +62,20 @@ public class CloudinaryUploadService {
                 "Bin report photo is required");
     }
 
+    public String uploadBinReportPhoto(
+            byte[] fileBytes,
+            String originalFilename,
+            String contentType,
+            Long binId) {
+        return uploadImageBytes(
+                fileBytes,
+                originalFilename,
+                contentType,
+                "garbo/bin-reports",
+                "bin-" + binId + "-",
+                "Bin report photo is required");
+    }
+
     public String uploadNicPhoto(MultipartFile file) {
         return uploadImage(
                 file,
@@ -114,6 +128,52 @@ public class CloudinaryUploadService {
         }
     }
 
+    private String uploadImageBytes(
+            byte[] fileBytes,
+            String originalFilename,
+            String contentType,
+            String folder,
+            String publicIdPrefix,
+            String missingPhotoMessage) {
+        if (!isConfigured()) {
+            throw new CollectionException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Cloudinary is not configured on backend",
+                    "CLOUDINARY_NOT_CONFIGURED");
+        }
+
+        validateImageBytes(fileBytes, originalFilename, contentType, missingPhotoMessage);
+
+        Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(
+                "cloud_name", cloudName,
+                "api_key", apiKey,
+                "api_secret", apiSecret,
+                "secure", true));
+
+        try {
+            Map<?, ?> result = cloudinary.uploader().upload(
+                    fileBytes,
+                    ObjectUtils.asMap(
+                            "folder", folder,
+                            "resource_type", "image",
+                            "public_id", publicIdPrefix + System.currentTimeMillis()));
+
+            Object secureUrl = result.get("secure_url");
+            if (secureUrl == null || secureUrl.toString().isBlank()) {
+                throw new CollectionException(
+                        HttpStatus.INTERNAL_SERVER_ERROR,
+                        "Image upload failed: secure URL not returned",
+                        "UPLOAD_FAILED");
+            }
+            return secureUrl.toString();
+        } catch (IOException ex) {
+            throw new CollectionException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Image upload failed",
+                    "UPLOAD_FAILED");
+        }
+    }
+
     private boolean isConfigured() {
         return !isBlank(cloudName) && !isBlank(apiKey) && !isBlank(apiSecret);
     }
@@ -135,6 +195,25 @@ public class CloudinaryUploadService {
         String contentType = file.getContentType();
         String fileName = file.getOriginalFilename();
         if (!isAllowedImage(contentType, fileName)) {
+            throw new CollectionException(HttpStatus.BAD_REQUEST, "Only image files are allowed", "VALIDATION_ERROR");
+        }
+    }
+
+    private void validateImageBytes(
+            byte[] fileBytes,
+            String originalFilename,
+            String contentType,
+            String missingPhotoMessage) {
+        if (fileBytes == null || fileBytes.length == 0) {
+            throw new CollectionException(HttpStatus.BAD_REQUEST, missingPhotoMessage, "VALIDATION_ERROR");
+        }
+
+        if (fileBytes.length > MAX_FILE_BYTES) {
+            throw new CollectionException(HttpStatus.BAD_REQUEST, "Image file must be 10MB or smaller",
+                    "VALIDATION_ERROR");
+        }
+
+        if (!isAllowedImage(contentType, originalFilename)) {
             throw new CollectionException(HttpStatus.BAD_REQUEST, "Only image files are allowed", "VALIDATION_ERROR");
         }
     }

@@ -92,6 +92,7 @@ public class FieldMentorController {
         }
     }
 
+    // Get all bins assigned to the field mentor's council
     @GetMapping("/me/bins")
     @PreAuthorize("hasRole('FIELD_MENTOR')")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAssignedBins() {

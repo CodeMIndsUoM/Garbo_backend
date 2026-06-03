@@ -1,4 +1,4 @@
-package com.garbo.core.dto.collection;
+package com.garbo.api.dto.collection;
 
 import com.garbo.core.entity.CollectionOffer;
 import com.garbo.core.enums.CancellationReason;
@@ -15,6 +15,7 @@ public record OfferDto(
         String collectorCompany,
         Double pricePerUnit,
         PriceUnit priceUnit,
+        String exchangeItem,
         Instant proposedPickupAt,
         String messageToCitizen,
         OfferStatus status,
@@ -41,6 +42,7 @@ public record OfferDto(
                 o.getCollector() != null ? o.getCollector().getCompany() : null,
                 o.getPricePerUnit(),
                 o.getPriceUnit(),
+                o.getExchangeItem(),
                 o.getProposedPickupAt(),
                 o.getMessageToCitizen(),
                 o.getStatus(),
