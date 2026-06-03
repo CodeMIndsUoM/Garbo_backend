@@ -15,6 +15,7 @@ public class OSRMClient {
     private static final int CONNECT_TIMEOUT_MS = 8000;
     private static final int READ_TIMEOUT_MS = 15000;
 
+    // Builds a RestTemplate with configured connection and read timeouts for OSRM API calls.
     private static RestTemplate buildRestTemplate() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(CONNECT_TIMEOUT_MS);
@@ -22,6 +23,7 @@ public class OSRMClient {
         return new RestTemplate(factory);
     }
 
+    // Queries OSRM API to compute a travel duration matrix between all coordinate pairs; coordinates are lat/lng pairs.
     public static double[][] getDurationMatrix(double[][] coords) {
 
         StringBuilder sb = new StringBuilder();
@@ -65,6 +67,7 @@ public class OSRMClient {
         return matrix;
     }
 
+    // DTO for OSRM API response; contains durations matrix and status code.
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class OSRMResponse {
         public Double[][] durations;

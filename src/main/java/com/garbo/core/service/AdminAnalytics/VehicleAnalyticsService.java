@@ -16,50 +16,77 @@ public class VehicleAnalyticsService {
 
     private final VehicleRepository vehicleRepository;
 
-    // DB status values
     private static final String STATUS_AVAILABLE   = "available";
     private static final String STATUS_ON_ROUTE    = "on_route";
     private static final String STATUS_MAINTENANCE = "maintenance";
 
-    public VehicleAnalyticsDTO getAnalytics() {
+    public VehicleAnalyticsDTO getAnalytics(String councilId) {
+        boolean filtered = councilId != null && !councilId.isBlank();
 
-        //  KPIs 
-        long totalFleet   = vehicleRepository.countByIsActiveTrue();
-        long onRoute      = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_ON_ROUTE);
-        long available    = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_AVAILABLE);
-        long maintenance  = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_MAINTENANCE);
+        long totalFleet  = filtered
+            ? vehicleRepository.countByIsActiveTrueAndAssignedCouncil(councilId)
+            : vehicleRepository.countByIsActiveTrue();
 
-        //  Fleet table 
-        List<Vehicle> vehicles = vehicleRepository.findAllByIsActiveTrueOrderByIdAsc();
+        long onRoute     = filtered
+            ? vehicleRepository.countByStatusAndIsActiveTrueAndAssignedCouncil(STATUS_ON_ROUTE, councilId)
+            : vehicleRepository.countByStatusAndIsActiveTrue(STATUS_ON_ROUTE);
+
+        long available   = filtered
+            ? vehicleRepository.countByStatusAndIsActiveTrueAndAssignedCouncil(STATUS_AVAILABLE, councilId)
+            : vehicleRepository.countByStatusAndIsActiveTrue(STATUS_AVAILABLE);
+
+        long maintenance = filtered
+            ? vehicleRepository.countByStatusAndIsActiveTrueAndAssignedCouncil(STATUS_MAINTENANCE, councilId)
+            : vehicleRepository.countByStatusAndIsActiveTrue(STATUS_MAINTENANCE);
+
+        List<Vehicle> vehicles = filtered
+            ? vehicleRepository.findAllByIsActiveTrueAndAssignedCouncilOrderByIdAsc(councilId)
+            : vehicleRepository.findAllByIsActiveTrueOrderByIdAsc();
 
         List<VehicleRowDTO> rows = vehicles.stream()
             .map(v -> new VehicleRowDTO(
                 String.valueOf(v.getId()),
                 v.getLicensePlate(),
                 v.getType(),
-                formatStatus(v.getStatus())   // "on_route" → "On Route"
+                formatStatus(v.getStatus())
             ))
             .collect(Collectors.toList());
 
         return new VehicleAnalyticsDTO(totalFleet, onRoute, available, maintenance, rows);
     }
 
-    //  Filtered fleet list (used when frontend passes a status filter) 
-    public VehicleAnalyticsDTO getAnalyticsByStatus(String statusFilter) {
+    public VehicleAnalyticsDTO getAnalyticsByStatus(String statusFilter, String councilId) {
+        boolean filtered = councilId != null && !councilId.isBlank();
 
-        long totalFleet  = vehicleRepository.countByIsActiveTrue();
-        long onRoute     = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_ON_ROUTE);
-        long available   = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_AVAILABLE);
-        long maintenance = vehicleRepository.countByStatusAndIsActiveTrue(STATUS_MAINTENANCE);
+        long totalFleet  = filtered
+            ? vehicleRepository.countByIsActiveTrueAndAssignedCouncil(councilId)
+            : vehicleRepository.countByIsActiveTrue();
+
+        long onRoute     = filtered
+            ? vehicleRepository.countByStatusAndIsActiveTrueAndAssignedCouncil(STATUS_ON_ROUTE, councilId)
+            : vehicleRepository.countByStatusAndIsActiveTrue(STATUS_ON_ROUTE);
+
+        long available   = filtered
+            ? vehicleRepository.countByStatusAndIsActiveTrueAndAssignedCouncil(STATUS_AVAILABLE, councilId)
+            : vehicleRepository.countByStatusAndIsActiveTrue(STATUS_AVAILABLE);
+
+        long maintenance = filtered
+            ? vehicleRepository.countByStatusAndIsActiveTrueAndAssignedCouncil(STATUS_MAINTENANCE, councilId)
+            : vehicleRepository.countByStatusAndIsActiveTrue(STATUS_MAINTENANCE);
 
         List<Vehicle> vehicles;
 
-        if (statusFilter == null || statusFilter.equalsIgnoreCase("all")) {
-            vehicles = vehicleRepository.findAllByIsActiveTrueOrderByIdAsc();
+        boolean allStatuses = statusFilter == null || statusFilter.equalsIgnoreCase("all");
+        String dbStatus = allStatuses ? null : statusFilter.toLowerCase().replace(" ", "_");
+
+        if (allStatuses) {
+            vehicles = filtered
+                ? vehicleRepository.findAllByIsActiveTrueAndAssignedCouncilOrderByIdAsc(councilId)
+                : vehicleRepository.findAllByIsActiveTrueOrderByIdAsc();
         } else {
-            vehicles = vehicleRepository.findAllByStatusAndIsActiveTrueOrderByIdAsc(
-                statusFilter.toLowerCase().replace(" ", "_")  // "On Route" → "on_route"
-            );
+            vehicles = filtered
+                ? vehicleRepository.findAllByStatusAndIsActiveTrueAndAssignedCouncilOrderByIdAsc(dbStatus, councilId)
+                : vehicleRepository.findAllByStatusAndIsActiveTrueOrderByIdAsc(dbStatus);
         }
 
         List<VehicleRowDTO> rows = vehicles.stream()
@@ -74,7 +101,6 @@ public class VehicleAnalyticsService {
         return new VehicleAnalyticsDTO(totalFleet, onRoute, available, maintenance, rows);
     }
 
-    //  Convert DB status to display label 
     private String formatStatus(String dbStatus) {
         if (dbStatus == null) return "Unknown";
         return switch (dbStatus.toLowerCase()) {

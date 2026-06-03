@@ -21,7 +21,6 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
     @Query("SELECT b FROM Bin b WHERE b.id IN :ids")
     List<Bin> findAllByTextIdsCastToBigInt(@Param("ids") List<Long> ids);
 
-    // Mobile APIs use numeric path IDs matching the BIGINT database column
     @Query(value = "SELECT * FROM bins WHERE id = :id", nativeQuery = true)
     Optional<Bin> findByNumericId(@Param("id") Long id);
 
@@ -56,7 +55,6 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
 
     @Transactional
     @Modifying
-    // Undo returns the bin to default "notChecked" state for field-staff flow.
     @Query(value = "UPDATE bins SET status = 'notChecked', fill_level = 0, last_checked = NULL WHERE id = :binId", nativeQuery = true)
     int resetStatusForUndo(@Param("binId") Long binId);
 
@@ -68,5 +66,20 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
     @Query("UPDATE Bin b SET b.isAssigned = :isAssigned WHERE b.id = :id")
     void updateAssignedStatus(@Param("id") Long id, @Param("isAssigned") Boolean isAssigned);
 
-}
+    // ── Analytics — council filtered ──────────────────────────────────────────
 
+    @Query("SELECT b FROM Bin b WHERE LOWER(b.council) = LOWER(:council)")
+    List<Bin> findAllByCouncil(@Param("council") String council);
+
+    @Query("SELECT COUNT(b) FROM Bin b WHERE LOWER(b.status) = 'full'")
+    long countFullBins();
+
+    @Query("SELECT COUNT(b) FROM Bin b WHERE LOWER(b.status) = 'full' AND LOWER(b.council) = LOWER(:council)")
+    long countFullBinsByCouncil(@Param("council") String council);
+
+    @Query("SELECT DISTINCT b.zone FROM Bin b WHERE b.zone IS NOT NULL")
+    List<String> findDistinctZones();
+
+    @Query("SELECT DISTINCT b.zone FROM Bin b WHERE b.zone IS NOT NULL AND LOWER(b.council) = LOWER(:council)")
+    List<String> findDistinctZonesByCouncil(@Param("council") String council);
+}
