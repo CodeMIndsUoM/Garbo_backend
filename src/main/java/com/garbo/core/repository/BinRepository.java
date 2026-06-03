@@ -63,5 +63,10 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
     @Query("SELECT b FROM Bin b WHERE b.id IN :selected")
     List<Bin> findAllByIdWithCast(@Param("selected") List<Long> selected);
 
+    @Transactional
+    @Modifying
+    @Query("UPDATE Bin b SET b.isAssigned = :isAssigned WHERE b.id = :id")
+    void updateAssignedStatus(@Param("id") Long id, @Param("isAssigned") Boolean isAssigned);
+
 }
 
