@@ -36,9 +36,6 @@ public class RouteSessionController {
     @PostMapping
     public ResponseEntity<?> createRouteSession(@RequestBody RouteAssignmentRequestDTO request) {
         try {
-            if (request.getUserId() == null || request.getUserId() <= 0) {
-                return badRequest("userId is required");
-            }
             if (!request.hasValidDepot()) {
                 return badRequest("depotLat and depotLng are required");
             }
@@ -46,17 +43,11 @@ public class RouteSessionController {
                 return badRequest("At least one bin must be selected");
             }
             if (!request.hasValidTeam()) {
-                return badRequest("vehicleId, driverId, and at least 2 collectorIds are required");
+                return badRequest("vehicleId and driverId are required");
             }
 
+            request.setUserId(request.getDriverId());
             RouteSessionSnapshotDTO snapshot = routeSessionService.optimizeAndBroadcast(request);
-
-            if ("READY".equalsIgnoreCase(snapshot.status)) {
-                routeAssignmentService.persist(request, snapshot);
-                log.info("Route session created and persisted: sessionId={}, user={}",
-                        snapshot.sessionId, request.getUserId());
-            }
-
             return ResponseEntity.ok(snapshot);
         } catch (Exception e) {
             log.error("Unexpected error creating route session", e);
@@ -110,14 +101,6 @@ public class RouteSessionController {
                 ? council
                 : CurrentUserService.getCurrentCouncil().orElse(null);
         return ResponseEntity.ok(Map.of("success", true, "data", routeAssignmentService.getAvailableDrivers(effectiveCouncil)));
-    }
-
-    @GetMapping("/available-collectors")
-    public ResponseEntity<?> getAvailableCollectors(@RequestParam(required = false) String council) {
-        String effectiveCouncil = (council != null && !council.isBlank())
-                ? council
-                : CurrentUserService.getCurrentCouncil().orElse(null);
-        return ResponseEntity.ok(Map.of("success", true, "data", routeAssignmentService.getAvailableCollectors(effectiveCouncil)));
     }
 
     @GetMapping("/{sessionId}/progress")
