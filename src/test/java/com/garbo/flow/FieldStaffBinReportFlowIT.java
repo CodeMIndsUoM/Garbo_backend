@@ -68,7 +68,7 @@ class FieldStaffBinReportFlowIT extends FlowTestBase {
 
         MvcResult reportResult = mockMvc.perform(multipart("/api/bins/{id}/report", bin.getId())
                 .param("status", "full")
-                .param("fillLevel", "80")
+                .param("fillLevel", "100")
                 .param("latitude", "6.9271")
                 .param("longitude", "79.8612")
                 .param("notes", "Bin is full")
@@ -81,7 +81,7 @@ class FieldStaffBinReportFlowIT extends FlowTestBase {
         int fillLevel = objectMapper.readTree(reportResult.getResponse().getContentAsString())
                 .path("data").path("fillLevel").asInt();
         assertThat(reportStatus).isEqualTo("full");
-        assertThat(fillLevel).isEqualTo(80);
+        assertThat(fillLevel).isEqualTo(100);
 
         MvcResult undoResult = mockMvc.perform(post("/api/bins/{id}/undo", bin.getId())
                 .header("Authorization", mentorToken))
@@ -110,7 +110,7 @@ class FieldStaffBinReportFlowIT extends FlowTestBase {
 
         mockMvc.perform(multipart("/api/bins/{id}/report", bin.getId())
                 .param("status", "full")
-                .param("fillLevel", "80")
+                .param("fillLevel", "100")
                 .param("latitude", "6.9271")
                 .param("longitude", "79.8612"))
                 .andExpect(status().isUnauthorized());
