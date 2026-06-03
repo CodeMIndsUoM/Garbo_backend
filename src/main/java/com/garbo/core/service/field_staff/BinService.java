@@ -5,8 +5,10 @@ import com.garbo.api.dto.BinReportRequest;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.BinReport;
 import com.garbo.core.entity.FieldMentor;
+import com.garbo.core.entity.CouncilBoundary;
 import com.garbo.core.repository.BinReportRepository;
 import com.garbo.core.repository.BinRepository;
+import com.garbo.core.repository.CouncilBoundaryRepository;
 import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.service.CouncilAccessService;
 import com.garbo.core.service.event.BinChangedEvent;
@@ -39,6 +41,7 @@ public class BinService {
     private final BinReportRepository binReportRepository;
     private final FieldMentorRepository fieldMentorRepository;
     private final CouncilAccessService councilAccessService;
+    private final CouncilBoundaryRepository councilBoundaryRepository;
     private static final Map<String, CouncilBounds> COUNCIL_BOUNDS = buildCouncilBounds();
 
     // ── kevin-RWS dependencies ────────────────────────────────────────────────
@@ -52,11 +55,13 @@ public class BinService {
     public BinService(BinRepository binRepository,
             BinReportRepository binReportRepository,
             FieldMentorRepository fieldMentorRepository,
-            CouncilAccessService councilAccessService) {
+            CouncilAccessService councilAccessService,
+            CouncilBoundaryRepository councilBoundaryRepository) {
         this.binRepository = binRepository;
         this.binReportRepository = binReportRepository;
         this.fieldMentorRepository = fieldMentorRepository;
         this.councilAccessService = councilAccessService;
+        this.councilBoundaryRepository = councilBoundaryRepository;
     }
 
     // ── Methods from HEAD ─────────────────────────────────────────────────────
@@ -471,7 +476,34 @@ public class BinService {
         throw new IllegalArgumentException("Location is required as lat,lng");
     }
 
+    private boolean isPointInPolygon(double lat, double lng, List<CouncilBoundary> polygon) {
+        boolean inside = false;
+        int n = polygon.size();
+        for (int i = 0, j = n - 1; i < n; j = i++) {
+            double xi = polygon.get(i).getLng();
+            double yi = polygon.get(i).getLat();
+            double xj = polygon.get(j).getLng();
+            double yj = polygon.get(j).getLat();
+
+            boolean intersect = ((yi > lat) != (yj > lat))
+                    && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+            if (intersect) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
     private void validateCoordinatesInCouncil(String council, double lat, double lng) {
+        List<CouncilBoundary> dbBoundary = councilBoundaryRepository.findByCouncilIgnoreCaseOrderByPointOrderAsc(council);
+        if (dbBoundary != null && !dbBoundary.isEmpty()) {
+            if (!isPointInPolygon(lat, lng, dbBoundary)) {
+                throw new IllegalArgumentException("Coordinates are outside the council boundary");
+            }
+            return;
+        }
+
+        // Fallback to legacy rectangular bounds
         CouncilBounds bounds = COUNCIL_BOUNDS.get(council.toLowerCase(Locale.ROOT));
         if (bounds == null) {
             throw new IllegalArgumentException("Unsupported council for coordinate validation: " + council);
