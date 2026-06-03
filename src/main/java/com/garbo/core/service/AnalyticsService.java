@@ -16,41 +16,32 @@ public class AnalyticsService {
     @Autowired
     private CollectorRouteCompletionRepository repo;
 
-    public DashboardResponseDTO getDashboard(String filter) {
+    public DashboardResponseDTO getDashboard(String filter, String council) {
 
         // 1. NORMALIZE FILTER
-        
-        if (filter == null) {
-            filter = "DAY";
-        }
+        if (filter == null) filter = "DAY";
         filter = filter.toUpperCase();
 
-        
-        // 2. DATE RANGE
-        
-        LocalDateTime startDate;
+        boolean hasCouncil = council != null && !council.isBlank();
 
+        // 2. DATE RANGE
+        LocalDateTime startDate;
         switch (filter) {
-            case "WEEK":
-                startDate = LocalDateTime.now().minusDays(7);
-                break;
-            case "MONTH":
-                startDate = LocalDateTime.now().minusDays(30);
-                break;
-            default:
-                startDate = LocalDateTime.now().minusDays(1);
+            case "WEEK":  startDate = LocalDateTime.now().minusDays(7);  break;
+            case "MONTH": startDate = LocalDateTime.now().minusDays(30); break;
+            default:      startDate = LocalDateTime.now().minusDays(1);
         }
 
-       
-        // 3. SUMMARY (SAFE)
-        // getSummary returns List<Object[]> — unwrap the first row
-        
-        List<Object[]> summaryList = repo.getSummary(startDate);
+        // 3. SUMMARY
+        List<Object[]> summaryList = hasCouncil
+                ? repo.getSummaryByCouncil(startDate, council)
+                : repo.getSummary(startDate);
+
         Object[] summary = (summaryList != null && !summaryList.isEmpty()) ? summaryList.get(0) : null;
 
-        int assigned = 0;
+        int assigned  = 0;
         int collected = 0;
-        int missed = 0;
+        int missed    = 0;
 
         if (summary != null) {
             assigned  = summary[0] != null ? ((Number) summary[0]).intValue() : 0;
@@ -58,43 +49,29 @@ public class AnalyticsService {
             missed    = summary[2] != null ? ((Number) summary[2]).intValue() : 0;
         }
 
-       
-        // 4. CHART DATA SELECTION
-        
+        // 4. CHART DATA
         List<Object[]> rawData;
-
         if ("WEEK".equals(filter)) {
-            rawData = repo.getDailyData(startDate);
+            rawData = hasCouncil ? repo.getDailyDataByCouncil(startDate, council)  : repo.getDailyData(startDate);
         } else if ("MONTH".equals(filter)) {
-            rawData = repo.getWeeklyData(startDate);
+            rawData = hasCouncil ? repo.getWeeklyDataByCouncil(startDate, council) : repo.getWeeklyData(startDate);
         } else {
-            rawData = repo.getHourlyData(startDate);
+            rawData = hasCouncil ? repo.getHourlyDataByCouncil(startDate, council) : repo.getHourlyData(startDate);
         }
 
-        
-        // 5. CHART MAPPING (SAFE)
-        
+        // 5. CHART MAPPING
         List<ChartDataDTO> chartData = new ArrayList<>();
-
         if (rawData != null) {
             for (Object[] row : rawData) {
                 String label = row[0] != null ? String.valueOf(row[0]) : "0";
                 int a = row[1] != null ? ((Number) row[1]).intValue() : 0;
                 int c = row[2] != null ? ((Number) row[2]).intValue() : 0;
                 int m = row[3] != null ? ((Number) row[3]).intValue() : 0;
-
                 chartData.add(new ChartDataDTO(label, a, c, m));
             }
         }
 
-        
         // 6. RESPONSE
-        
-        return new DashboardResponseDTO(
-                assigned,
-                collected,
-                missed,
-                chartData
-        );
+        return new DashboardResponseDTO(assigned, collected, missed, chartData);
     }
 }

@@ -1,15 +1,11 @@
 package com.garbo.api.controller.adminAnalytics;
 
-
 import com.garbo.api.dto.ComplaintDTOs.ComplaintAnalyticsResponseDTO;
 import com.garbo.core.service.AdminAnalytics.ComplaintAnalyticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * GET /api/admin/complaintanalytics?filter=TODAY|WEEK|MONTH
- */
 @RestController
 @RequestMapping("/api/admin")
 @CrossOrigin("*")
@@ -20,9 +16,10 @@ public class ComplaintAnalyticsController {
 
     @GetMapping("/complaintanalytics")
     public ResponseEntity<?> getComplaintAnalytics(
-            @RequestParam(defaultValue = "TODAY") String filter) {
+            @RequestParam(defaultValue = "TODAY")  String filter,
+            @RequestParam(required = false)        String councilId) {
         try {
-            ComplaintAnalyticsResponseDTO response = service.getAnalytics(filter);
+            ComplaintAnalyticsResponseDTO response = service.getAnalytics(filter, councilId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             e.printStackTrace();
