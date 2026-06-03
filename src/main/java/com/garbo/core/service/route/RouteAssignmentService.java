@@ -30,7 +30,6 @@ public class RouteAssignmentService {
     private final RouteBinStopRepository    binStopRepository;
     private final VehicleRepository         vehicleRepository;
     private final BinCollectorRepository    collectorRepository;
-    private final CollectorLabourRepository labourRepository;
     private final BinRepository             binRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -109,19 +108,8 @@ public class RouteAssignmentService {
 
     public List<BinCollector> getAvailableDrivers(String council) {
         List<BinCollector> all = collectorRepository.findAll();
-        List<Long> busyIds = routeAssignmentRepository.findBusyDriverIds();
         return all.stream()
-                .filter(d -> !busyIds.contains(d.getEmpId()))
                 .filter(d -> council == null || council.equalsIgnoreCase(d.getAssignedCouncil()))
-                .toList();
-    }
-
-    public List<CollectorLabour> getAvailableCollectors(String council) {
-        List<CollectorLabour> all = labourRepository.findAll();
-        List<Long> busyIds = routeAssignmentRepository.findBusyCollectorIds();
-        return all.stream()
-                .filter(c -> !busyIds.contains(c.getId()))
-                .filter(c -> council == null || council.equalsIgnoreCase(c.getCouncil()))
                 .toList();
     }
 
@@ -146,15 +134,11 @@ public class RouteAssignmentService {
         vehicleRepository.save(vehicle);
         
         BinCollector driver = collectorRepository.findById(request.getDriverId()).orElseThrow();
-        List<CollectorLabour> collectors = new ArrayList<>();
-        for (Long cId : request.getCollectorIds()) {
-            collectors.add(labourRepository.findById(cId).orElseThrow());
-        }
         RouteAssignment assignment = new RouteAssignment();
         assignment.setSessionId(sessionId);
         assignment.setVehicle(vehicle);
         assignment.setDriver(driver);
-        assignment.setCollectors(collectors);
+        assignment.setCollectors(new ArrayList<>());
         routeAssignmentRepository.save(assignment);
     }
 
