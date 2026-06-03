@@ -8,7 +8,7 @@ import lombok.EqualsAndHashCode;
  *
  * By inheriting from RouteSessionCreateRequestDTO all shared fields
  * (sessionId, userId, vehicleCount, vehicleCapacities, depotLat, depotLng,
- * selectedBinIds, vehicleId, driverId, collectorIds) and helpers
+ * selectedBinIds, vehicleId, driverId) and helpers
  * (hasValidTeam, hasValidDepot, getValidatedCapacities) are available
  * automatically, which allows the instanceof checks in RouteSessionService
  * to compile and behave correctly.
