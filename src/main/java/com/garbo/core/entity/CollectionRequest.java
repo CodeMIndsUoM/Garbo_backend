@@ -1,6 +1,5 @@
 package com.garbo.core.entity;
 
-
 import com.garbo.core.enums.PreferredSlot;
 import com.garbo.core.enums.RequestStatus;
 import com.garbo.core.enums.WasteType;

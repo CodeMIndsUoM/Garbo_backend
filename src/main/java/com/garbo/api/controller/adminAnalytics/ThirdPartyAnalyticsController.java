@@ -4,10 +4,7 @@ import com.garbo.api.dto.ThirdPartyAnalyseDTOs.ThirdPartyAnalyticsResponseDTO;
 import com.garbo.core.service.AdminAnalytics.ThirdPartyAnalyticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -16,18 +13,13 @@ public class ThirdPartyAnalyticsController {
 
     private final ThirdPartyAnalyticsService service;
 
-    /**
-     * GET /api/admin/thirdparty/analyze?period=TODAY
-     * GET /api/admin/thirdparty/analyze?period=LAST_WEEK
-     * GET /api/admin/thirdparty/analyze?period=LAST_MONTH
-     * GET /api/admin/thirdparty/analyze          
-     */
     @GetMapping("/thirdparty/analyze")
     public ResponseEntity<?> getThirdPartyAnalytics(
-            @RequestParam(name = "period", required = false, defaultValue = "ALL") String period
+            @RequestParam(name = "period",    required = false, defaultValue = "ALL") String period,
+            @RequestParam(name = "councilId", required = false)                       String councilId
     ) {
         try {
-            ThirdPartyAnalyticsResponseDTO response = service.getAnalytics(period);
+            ThirdPartyAnalyticsResponseDTO response = service.getAnalytics(period, councilId);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             e.printStackTrace();
