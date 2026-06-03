@@ -21,6 +21,34 @@ public interface CollectionRequestRepository extends JpaRepository<CollectionReq
 
     List<CollectionRequest> findByStatusOrderByCreatedAtDesc(RequestStatus status);
 
+    @Query("""
+            SELECT COUNT(r)
+            FROM CollectionRequest r
+            WHERE r.status = :status
+              AND (
+                LOWER(r.council) IN :councils
+                OR (r.council IS NULL AND LOWER(r.citizen.council) IN :councils)
+              )
+            """)
+    long countByStatusAndCouncilIn(
+            @Param("status") RequestStatus status,
+            @Param("councils") List<String> councils);
+
+    @Query("""
+            SELECT r FROM CollectionRequest r
+            WHERE r.status = com.garbo.core.enums.RequestStatus.OPEN
+              AND (
+                LOWER(r.council) IN :councils
+                OR (r.council IS NULL AND LOWER(r.citizen.council) IN :councils)
+              )
+            ORDER BY r.createdAt DESC
+            """)
+    List<CollectionRequest> findOpenFeedByCouncils(@Param("councils") List<String> councils);
+
+    /**
+     * OPEN requests sorted by Haversine distance from (lat, lng) when provided.
+     * Falls back to creation time when coordinates are null.
+     */
     @Query(value = """
             SELECT r FROM CollectionRequest r
             WHERE r.status = com.garbo.core.enums.RequestStatus.OPEN
@@ -42,6 +70,25 @@ public interface CollectionRequestRepository extends JpaRepository<CollectionReq
     long countByCreatedAtAfter(@Param("from") Instant from);
 
     // ── All councils — status ─────────────────────────────────────────────────
+    @Query(value = """
+            SELECT r FROM CollectionRequest r
+            WHERE r.status = com.garbo.core.enums.RequestStatus.OPEN
+              AND (
+                LOWER(r.council) IN :councils
+                OR (r.council IS NULL AND LOWER(r.citizen.council) IN :councils)
+              )
+            ORDER BY
+              (6371 * acos(
+                cos(radians(:lat)) * cos(radians(r.latitude)) *
+                cos(radians(r.longitude) - radians(:lng)) +
+                sin(radians(:lat)) * sin(radians(r.latitude))
+              )) ASC,
+              r.createdAt DESC
+            """)
+    List<CollectionRequest> findOpenFeedNearByCouncils(
+            @Param("lat") Double lat,
+            @Param("lng") Double lng,
+            @Param("councils") List<String> councils);
 
     @Query("""
         SELECT r.status, COUNT(r)
