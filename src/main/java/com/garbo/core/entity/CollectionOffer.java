@@ -31,12 +31,16 @@ public class CollectionOffer {
     @JoinColumn(name = "collector_id", referencedColumnName = "emp_id", nullable = false)
     private ThirdPartyCollector collector;
 
-    @Column(name = "price_per_unit", nullable = false)
+    @Column(name = "price_per_unit")
     private Double pricePerUnit;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "price_unit", nullable = false, length = 20)
+    @Column(name = "price_unit", length = 20)
     private PriceUnit priceUnit;
+
+    @Column(name = "exchange_item", length = 255)
+    private String exchangeItem;
+
 
     @Column(name = "proposed_pickup_at", nullable = false)
     private Instant proposedPickupAt;

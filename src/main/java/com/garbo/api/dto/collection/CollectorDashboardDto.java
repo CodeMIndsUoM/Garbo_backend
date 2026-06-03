@@ -1,4 +1,4 @@
-package com.garbo.core.dto.collection;
+package com.garbo.api.dto.collection;
 
 import java.time.Instant;
 

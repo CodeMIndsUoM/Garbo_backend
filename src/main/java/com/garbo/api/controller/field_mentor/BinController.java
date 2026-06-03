@@ -1,10 +1,11 @@
-package com.garbo.api.controller;
+package com.garbo.api.controller.field_mentor;
 
-import com.garbo.core.dto.ApiResponse;
+import com.garbo.api.dto.BinReportRequest;
+import com.garbo.api.dto.common.ApiResponse;
 import com.garbo.core.entity.Bin;
-import com.garbo.core.service.field_staff.BinService;
 import com.garbo.core.service.CurrentUserService;
-import com.garbo.infrastructure.storage.CloudinaryUploadService;
+import com.garbo.core.service.field_staff.BinReportPhotoService;
+import com.garbo.core.service.field_staff.BinService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,16 +16,20 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@RestController
+// Bin endpoints used in the scoped field mentor flow.
+// Main mobile usage:
+//   - POST /api/bins/{binId}/report (multipart) from field mentor app
+//   - POST /api/bins/{binId}/undo from field mentor app
+@RestController("fieldMentorBinController")
 @RequestMapping("/api/bins")
 public class BinController {
 
     private final BinService binService;
-    private final CloudinaryUploadService cloudinaryUploadService;
+    private final BinReportPhotoService binReportPhotoService;
 
-    public BinController(BinService binService, CloudinaryUploadService cloudinaryUploadService) {
+    public BinController(BinService binService, BinReportPhotoService binReportPhotoService) {
         this.binService = binService;
-        this.cloudinaryUploadService = cloudinaryUploadService;
+        this.binReportPhotoService = binReportPhotoService;
     }
 
     @GetMapping
@@ -102,19 +107,33 @@ public class BinController {
             Long reporterId = CurrentUserService.getCurrentEmpId()
                     .orElseThrow(() -> new RuntimeException("Authenticated user not found"));
 
-            com.garbo.core.dto.BinReportRequest request = new com.garbo.core.dto.BinReportRequest();
+            BinReportRequest request = new BinReportRequest();
             request.setStatus(status);
             request.setFillLevel(fillLevel);
             request.setLatitude(latitude);
             request.setLongitude(longitude);
             request.setNotes(notes);
 
+            byte[] photoBytes = null;
+            String photoFilename = null;
+            String photoContentType = null;
             if (photo != null && !photo.isEmpty()) {
-                String photoUrl = cloudinaryUploadService.uploadBinReportPhoto(photo, binId);
-                request.setPhotoUrl(photoUrl);
+                photoBytes = photo.getBytes();
+                photoFilename = photo.getOriginalFilename();
+                photoContentType = photo.getContentType();
             }
 
-            Bin updatedBin = binService.reportBinStatus(binId, reporterId, request);
+            BinService.BinStatusReportResult result = binService.reportBinStatus(binId, reporterId, request);
+            Bin updatedBin = result.bin();
+
+            if (photoBytes != null) {
+                binReportPhotoService.uploadAndAttachAsync(
+                        result.reportId(),
+                        binId,
+                        photoBytes,
+                        photoFilename,
+                        photoContentType);
+            }
 
             Map<String, Object> data = new HashMap<>();
             data.put("id", updatedBin.getId());
@@ -128,7 +147,6 @@ public class BinController {
         }
     }
 
-    // Dedicated undo endpoint used by Flutter to revert a report without resubmitting payload.
     @PostMapping("/{binId}/undo")
     @PreAuthorize("hasRole('FIELD_MENTOR')")
     public ResponseEntity<ApiResponse<Map<String, Object>>> undoBinReportFromFieldMentor(@PathVariable Long binId) {

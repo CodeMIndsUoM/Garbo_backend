@@ -1,4 +1,4 @@
-package com.garbo.core.dto.collection;
+package com.garbo.api.dto.collection;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;

@@ -32,7 +32,6 @@ public class RouteSessionController {
     private final RouteAssignmentService  routeAssignmentService;
     private final RouteAssignmentRepository assignmentRepository;
     private final RouteVehicleRouteRepository vehicleRouteRepository;
-    private final RouteBinStopRepository  binStopRepository;
 
     @PostMapping
     public ResponseEntity<?> createRouteSession(@RequestBody RouteAssignmentRequestDTO request) {

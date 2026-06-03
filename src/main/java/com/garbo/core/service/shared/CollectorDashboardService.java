@@ -1,6 +1,6 @@
 package com.garbo.core.service.shared;
 
-import com.garbo.core.dto.collection.CollectorDashboardDto;
+import com.garbo.api.dto.collection.CollectorDashboardDto;
 import com.garbo.core.entity.CollectionOffer;
 import com.garbo.core.entity.ThirdPartyCollector;
 import com.garbo.core.enums.OfferStatus;
