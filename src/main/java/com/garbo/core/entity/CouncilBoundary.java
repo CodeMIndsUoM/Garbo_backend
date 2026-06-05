@@ -16,21 +16,15 @@ public class CouncilBoundary {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 120)
+    @Column(nullable = false, unique = true, length = 120)
     private String council;
-
-    @Column(nullable = false)
-    private Double lat;
-
-    @Column(nullable = false)
-    private Double lng;
-
-    @Column(name = "point_order", nullable = false)
-    private Integer pointOrder;
 
     @Column(name = "depot_lat")
     private Double depotLat;
 
     @Column(name = "depot_lng")
     private Double depotLng;
+
+    @Column(name = "boundary_points", columnDefinition = "TEXT")
+    private String boundaryPoints;
 }
