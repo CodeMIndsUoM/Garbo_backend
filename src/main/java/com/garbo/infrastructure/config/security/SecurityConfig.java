@@ -114,6 +114,8 @@ public class SecurityConfig {
 
                         // third-party collector self-registration (public, no JWT)
                         .requestMatchers("/api/auth/thirdparty-register/**").permitAll()
+                        // validate token endpoint requires authentication
+                        .requestMatchers(HttpMethod.GET, "/api/auth/validate").authenticated()
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated() // all others need JWT
