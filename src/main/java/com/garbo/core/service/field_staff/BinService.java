@@ -232,8 +232,12 @@ public class BinService {
         if (council == null) {
             // Verify if user is Superadmin
             if (councilAccessService.isSuperAdmin(email)) {
-                // Automatically resolve council from the coordinates
-                council = resolveCouncilFromCoordinates(latLng[0], latLng[1]);
+                // Use council from payload if provided, otherwise resolve automatically from coordinates
+                if (payload.getCouncil() != null && !payload.getCouncil().isBlank()) {
+                    council = payload.getCouncil();
+                } else {
+                    council = resolveCouncilFromCoordinates(latLng[0], latLng[1]);
+                }
                 if (council == null) {
                     throw new IllegalArgumentException("Coordinates are outside any supported municipal council boundary");
                 }
