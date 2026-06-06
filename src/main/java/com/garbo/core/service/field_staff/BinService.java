@@ -263,10 +263,27 @@ public class BinService {
         return saved;
     }
 
+    @Transactional
     public void deleteBinForCurrentUser(Long id) {
         Bin bin = getBinWithCouncilAccess(id);
+        binReportRepository.deleteByBinId(bin.getId());
         binRepository.deleteByIdNative(bin.getId());
         eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
+    }
+
+    @Transactional
+    public void deleteBinsForCurrentUser(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        for (Long id : ids) {
+            getBinWithCouncilAccess(id);
+        }
+        binReportRepository.deleteByBinIds(ids);
+        binRepository.deleteAllByIds(ids);
+        for (Long id : ids) {
+            eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
+        }
     }
 
     public Bin updatePriorityForCurrentUser(Long id, String priority) {
