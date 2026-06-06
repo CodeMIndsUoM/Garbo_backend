@@ -89,9 +89,8 @@ public class SecurityConfig {
                         // allow websocket handshake + SockJS endpoints
                         .requestMatchers("/ws/**").permitAll()
                         // TEMP: allow route-session testing without JWT
-                        .requestMatchers(HttpMethod.POST, "/api/route-sessions").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/route-sessions/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/route-sessions/**").permitAll()
+                        .requestMatchers("/api/route-sessions").permitAll()
+                        .requestMatchers("/api/route-sessions/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/routes/optimize").permitAll()
                         // allow Spring error endpoint to return real status/details
                         .requestMatchers("/error").permitAll()
