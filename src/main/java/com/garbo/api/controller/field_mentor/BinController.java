@@ -1,5 +1,6 @@
 package com.garbo.api.controller.field_mentor;
 
+import com.garbo.api.dto.BinLatestReportDTO;
 import com.garbo.api.dto.BinReportRequest;
 import com.garbo.api.dto.common.ApiResponse;
 import com.garbo.core.entity.Bin;
@@ -30,6 +31,19 @@ public class BinController {
     public BinController(BinService binService, BinReportPhotoService binReportPhotoService) {
         this.binService = binService;
         this.binReportPhotoService = binReportPhotoService;
+    }
+
+    @GetMapping("/{binId}/latest-report")
+    public ResponseEntity<ApiResponse<BinLatestReportDTO>> getLatestReport(@PathVariable Long binId) {
+        try {
+            BinLatestReportDTO report = binService.getLatestReport(binId);
+            if (report == null) {
+                return ResponseEntity.ok(ApiResponse.success(null));
+            }
+            return ResponseEntity.ok(ApiResponse.success(report));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "FETCH_FAILED"));
+        }
     }
 
     @GetMapping

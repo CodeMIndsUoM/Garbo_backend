@@ -6,19 +6,16 @@ import com.garbo.core.entity.Bin;
 import com.garbo.core.repository.BinRepository;
 import com.garbo.core.service.event.BinChangedEvent;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Converts bin-status domain events into websocket pushes for dashboards.
- *
- * We only push report/undo style updates because those are the events that
- * field-staff dashboard needs for near real-time stat tiles and bin list refresh.
  */
 @Slf4j
 @Component
@@ -31,13 +28,18 @@ public class BinStatusBroadcaster {
 
     private final BinRepository binRepository;
     private final WebSocketSessionManager sessionManager;
+    private final CouncilBinStompBroadcaster councilBinStompBroadcaster;
 
-    public BinStatusBroadcaster(BinRepository binRepository, WebSocketSessionManager sessionManager) {
+    public BinStatusBroadcaster(
+            BinRepository binRepository,
+            WebSocketSessionManager sessionManager,
+            CouncilBinStompBroadcaster councilBinStompBroadcaster) {
         this.binRepository = binRepository;
         this.sessionManager = sessionManager;
+        this.councilBinStompBroadcaster = councilBinStompBroadcaster;
     }
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onBinChanged(BinChangedEvent event) {
         if (event == null || event.getBinId() == null) {
             return;
@@ -48,7 +50,7 @@ public class BinStatusBroadcaster {
             return;
         }
 
-        CompletableFuture.runAsync(() -> broadcastBinStatus(event, changeType));
+        broadcastBinStatus(event, changeType);
     }
 
     private void broadcastBinStatus(BinChangedEvent event, String changeType) {
@@ -60,11 +62,8 @@ public class BinStatusBroadcaster {
                     payload
             );
 
-            // Bin status is operational dashboard data, so broadcast it to all
-            // authenticated realtime clients. Field-staff clients filter by
-            // assignedToEmpId; admin dashboards need the same event for live
-            // monitoring without a manual refresh.
             sessionManager.broadcastToAll(message);
+            councilBinStompBroadcaster.publishStatusFromEvent(event);
 
             log.info("Broadcast BIN_STATUS_UPDATED for binId={}, type={}", payload.getBinId(), changeType);
         }, () -> log.warn("Skipping BIN_STATUS_UPDATED broadcast; bin not found for id={}", event.getBinId()));
