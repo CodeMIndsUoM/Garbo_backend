@@ -4,10 +4,10 @@ import com.garbo.core.entity.CouncilBoundary;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CouncilBoundaryRepository extends JpaRepository<CouncilBoundary, Long> {
 
-    List<CouncilBoundary> findByCouncilIgnoreCaseOrderByPointOrderAsc(String council);
+    Optional<CouncilBoundary> findByCouncilIgnoreCase(String council);
 }

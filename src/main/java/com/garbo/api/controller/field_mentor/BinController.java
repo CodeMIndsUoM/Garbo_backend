@@ -54,7 +54,7 @@ public class BinController {
         }
     }
 
-    @DeleteMapping("/{binId}")
+    @DeleteMapping("/{binId:[0-9]+}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> deleteBin(@PathVariable Long binId) {
         try {
             binService.deleteBinForCurrentUser(binId);
@@ -64,6 +64,19 @@ public class BinController {
             return ResponseEntity.ok(ApiResponse.success(data));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "DELETE_FAILED"));
+        }
+    }
+
+    @DeleteMapping("/batch")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteBins(@RequestBody List<Long> binIds) {
+        try {
+            binService.deleteBinsForCurrentUser(binIds);
+            Map<String, Object> data = new HashMap<>();
+            data.put("ids", binIds);
+            data.put("deleted", true);
+            return ResponseEntity.ok(ApiResponse.success(data));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "BATCH_DELETE_FAILED"));
         }
     }
 
