@@ -7,6 +7,7 @@ import com.garbo.core.repository.ThirdPartyCollectorRepository;
 import com.garbo.core.repository.CouncilRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -152,6 +153,7 @@ public class ThirdPartyCollectorRegistrationService {
 
     public List<ThirdPartyCollector> getActiveCollectors(String councilFilter) {
         return repository.findAll().stream()
+                .filter(collector -> !Boolean.TRUE.equals(collector.getAdminHidden()))
                 .filter(this::isActiveCollector)
                 .filter(collector -> matchesCouncil(councilFilter, collector.getAssignedCouncils()))
                 .toList();
@@ -159,6 +161,7 @@ public class ThirdPartyCollectorRegistrationService {
 
     public List<ThirdPartyCollector> getRevokedCollectors(String councilFilter) {
         return repository.findAll().stream()
+                .filter(collector -> !Boolean.TRUE.equals(collector.getAdminHidden()))
                 .filter(this::isRevokedCollector)
                 .filter(collector -> matchesCouncil(councilFilter, collector.getAssignedCouncils()))
                 .toList();
@@ -166,6 +169,7 @@ public class ThirdPartyCollectorRegistrationService {
 
     public List<ThirdPartyCollector> getPendingCollectors(String councilFilter) {
         return getByStatus(RegistrationStatus.PENDING).stream()
+                .filter(collector -> !Boolean.TRUE.equals(collector.getAdminHidden()))
                 .filter(collector -> matchesCouncil(councilFilter, collector.getAssignedCouncils()))
                 .toList();
     }
@@ -233,5 +237,30 @@ public class ThirdPartyCollectorRegistrationService {
 
     public List<String> getAvailableCouncils() {
         return councilRepository.findByIsActiveTrue().stream().map(Council::getName).toList();
+    }
+
+    public String hideCollector(Long empId) {
+        ThirdPartyCollector collector = getCollector(empId);
+        collector.setAdminHidden(true);
+        repository.save(collector);
+        log.info("Third-party collector hidden: empId={}, email={}", collector.getEmpId(), collector.getEmail());
+        return "HIDDEN";
+    }
+
+    public String deleteCollector(Long empId) {
+        if (!repository.existsById(empId)) {
+            return "NOT_FOUND";
+        }
+        try {
+            repository.deleteById(empId);
+            log.info("Third-party collector deleted: empId={}", empId);
+            return "DELETED";
+        } catch (DataIntegrityViolationException ex) {
+            log.error("Failed to delete third-party collector {} due to constraint", empId, ex);
+            return "CONFLICT";
+        } catch (Exception ex) {
+            log.error("Unexpected error deleting third-party collector {}", empId, ex);
+            return "ERROR";
+        }
     }
 }

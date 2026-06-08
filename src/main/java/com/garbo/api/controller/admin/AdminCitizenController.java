@@ -10,13 +10,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/citizens")
@@ -56,5 +60,43 @@ public class AdminCitizenController {
         } catch (org.springframework.security.access.AccessDeniedException ex) {
             return ResponseEntity.status(403).body(ApiResponse.error(ex.getMessage(), "FORBIDDEN"));
         }
+    }
+
+    @PostMapping("/{empId}/hide")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> hideCitizen(
+            @PathVariable Long empId,
+            HttpServletRequest request) {
+        String result = adminCitizenService.hideCitizen(resolveRequesterEmail(request), empId);
+        return switch (result) {
+            case "HIDDEN" -> ResponseEntity.ok(ApiResponse.success(Map.of(
+                    "empId", empId,
+                    "message", "Citizen hidden from admin list")));
+            case "NOT_FOUND" -> ResponseEntity.status(404)
+                    .body(ApiResponse.error("Citizen not found", "NOT_FOUND"));
+            case "FORBIDDEN" -> ResponseEntity.status(403)
+                    .body(ApiResponse.error("Not allowed to manage this citizen", "FORBIDDEN"));
+            default -> ResponseEntity.status(500)
+                    .body(ApiResponse.error("Failed to hide citizen", "ERROR"));
+        };
+    }
+
+    @DeleteMapping("/{empId}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> deleteCitizen(
+            @PathVariable Long empId,
+            HttpServletRequest request) {
+        String result = adminCitizenService.deleteCitizen(resolveRequesterEmail(request), empId);
+        return switch (result) {
+            case "DELETED" -> ResponseEntity.ok(ApiResponse.success(Map.of(
+                    "empId", empId,
+                    "message", "Citizen deleted")));
+            case "NOT_FOUND" -> ResponseEntity.status(404)
+                    .body(ApiResponse.error("Citizen not found", "NOT_FOUND"));
+            case "FORBIDDEN" -> ResponseEntity.status(403)
+                    .body(ApiResponse.error("Not allowed to manage this citizen", "FORBIDDEN"));
+            case "CONFLICT" -> ResponseEntity.status(409)
+                    .body(ApiResponse.error("Cannot delete due to linked records", "CONFLICT"));
+            default -> ResponseEntity.status(500)
+                    .body(ApiResponse.error("Failed to delete citizen", "ERROR"));
+        };
     }
 }
