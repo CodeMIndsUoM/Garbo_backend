@@ -2,14 +2,12 @@ package com.garbo.api.controller;
 
 import com.garbo.core.entity.Admin;
 import com.garbo.core.service.AdminService;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/admins")
 public class AdminController {
-
     final private AdminService adminService;
 
     public AdminController(AdminService adminService) {
