@@ -130,12 +130,17 @@ public class BinService {
 
         // Trigger realtime websocket push for dashboards listening to bin-status
         // changes.
+        String reporterName = reporter != null ? reporter.getEmpName() : null;
         eventPublisher.publishEvent(new BinChangedEvent(
                 "STATUS_REPORTED",
                 binId,
                 request.getStatus(),
-                request.getFillLevel(),
-                checkedAt));
+                effectiveFillLevel,
+                checkedAt,
+                savedReport.getId(),
+                request.getNotes(),
+                request.getPhotoUrl(),
+                reporterName));
 
         if (reporter != null) {
             userTaskProgressService.incrementFieldMentorReportTasks(reporter.getEmpId(), binId);
@@ -147,6 +152,27 @@ public class BinService {
         updated.setFillLevel(effectiveFillLevel);
         updated.setLastChecked(checkedAt);
         return new BinStatusReportResult(updated, savedReport.getId());
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public com.garbo.api.dto.BinLatestReportDTO getLatestReport(Long binId) {
+        Bin bin = binRepository.findByNumericId(binId)
+                .orElseThrow(() -> new EntityNotFoundException("Bin not found with ID: " + binId));
+
+        return binReportRepository.findFirstByBin_IdOrderByReportedAtDesc(binId)
+                .map(report -> com.garbo.api.dto.BinLatestReportDTO.builder()
+                        .reportId(report.getId())
+                        .binId(binId)
+                        .binCode(bin.getBinCode())
+                        .council(bin.getCouncil())
+                        .status(report.getStatus())
+                        .fillLevel(report.getFillLevel())
+                        .notes(report.getNotes())
+                        .photoUrl(report.getPhotoUrl())
+                        .reporterName(report.getReporter() != null ? report.getReporter().getEmpName() : null)
+                        .reportedAt(report.getReportedAt())
+                        .build())
+                .orElse(null);
     }
 
     // Field-staff undo operation used by dedicated mobile undo endpoint.
