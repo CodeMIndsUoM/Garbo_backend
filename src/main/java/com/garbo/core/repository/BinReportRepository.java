@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BinReportRepository extends JpaRepository<BinReport, Long> {
@@ -18,6 +19,8 @@ public interface BinReportRepository extends JpaRepository<BinReport, Long> {
     @Modifying
     @Query("UPDATE BinReport r SET r.photoUrl = :photoUrl WHERE r.id = :reportId")
     int updatePhotoUrl(@Param("reportId") Long reportId, @Param("photoUrl") String photoUrl);
+
+    Optional<BinReport> findFirstByBin_IdOrderByReportedAtDesc(Long binId);
 
     @Modifying
     @Query("DELETE FROM BinReport r WHERE r.bin.id = :binId")
