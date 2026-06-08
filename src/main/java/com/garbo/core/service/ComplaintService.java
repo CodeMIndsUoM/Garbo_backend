@@ -25,17 +25,13 @@ public class ComplaintService {
     public Complaint createComplaint(Complaint complaint, String citizenEmail) {
         User citizen = userRepository.findByEmail(citizenEmail)
                 .orElseThrow(() -> new RuntimeException("Citizen not found"));
-        complaint.setCitizen(citizen);
+        complaint.setCitizenId(citizen.getEmpId());
         complaint.setStatus("PENDING");
-        if (complaint.getCategory() == null || ((String) complaint.getCategory()).isBlank()) {
-            complaint.setCategory(complaint.getTitle() == null ? "General" : complaint.getTitle());
-        }
         if (complaint.getDescription() == null || complaint.getDescription().isBlank()) {
             complaint.setDescription("No description provided");
         }
         if (complaint.getLocation() == null || complaint.getLocation().isBlank()) {
-            String location = complaint.getLocationAddress();
-            complaint.setLocation((location == null || location.isBlank()) ? "Unknown Location" : location);
+            complaint.setLocation("Unknown Location");
         }
         return complaintRepository.save(complaint);
     }
@@ -74,7 +70,8 @@ public class ComplaintService {
                     .orElseThrow(() -> new RuntimeException("Citizen not found"));
             Complaint ownComplaint = complaintRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Complaint not found"));
-            if (!ownComplaint.getCitizen().getEmpId().equals(citizen.getEmpId())) {
+            if (ownComplaint.getCitizenId() == null
+                    || !ownComplaint.getCitizenId().equals(citizen.getEmpId())) {
                 throw new AccessDeniedException("Complaint is not visible to this citizen");
             }
             return ownComplaint;
@@ -119,9 +116,10 @@ public class ComplaintService {
 
     public Complaint assignComplaint(Long id, Long personnelId, String requesterEmail) {
         Complaint complaint = getComplaintById(id, requesterEmail);
-        User personnel = userRepository.findById(personnelId)
-                .orElseThrow(() -> new RuntimeException("Personnel not found"));
-        complaint.setAssignedTo(personnel);
+        if (!userRepository.existsById(personnelId)) {
+            throw new RuntimeException("Personnel not found");
+        }
+        complaint.setAssignedPersonnelId(personnelId);
         complaint.setStatus("IN_PROGRESS");
         return complaintRepository.save(complaint);
     }
