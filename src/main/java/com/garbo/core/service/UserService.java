@@ -15,6 +15,8 @@ import com.garbo.core.entity.User;
 import com.garbo.core.repository.AdminNewRepository;
 import com.garbo.core.repository.UserRepository;
 import com.garbo.infrastructure.email.EmailService;
+import com.garbo.infrastructure.storage.CloudinaryUploadService;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class UserService {
@@ -24,16 +26,19 @@ public class UserService {
     private final AdminNewRepository adminNewRepo;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final CloudinaryUploadService cloudinaryUploadService;
 
     public UserService(
             UserRepository userRepo,
             AdminNewRepository adminNewRepo,
             PasswordEncoder passwordEncoder,
-            EmailService emailService) {
+            EmailService emailService,
+            CloudinaryUploadService cloudinaryUploadService) {
         this.userRepo = userRepo;
         this.adminNewRepo = adminNewRepo;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.cloudinaryUploadService = cloudinaryUploadService;
     }
 
     public User saveUser(User user) {
@@ -167,6 +172,14 @@ public class UserService {
             existing.setPhone(payload.getPhone());
         }
 
+        if (payload.getDefaultAddress() != null) {
+            existing.setDefaultAddress(payload.getDefaultAddress());
+        }
+
+        if (payload.getAvatarUrl() != null) {
+            existing.setAvatarUrl(payload.getAvatarUrl());
+        }
+
         if (payload.getPassword() != null && !payload.getPassword().isBlank()) {
             existing.setPassword(passwordEncoder.encode(payload.getPassword()));
         }
@@ -181,6 +194,33 @@ public class UserService {
 
         userRepo.deleteById(userId);
         return true;
+    }
+
+    public Optional<User> uploadAvatar(Long userId, MultipartFile photo) {
+        if (userId == null || photo == null || photo.isEmpty()) {
+            return Optional.empty();
+        }
+        Optional<User> existingOpt = userRepo.findById(userId);
+        if (existingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        User existing = existingOpt.get();
+        String url = cloudinaryUploadService.uploadProfilePhoto(photo, userId);
+        existing.setAvatarUrl(url);
+        return Optional.of(userRepo.save(existing));
+    }
+
+    public Optional<User> removeAvatar(Long userId) {
+        if (userId == null) {
+            return Optional.empty();
+        }
+        Optional<User> existingOpt = userRepo.findById(userId);
+        if (existingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        User existing = existingOpt.get();
+        existing.setAvatarUrl(null);
+        return Optional.of(userRepo.save(existing));
     }
 
     public void changePassword(

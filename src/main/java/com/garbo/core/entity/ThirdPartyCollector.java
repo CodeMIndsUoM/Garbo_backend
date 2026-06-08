@@ -22,6 +22,7 @@ import java.time.LocalDate;
 @PrimaryKeyJoinColumn(name = "emp_id")
 public class ThirdPartyCollector extends User {
     @JsonProperty("NIC")
+    @Column(name = "nic")
     private String NIC;
     private String company;
     private String contractId;
