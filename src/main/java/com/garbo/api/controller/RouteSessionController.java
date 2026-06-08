@@ -189,6 +189,16 @@ public class RouteSessionController {
         }
     }
 
+    @PatchMapping("/{sessionId}/bins/{binId}/pending")
+    public ResponseEntity<?> resetBinToPending(@PathVariable String sessionId, @PathVariable Long binId) {
+        try {
+            boolean updated = routeAssignmentService.markBinPending(UUID.fromString(sessionId), binId);
+            return ResponseEntity.ok(Map.of("sessionId", sessionId, "binId", binId, "status", updated ? "PENDING" : "NOT_UPDATED"));
+        } catch (Exception e) {
+            return serverError("Failed to reset bin to pending: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/{sessionId}/routes")
     public ResponseEntity<?> getPersistedRoutes(@PathVariable String sessionId) {
         try {

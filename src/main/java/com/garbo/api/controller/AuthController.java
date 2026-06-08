@@ -3,8 +3,11 @@ package com.garbo.api.controller;
 import com.garbo.infrastructure.config.security.CustomUserDetailsService;
 import com.garbo.infrastructure.config.security.JwtUtil;
 import com.garbo.core.service.UserService;
+import com.garbo.core.service.CitizenService;
+import com.garbo.api.dto.CitizenRegisterRequest;
 import com.garbo.core.entity.AdminNew;
 import com.garbo.core.entity.BinCollector;
+import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -24,15 +27,18 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final CustomUserDetailsService userDetailsService;
     private final UserService userService;
+    private final CitizenService citizenService;
 
     public AuthController(AuthenticationManager authenticationManager,
             JwtUtil jwtUtil,
             CustomUserDetailsService userDetailsService,
-            UserService userService) {
+            UserService userService,
+            CitizenService citizenService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.userService = userService;
+        this.citizenService = citizenService;
     }
 
     @PostMapping("/login")
@@ -97,10 +103,17 @@ public class AuthController {
                         response.put("assignedCouncils", tpc.getAssignedCouncils());
                     }
                 }
+
+                if (user instanceof Citizen) {
+                    Citizen citizen = (Citizen) user;
+                    if (citizen.getCouncil() != null && !citizen.getCouncil().isBlank()) {
+                        response.put("council", citizen.getCouncil());
+                    }
+                }
             }
             response.put("mustChangePassword", mustChange);
-            Object councilValue = null;
             if ("admin".equals(role)) {
+                Object councilValue = null;
                 if (userOpt.isPresent() && userOpt.get() instanceof AdminNew) {
                     AdminNew admin = (AdminNew) userOpt.get();
                     String councilName = admin.getCouncil();
@@ -108,16 +121,10 @@ public class AuthController {
                         Map<String, String> councilMap = new HashMap<>();
                         councilMap.put("name", councilName);
                         councilValue = councilMap;
-                    } else {
-                        councilValue = null;
                     }
-                } else {
-                    councilValue = null;
                 }
-            } else {
-                councilValue = null;
+                response.put("council", councilValue);
             }
-            response.put("council", councilValue);
 
             return ResponseEntity.ok(response);
 
@@ -126,6 +133,29 @@ public class AuthController {
             Map<String, String> error = new HashMap<>();
             error.put("error", "Invalid email or password");
             return ResponseEntity.status(401).body(error);
+        }
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> registerCitizen(@RequestBody CitizenRegisterRequest request) {
+        try {
+            Citizen saved = citizenService.registerCitizen(request);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("empId", saved.getEmpId());
+            response.put("email", saved.getEmail());
+            response.put("empName", saved.getEmpName());
+            response.put("council", saved.getCouncil());
+            response.put("message", "Account created successfully");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", ex.getMessage()));
+        } catch (Exception ex) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Registration failed"));
         }
     }
 

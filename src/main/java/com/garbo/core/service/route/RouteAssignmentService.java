@@ -5,6 +5,7 @@ import com.garbo.api.dto.RouteAssignmentRequestDTO;
 import com.garbo.api.dto.RouteSessionSnapshotDTO;
 import com.garbo.core.entity.*;
 import com.garbo.core.repository.*;
+import com.garbo.infrastructure.websocket.RouteCollectionBroadcaster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class RouteAssignmentService {
     private final VehicleRepository         vehicleRepository;
     private final BinCollectorRepository    collectorRepository;
     private final BinRepository             binRepository;
+    private final RouteCollectionBroadcaster routeCollectionBroadcaster;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -69,6 +71,7 @@ public class RouteAssignmentService {
                     int updated = binStopRepository.markCollected(stop.getId(), LocalDateTime.now());
                     if (updated > 0) {
                         log.info("Bin {} marked COLLECTED in session {}", binId, sessionId);
+                        routeCollectionBroadcaster.broadcastBinStatusUpdate(sessionId, binId, "COLLECTED");
                         return true;
                     }
                     return false;
@@ -82,7 +85,26 @@ public class RouteAssignmentService {
                 .findBySessionIdAndBinId(sessionId, binId)
                 .map(stop -> {
                     int updated = binStopRepository.markSkipped(stop.getId());
-                    return updated > 0;
+                    if (updated > 0) {
+                        routeCollectionBroadcaster.broadcastBinStatusUpdate(sessionId, binId, "SKIPPED");
+                        return true;
+                    }
+                    return false;
+                })
+                .orElse(false);
+    }
+
+    @Transactional
+    public boolean markBinPending(UUID sessionId, Long binId) {
+        return binStopRepository
+                .findBySessionIdAndBinId(sessionId, binId)
+                .map(stop -> {
+                    int updated = binStopRepository.markPending(stop.getId());
+                    if (updated > 0) {
+                        routeCollectionBroadcaster.broadcastBinStatusUpdate(sessionId, binId, "PENDING");
+                        return true;
+                    }
+                    return false;
                 })
                 .orElse(false);
     }

@@ -2,12 +2,13 @@ package com.garbo.core.service;
 
 import com.garbo.api.dto.gamification.AdminGamificationTaskUpsertRequest;
 import com.garbo.core.entity.GamificationTask;
+import com.garbo.core.entity.TaskFamily;
 import com.garbo.core.repository.GamificationTaskRepository;
+import com.garbo.core.repository.TaskFamilyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -15,29 +16,11 @@ import java.util.Optional;
 @Service
 public class GamificationTaskService {
 
-    private static final String TASK_CODE_ROUTES_2_DAILY = "ROUTES_2_DAILY";
-    private static final String TASK_CODE_ROUTES_3_DAILY = "ROUTES_3_DAILY";
-
     @Autowired
     private GamificationTaskRepository gamificationTaskRepository;
 
-        @PostConstruct
-        void ensureDefaultRouteTasks() {
-        upsertDefaultRouteTask(
-            TASK_CODE_ROUTES_2_DAILY,
-            "2 routes in 1 day",
-            "Complete 2 collection routes within a single day.",
-            20.0,
-            2.0
-        );
-        upsertDefaultRouteTask(
-            TASK_CODE_ROUTES_3_DAILY,
-            "3 routes in 1 day",
-            "Complete 3 collection routes within a single day.",
-            30.0,
-            3.0
-        );
-        }
+    @Autowired
+    private TaskFamilyRepository taskFamilyRepository;
 
     public List<GamificationTask> getAllTasks() {
         return gamificationTaskRepository.findAll();
@@ -156,42 +139,14 @@ public class GamificationTaskService {
         if (request.getEndAt() != null) {
             task.setEndAt(request.getEndAt());
         }
+        if (request.getFamilyId() != null) {
+            Optional<TaskFamily> familyOpt = taskFamilyRepository.findById(request.getFamilyId());
+            familyOpt.ifPresent(task::setFamily);
+        }
 
         if (creating) {
             task.setCreatedByAdminId(request.getAdminId());
         }
         task.setUpdatedByAdminId(request.getAdminId());
-    }
-
-    private void upsertDefaultRouteTask(
-            String code,
-            String title,
-            String description,
-            double basePoints,
-            double targetProgress
-    ) {
-        GamificationTask task = gamificationTaskRepository.findByCode(code)
-                .orElseGet(GamificationTask::new);
-
-        task.setCode(code);
-        task.setTitle(title);
-        task.setDescription(description);
-        task.setRoleScope("COLLECTOR");
-        task.setTaskType("DAILY_ROUTE_COMPLETION");
-        task.setScoringType("FIXED");
-        task.setBasePoints(basePoints);
-        task.setTargetProgress(targetProgress);
-        task.setStatus("PUBLISHED");
-        task.setStartAt(null);
-        task.setEndAt(null);
-
-        if (task.getHighPriorityMultiplier() <= 0) {
-            task.setHighPriorityMultiplier(1.5);
-        }
-        if (task.getMediumPriorityMultiplier() <= 0) {
-            task.setMediumPriorityMultiplier(1.2);
-        }
-
-        gamificationTaskRepository.save(task);
     }
 }

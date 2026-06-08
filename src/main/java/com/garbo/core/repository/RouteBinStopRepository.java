@@ -80,6 +80,15 @@ public interface RouteBinStopRepository extends JpaRepository<RouteBinStop, Long
     """)
     int markSkipped(@Param("stopId") Long stopId);
 
+    @Transactional
+    @Modifying
+    @Query("""
+        UPDATE RouteBinStop s
+        SET s.status = 'PENDING', s.collectedAt = null
+        WHERE s.id = :stopId
+    """)
+    int markPending(@Param("stopId") Long stopId);
+
     /**
      * Count stops by status for a given session — used for progress tracking.
      * Returns a List of Object[]{status, count}.
