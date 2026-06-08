@@ -57,6 +57,16 @@ public class CouncilAccessService {
         return normalized.equals("SUPERADMIN") || normalized.equals("ROLE_SUPERADMIN");
     }
 
+    public boolean isAdmin(String email) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+        if (isSuperAdmin(email)) {
+            return true;
+        }
+        return adminNewRepository.findFirstByEmailIgnoreCase(email).isPresent();
+    }
+
     private Optional<String> normalizeCouncil(String council) {
         if (council == null) {
             return Optional.empty();

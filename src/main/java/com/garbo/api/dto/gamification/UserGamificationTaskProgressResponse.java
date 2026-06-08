@@ -14,10 +14,13 @@ public class UserGamificationTaskProgressResponse {
     private String taskCode;
     private String taskTitle;
     private String taskDescription;
+    private double availablePoints;
     private double currentProgress;
     private double targetProgress;
     @JsonProperty("isCompleted")
     private boolean isCompleted;
+    @JsonProperty("isNew")
+    private boolean isNew;
     private String completedAt;
     private double pointsEarned;
 }

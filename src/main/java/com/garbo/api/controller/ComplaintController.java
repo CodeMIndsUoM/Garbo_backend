@@ -10,6 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -73,11 +74,26 @@ public class ComplaintController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<Complaint> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body, HttpServletRequest request) {
-        String email = resolveRequesterEmail(request);
-        String status = body.get("status");
-        String resolutionNotes = body.get("resolutionNotes");
-        return ResponseEntity.ok(complaintService.updateStatus(id, status, resolutionNotes, email));
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> body, HttpServletRequest request) {
+        try {
+            String email = resolveRequesterEmail(request);
+            String status = body.get("status");
+            String resolutionNotes = body.get("resolutionNotes");
+            Complaint updated = complaintService.updateStatus(id, status, resolutionNotes, email);
+            return ResponseEntity.ok(updated);
+        } catch (AccessDeniedException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "success", false,
+                    "message", ex.getMessage()));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", ex.getMessage()));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "success", false,
+                    "message", ex.getMessage()));
+        }
     }
 
     @PatchMapping("/{id}/assign")
