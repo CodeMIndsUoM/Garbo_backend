@@ -1,5 +1,6 @@
 package com.garbo.api.controller;
 
+import com.garbo.api.dto.ComplaintCreateRequest;
 import com.garbo.infrastructure.config.security.JwtUtil;
 import com.garbo.core.entity.Complaint;
 import com.garbo.core.service.ComplaintService;
@@ -46,9 +47,11 @@ public class ComplaintController {
     }
 
     @PostMapping
-    public ResponseEntity<Complaint> createComplaint(@RequestBody Complaint complaint, HttpServletRequest request) {
-        String email = resolveRequesterEmail(request);
-        return ResponseEntity.ok(complaintService.createComplaint(complaint, email));
+    public ResponseEntity<Complaint> createComplaint(
+            @RequestBody ComplaintCreateRequest request,
+            HttpServletRequest httpRequest) {
+        String email = resolveRequesterEmail(httpRequest);
+        return ResponseEntity.ok(complaintService.createComplaint(request, email));
     }
 
     @GetMapping("/my")

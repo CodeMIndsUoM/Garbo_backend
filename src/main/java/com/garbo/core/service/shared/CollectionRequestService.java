@@ -53,16 +53,18 @@ public class CollectionRequestService {
     private final CitizenRepository citizenRepository;
     private final ThirdPartyCollectorRepository collectorRepository;
     private final UserRepository userRepository;
-    private final CloudinaryUploadService cloudinaryUploadService;
-    private final CollectorDashboardService collectorDashboardService;
+  private final CloudinaryUploadService cloudinaryUploadService;
+  private final CollectorDashboardService collectorDashboardService;
+  private final MarketplaceRealtimeService marketplaceRealtimeService;
 
-    public CollectionRequestService(CollectionRequestRepository requestRepository,
+  public CollectionRequestService(CollectionRequestRepository requestRepository,
             CollectionOfferRepository offerRepository,
             CitizenRepository citizenRepository,
             ThirdPartyCollectorRepository collectorRepository,
             UserRepository userRepository,
             CloudinaryUploadService cloudinaryUploadService,
-            CollectorDashboardService collectorDashboardService) {
+            CollectorDashboardService collectorDashboardService,
+            MarketplaceRealtimeService marketplaceRealtimeService) {
         this.requestRepository = requestRepository;
         this.offerRepository = offerRepository;
         this.citizenRepository = citizenRepository;
@@ -70,6 +72,7 @@ public class CollectionRequestService {
         this.userRepository = userRepository;
         this.cloudinaryUploadService = cloudinaryUploadService;
         this.collectorDashboardService = collectorDashboardService;
+        this.marketplaceRealtimeService = marketplaceRealtimeService;
     }
 
     @Transactional
@@ -99,6 +102,7 @@ public class CollectionRequestService {
         request.setStatus(RequestStatus.OPEN);
 
         CollectionRequest saved = requestRepository.save(request);
+        marketplaceRealtimeService.publishRequestCreated(saved);
         return RequestSummaryDto.from(saved, 0);
     }
 
@@ -170,6 +174,10 @@ public class CollectionRequestService {
             }
         }
 
+        offerRepository.save(offer);
+        requestRepository.save(request);
+        marketplaceRealtimeService.publishOfferChanged(offer);
+        marketplaceRealtimeService.publishRequestChanged(request);
         return OfferDto.from(offer);
     }
 
@@ -183,6 +191,8 @@ public class CollectionRequestService {
             throw conflict("Only pending offers can be rejected");
         }
         offer.setStatus(OfferStatus.REJECTED);
+        offerRepository.save(offer);
+        marketplaceRealtimeService.publishOfferChanged(offer);
         return OfferDto.from(offer);
     }
 
@@ -205,6 +215,11 @@ public class CollectionRequestService {
             }
         }
         request.setStatus(RequestStatus.CANCELLED);
+        requestRepository.save(request);
+        marketplaceRealtimeService.publishRequestChanged(request);
+        for (CollectionOffer offer : offerRepository.findByRequest_IdOrderByCreatedAtDesc(requestId)) {
+            marketplaceRealtimeService.publishOfferChanged(offer);
+        }
         return RequestSummaryDto.from(request, offerRepository.findByRequest_IdOrderByCreatedAtDesc(requestId).size());
     }
 
@@ -226,6 +241,10 @@ public class CollectionRequestService {
         offer.setCitizenFeedback(blankToNull(dto.feedback()));
         request.setStatus(RequestStatus.CONFIRMED);
         offer.getCollector().setCompletedRequests(offer.getCollector().getCompletedRequests() + 1);
+        offerRepository.save(offer);
+        requestRepository.save(request);
+        marketplaceRealtimeService.publishOfferChanged(offer);
+        marketplaceRealtimeService.publishRequestChanged(request);
         return OfferDto.from(offer);
     }
 
@@ -369,7 +388,9 @@ public class CollectionRequestService {
         offer.setProposedPickupAt(dto.proposedPickupAt());
         offer.setMessageToCitizen(blankToNull(dto.messageToCitizen()));
         offer.setStatus(OfferStatus.PENDING);
-        return OfferDto.from(offerRepository.save(offer));
+        CollectionOffer saved = offerRepository.save(offer);
+        marketplaceRealtimeService.publishOfferChanged(saved);
+        return OfferDto.from(saved);
     }
 
     @Transactional
@@ -382,6 +403,8 @@ public class CollectionRequestService {
             throw conflict("Only pending offers can be withdrawn");
         }
         offer.setStatus(OfferStatus.WITHDRAWN);
+        offerRepository.save(offer);
+        marketplaceRealtimeService.publishOfferChanged(offer);
         return OfferDto.from(offer);
     }
 
@@ -413,6 +436,11 @@ public class CollectionRequestService {
                 OfferStatus.REJECTED)) {
             rejected.setStatus(OfferStatus.PENDING);
         }
+        offerRepository.save(offer);
+        requestRepository.save(request);
+        marketplaceRealtimeService.publishOfferChanged(offer);
+        marketplaceRealtimeService.publishRequestChanged(request);
+        marketplaceRealtimeService.publishRequestCreated(request);
         return OfferDto.from(offer);
     }
 
@@ -428,6 +456,10 @@ public class CollectionRequestService {
         offer.setStatus(OfferStatus.IN_PROGRESS);
         offer.setStartedAt(Instant.now());
         offer.getRequest().setStatus(RequestStatus.IN_PROGRESS);
+        offerRepository.save(offer);
+        requestRepository.save(offer.getRequest());
+        marketplaceRealtimeService.publishOfferChanged(offer);
+        marketplaceRealtimeService.publishRequestChanged(offer.getRequest());
         return OfferDto.from(offer);
     }
 
@@ -460,6 +492,10 @@ public class CollectionRequestService {
         offer.setCompletedAt(Instant.now());
         offer.setStatus(OfferStatus.COMPLETED);
         offer.getRequest().setStatus(RequestStatus.COMPLETED);
+        offerRepository.save(offer);
+        requestRepository.save(offer.getRequest());
+        marketplaceRealtimeService.publishOfferChanged(offer);
+        marketplaceRealtimeService.publishRequestChanged(offer.getRequest());
         return OfferDto.from(offer);
     }
 
@@ -501,6 +537,10 @@ public class CollectionRequestService {
         offer.setCompletedAt(Instant.now());
         offer.setStatus(OfferStatus.COMPLETED);
         offer.getRequest().setStatus(RequestStatus.COMPLETED);
+        offerRepository.save(offer);
+        requestRepository.save(offer.getRequest());
+        marketplaceRealtimeService.publishOfferChanged(offer);
+        marketplaceRealtimeService.publishRequestChanged(offer.getRequest());
         return OfferDto.from(offer);
     }
 

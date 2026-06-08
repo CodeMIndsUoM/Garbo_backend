@@ -56,5 +56,5 @@ public class Leaderboard {
     
     @Version
     @Column(name = "version")
-    private Long version;  // For optimistic locking
+    private Long version = 0L;  // For optimistic locking
 }

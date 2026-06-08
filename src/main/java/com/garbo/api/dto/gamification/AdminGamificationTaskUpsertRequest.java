@@ -20,4 +20,5 @@ public class AdminGamificationTaskUpsertRequest {
     private LocalDateTime startAt;
     private LocalDateTime endAt;
     private Long adminId;
+    private Long familyId;
 }

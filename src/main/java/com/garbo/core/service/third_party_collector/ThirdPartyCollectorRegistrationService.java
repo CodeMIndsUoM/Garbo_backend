@@ -5,12 +5,15 @@ import com.garbo.core.entity.Council;
 import com.garbo.core.enums.RegistrationStatus;
 import com.garbo.core.repository.ThirdPartyCollectorRepository;
 import com.garbo.core.repository.CouncilRepository;
+import com.garbo.common.logging.AdminCreationLogger;
+import com.garbo.infrastructure.email.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -21,18 +24,23 @@ import java.util.Optional;
 public class ThirdPartyCollectorRegistrationService {
 
     private static final Logger log = LoggerFactory.getLogger(ThirdPartyCollectorRegistrationService.class);
+    private static final String PASSWORD_ALPHABET =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*()-_";
 
     private final ThirdPartyCollectorRepository repository;
     private final CouncilRepository councilRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
     public ThirdPartyCollectorRegistrationService(
             ThirdPartyCollectorRepository repository,
             CouncilRepository councilRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            EmailService emailService) {
         this.repository = repository;
         this.councilRepository = councilRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
 
     public ThirdPartyCollector register(
@@ -100,8 +108,32 @@ public class ThirdPartyCollectorRegistrationService {
         }
 
         collector.setRegistrationStatus(RegistrationStatus.APPROVED);
+
+        boolean firstCredentials = collector.getPassword() == null || collector.getPassword().isBlank();
+        String tempPassword = null;
+        if (firstCredentials) {
+            tempPassword = generateTemporaryPassword(12);
+            collector.setPassword(passwordEncoder.encode(tempPassword));
+            collector.setMustChangePassword(true);
+        }
+
         ThirdPartyCollector saved = repository.save(collector);
         log.info("Third-party collector approved: empId={}, email={}", saved.getEmpId(), saved.getEmail());
+
+        if (firstCredentials && tempPassword != null) {
+            AdminCreationLogger.log(saved.getEmail(), tempPassword);
+            try {
+                emailService.sendAdminCredentials(saved.getEmail(), tempPassword);
+            } catch (Exception e) {
+                log.warn("Failed to send credentials email to {}: {}", saved.getEmail(), e.getMessage());
+            }
+        } else {
+            try {
+                emailService.sendRegistrationApproved(saved.getEmail(), saved.getEmpName());
+            } catch (Exception e) {
+                log.warn("Failed to send approval email to {}: {}", saved.getEmail(), e.getMessage());
+            }
+        }
         return saved;
     }
 
@@ -117,6 +149,11 @@ public class ThirdPartyCollectorRegistrationService {
         collector.setRegistrationStatus(RegistrationStatus.REJECTED);
         ThirdPartyCollector saved = repository.save(collector);
         log.info("Third-party collector rejected: empId={}, email={}, reason={}", saved.getEmpId(), saved.getEmail(), reason);
+        try {
+            emailService.sendRegistrationRejected(saved.getEmail(), saved.getEmpName(), reason);
+        } catch (Exception e) {
+            log.warn("Failed to send rejection email to {}: {}", saved.getEmail(), e.getMessage());
+        }
         return saved;
     }
 
@@ -262,5 +299,15 @@ public class ThirdPartyCollectorRegistrationService {
             log.error("Unexpected error deleting third-party collector {}", empId, ex);
             return "ERROR";
         }
+    }
+
+    private String generateTemporaryPassword(int length) {
+        SecureRandom rnd = new SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            int idx = rnd.nextInt(PASSWORD_ALPHABET.length());
+            sb.append(PASSWORD_ALPHABET.charAt(idx));
+        }
+        return sb.toString();
     }
 }
