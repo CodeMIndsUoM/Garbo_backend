@@ -26,14 +26,17 @@ public class AdminStaffController {
     @PostMapping("/field-mentors")
     public ResponseEntity<?> createFieldMentor(@RequestBody StaffCreateRequest req) {
         String role = CurrentUserService.getCurrentRole().orElse("");
-        if (!"admin".equals(role)) {
+        if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
         }
 
-        String council = CurrentUserService.getCurrentCouncil().orElse(null);
+        String council = resolveCreateCouncil(role, req);
         if (council == null) {
             return ResponseEntity.status(400)
-                    .body(Map.of("success", false, "message", "Admin has no council assigned"));
+                    .body(Map.of("success", false, "message",
+                            "superadmin".equals(role)
+                                    ? "Council is required when creating staff"
+                                    : "Admin has no council assigned"));
         }
 
         var createdOpt = adminStaffService.createFieldMentor(req, council);
@@ -51,14 +54,17 @@ public class AdminStaffController {
     @PostMapping("/bin-collectors")
     public ResponseEntity<?> createBinCollector(@RequestBody StaffCreateRequest req) {
         String role = CurrentUserService.getCurrentRole().orElse("");
-        if (!"admin".equals(role)) {
+        if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
         }
 
-        String council = CurrentUserService.getCurrentCouncil().orElse(null);
+        String council = resolveCreateCouncil(role, req);
         if (council == null) {
             return ResponseEntity.status(400)
-                    .body(Map.of("success", false, "message", "Admin has no council assigned"));
+                    .body(Map.of("success", false, "message",
+                            "superadmin".equals(role)
+                                    ? "Council is required when creating staff"
+                                    : "Admin has no council assigned"));
         }
 
         var createdOpt = adminStaffService.createBinCollector(req, council);
@@ -97,6 +103,16 @@ public class AdminStaffController {
         resp.put("success", true);
         resp.put("data", list);
         return ResponseEntity.ok(resp);
+    }
+
+    private String resolveCreateCouncil(String role, StaffCreateRequest req) {
+        if ("superadmin".equals(role)) {
+            if (req == null || req.getCouncil() == null || req.getCouncil().isBlank()) {
+                return null;
+            }
+            return req.getCouncil().trim();
+        }
+        return CurrentUserService.getCurrentCouncil().orElse(null);
     }
 
     @DeleteMapping("/{id}")

@@ -11,4 +11,6 @@ public class StaffCreateRequest {
     private String fullName;
     private String email;
     private String contactNumber;
+    /** Required when superadmin creates staff for a specific council. */
+    private String council;
 }
