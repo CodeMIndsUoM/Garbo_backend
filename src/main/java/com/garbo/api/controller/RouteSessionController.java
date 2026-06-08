@@ -4,8 +4,13 @@ import com.garbo.api.dto.RouteAssignmentRequestDTO;
 import com.garbo.api.dto.RouteSessionSnapshotDTO;
 import com.garbo.core.repository.RouteBinStopRepository;
 import com.garbo.core.entity.RouteVehicleRoute;
+import com.garbo.core.entity.RouteAssignment;
 import com.garbo.core.repository.RouteAssignmentRepository;
 import com.garbo.core.repository.RouteVehicleRouteRepository;
+import com.garbo.core.repository.UserRepository;
+import com.garbo.core.entity.User;
+import com.garbo.core.entity.AdminNew;
+import com.garbo.core.entity.BinCollector;
 import com.garbo.core.service.route.RouteAssignmentService;
 import com.garbo.core.service.route.RouteSessionService;
 import com.garbo.core.service.CurrentUserService;
@@ -17,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * REST controller for route session lifecycle.
@@ -32,6 +39,7 @@ public class RouteSessionController {
     private final RouteAssignmentService  routeAssignmentService;
     private final RouteAssignmentRepository assignmentRepository;
     private final RouteVehicleRouteRepository vehicleRouteRepository;
+    private final UserRepository          userRepository;
 
     @PostMapping
     public ResponseEntity<?> createRouteSession(@RequestBody RouteAssignmentRequestDTO request) {
@@ -68,18 +76,57 @@ public class RouteSessionController {
     @GetMapping("/user/{userId}/active")
     public ResponseEntity<?> getActiveSnapshotByUser(@PathVariable Long userId) {
         try {
-            var assignments = assignmentRepository.findActiveByUserId(userId);
-            var result = assignments.stream().map(a -> {
+            List<Object[]> rows;
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                String role = user.getRole();
+                if (role != null && (role.equalsIgnoreCase("superadmin") || role.equalsIgnoreCase("role_superadmin"))) {
+                    rows = assignmentRepository.findAllWithStatus();
+                } else if (role != null && (role.equalsIgnoreCase("admin") || role.equalsIgnoreCase("role_admin"))) {
+                    String council = null;
+                    if (user instanceof AdminNew) {
+                        council = ((AdminNew) user).getCouncil();
+                    }
+                    if (council != null && !council.isBlank()) {
+                        rows = assignmentRepository.findAllByCouncilWithStatus(council);
+                    } else {
+                        rows = assignmentRepository.findAllWithStatus();
+                    }
+                } else {
+                    rows = assignmentRepository.findAllByUserIdWithStatus(userId);
+                }
+            } else {
+                rows = assignmentRepository.findAllByUserIdWithStatus(userId);
+            }
+
+            var result = rows.stream().map(row -> {
+                RouteAssignment a = (RouteAssignment) row[0];
+                String status = (String) row[1];
                 Map<String, Object> map = new LinkedHashMap<>();
                 map.put("id", a.getId());
                 map.put("sessionId", a.getSessionId());
                 map.put("vehicleCode", a.getVehicle().getLicensePlate());
+                map.put("driverName", a.getDriver() != null ? a.getDriver().getEmpName() : "");
+                map.put("status", status);
+                map.put("createdDate", a.getCreatedAt() != null ? a.getCreatedAt().toString() : "");
                 return map;
             }).toList();
             return ResponseEntity.ok(Map.of("success", true, "data", result));
         } catch (Exception e) {
-            log.error("Failed to fetch active assignments", e);
+            log.error("Failed to fetch assignments with status", e);
             return ResponseEntity.ok(Map.of("success", true, "data", java.util.Collections.emptyList()));
+        }
+    }
+
+    @DeleteMapping("/user/{userId}/clear")
+    public ResponseEntity<?> clearHistory(@PathVariable Long userId) {
+        try {
+            routeAssignmentService.clearHistoryForUser(userId, routeSessionService);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Route history cleared successfully"));
+        } catch (Exception e) {
+            log.error("Failed to clear route history for user {}", userId, e);
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "error", "Failed to clear route history: " + e.getMessage()));
         }
     }
 

@@ -214,4 +214,51 @@ public class RouteAssignmentService {
             return value != null ? value.toString() : null;
         }
     }
+
+    @Transactional
+    public void clearHistoryForUser(Long userId, RouteSessionService sessionService) {
+        List<RouteSession> sessions = routeSessionRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        for (RouteSession session : sessions) {
+            UUID sessionId = session.getSessionId();
+
+            // 1. Mark bins as unassigned
+            if (session.getSelectedBinIds() != null) {
+                try {
+                    List<Long> binIds = objectMapper.readValue(
+                        session.getSelectedBinIds(),
+                        new com.fasterxml.jackson.core.type.TypeReference<List<Long>>() {}
+                    );
+                    if (binIds != null) {
+                        for (Long binId : binIds) {
+                            binRepository.updateAssignedStatus(binId, false);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to parse selectedBinIds for session clear: {}", e.getMessage());
+                }
+            }
+
+            // 2. Reset vehicle status and delete assignments
+            routeAssignmentRepository.findBySessionId(sessionId).ifPresent(assignment -> {
+                Vehicle vehicle = assignment.getVehicle();
+                if (vehicle != null) {
+                    vehicle.setStatus("available");
+                    vehicle.setAssignedDriverId(null);
+                    vehicleRepository.save(vehicle);
+                }
+                routeAssignmentRepository.delete(assignment);
+            });
+
+            // 3. Delete bin stops and routes
+            binStopRepository.deleteBySessionId(sessionId);
+            vehicleRouteRepository.deleteBySessionId(sessionId);
+
+            // 4. Delete the session from database
+            routeSessionRepository.delete(session);
+
+            // 5. Remove from RouteSessionService in-memory tracking
+            sessionService.deleteSession(sessionId);
+        }
+        sessionService.deleteByUser(userId);
+    }
 }

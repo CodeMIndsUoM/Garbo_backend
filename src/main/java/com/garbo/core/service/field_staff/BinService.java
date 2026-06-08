@@ -1,7 +1,10 @@
 package com.garbo.core.service.field_staff;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.garbo.api.dto.BinDTO;
 import com.garbo.api.dto.BinReportRequest;
+import com.garbo.api.dto.CouncilBoundaryDTO;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.BinReport;
 import com.garbo.core.entity.FieldMentor;
@@ -43,6 +46,7 @@ public class BinService {
     private final CouncilAccessService councilAccessService;
     private final CouncilBoundaryRepository councilBoundaryRepository;
     private static final Map<String, CouncilBounds> COUNCIL_BOUNDS = buildCouncilBounds();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     // ── kevin-RWS dependencies ────────────────────────────────────────────────
 
@@ -228,8 +232,12 @@ public class BinService {
         if (council == null) {
             // Verify if user is Superadmin
             if (councilAccessService.isSuperAdmin(email)) {
-                // Automatically resolve council from the coordinates
-                council = resolveCouncilFromCoordinates(latLng[0], latLng[1]);
+                // Use council from payload if provided, otherwise resolve automatically from coordinates
+                if (payload.getCouncil() != null && !payload.getCouncil().isBlank()) {
+                    council = payload.getCouncil();
+                } else {
+                    council = resolveCouncilFromCoordinates(latLng[0], latLng[1]);
+                }
                 if (council == null) {
                     throw new IllegalArgumentException("Coordinates are outside any supported municipal council boundary");
                 }
@@ -255,10 +263,27 @@ public class BinService {
         return saved;
     }
 
+    @Transactional
     public void deleteBinForCurrentUser(Long id) {
         Bin bin = getBinWithCouncilAccess(id);
+        binReportRepository.deleteByBinId(bin.getId());
         binRepository.deleteByIdNative(bin.getId());
         eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
+    }
+
+    @Transactional
+    public void deleteBinsForCurrentUser(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        for (Long id : ids) {
+            getBinWithCouncilAccess(id);
+        }
+        binReportRepository.deleteByBinIds(ids);
+        binRepository.deleteAllByIds(ids);
+        for (Long id : ids) {
+            eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
+        }
     }
 
     public Bin updatePriorityForCurrentUser(Long id, String priority) {
@@ -489,7 +514,7 @@ public class BinService {
         throw new IllegalArgumentException("Location is required as lat,lng");
     }
 
-    private boolean isPointInPolygon(double lat, double lng, List<CouncilBoundary> polygon) {
+    private boolean isPointInPolygon(double lat, double lng, List<CouncilBoundaryDTO.CoordinatePoint> polygon) {
         boolean inside = false;
         int n = polygon.size();
         for (int i = 0, j = n - 1; i < n; j = i++) {
@@ -508,12 +533,23 @@ public class BinService {
     }
 
     private void validateCoordinatesInCouncil(String council, double lat, double lng) {
-        List<CouncilBoundary> dbBoundary = councilBoundaryRepository.findByCouncilIgnoreCaseOrderByPointOrderAsc(council);
-        if (dbBoundary != null && !dbBoundary.isEmpty()) {
-            if (!isPointInPolygon(lat, lng, dbBoundary)) {
-                throw new IllegalArgumentException("Coordinates are outside the council boundary");
+        Optional<CouncilBoundary> dbBoundary = councilBoundaryRepository.findByCouncilIgnoreCase(council);
+        if (dbBoundary.isPresent()) {
+            List<CouncilBoundaryDTO.CoordinatePoint> points = null;
+            try {
+                points = objectMapper.readValue(
+                    dbBoundary.get().getBoundaryPoints(),
+                    new TypeReference<List<CouncilBoundaryDTO.CoordinatePoint>>() {}
+                );
+            } catch (Exception e) {
+                // Ignore parsing errors and fallback
             }
-            return;
+            if (points != null && !points.isEmpty()) {
+                if (!isPointInPolygon(lat, lng, points)) {
+                    throw new IllegalArgumentException("Coordinates are outside the council boundary");
+                }
+                return;
+            }
         }
 
         // Fallback to legacy rectangular bounds
@@ -552,22 +588,21 @@ public class BinService {
             return null;
         }
 
-        // Group boundaries by council name (case-insensitive key)
-        Map<String, List<CouncilBoundary>> grouped = new HashMap<>();
-        for (CouncilBoundary pt : allBoundaries) {
-            String cKey = pt.getCouncil().toLowerCase(Locale.ROOT);
-            grouped.computeIfAbsent(cKey, k -> new java.util.ArrayList<>()).add(pt);
-        }
-
-        // Sort each boundary's points by pointOrder to form a valid polygon
-        for (List<CouncilBoundary> pts : grouped.values()) {
-            pts.sort(java.util.Comparator.comparingInt(CouncilBoundary::getPointOrder));
-        }
-
         // Perform point-in-polygon checks
-        for (Map.Entry<String, List<CouncilBoundary>> entry : grouped.entrySet()) {
-            if (isPointInPolygon(lat, lng, entry.getValue())) {
-                return entry.getValue().get(0).getCouncil();
+        for (CouncilBoundary cb : allBoundaries) {
+            List<CouncilBoundaryDTO.CoordinatePoint> points = null;
+            try {
+                points = objectMapper.readValue(
+                    cb.getBoundaryPoints(),
+                    new TypeReference<List<CouncilBoundaryDTO.CoordinatePoint>>() {}
+                );
+            } catch (Exception e) {
+                // Ignore parsing errors
+            }
+            if (points != null && !points.isEmpty()) {
+                if (isPointInPolygon(lat, lng, points)) {
+                    return cb.getCouncil();
+                }
             }
         }
 

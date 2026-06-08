@@ -23,6 +23,11 @@ public interface BinReportRepository extends JpaRepository<BinReport, Long> {
     @Query("DELETE FROM BinReport r WHERE r.bin.id = :binId")
     int deleteByBinId(@Param("binId") Long binId);
 
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM BinReport r WHERE r.bin.id IN :binIds")
+    int deleteByBinIds(@Param("binIds") List<Long> binIds);
+
     // KPI: Total reports today
     @Query("SELECT COUNT(r) FROM BinReport r WHERE r.reportedAt >= :start AND r.reportedAt < :end")
     long countReportsBetween(

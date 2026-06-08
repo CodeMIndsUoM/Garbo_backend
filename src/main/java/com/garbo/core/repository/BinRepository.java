@@ -40,6 +40,11 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
 
     @Transactional
     @Modifying
+    @Query("DELETE FROM Bin b WHERE b.id IN :ids")
+    void deleteAllByIds(@Param("ids") List<Long> ids);
+
+    @Transactional
+    @Modifying
     @Query("UPDATE Bin b SET b.priority = :priority WHERE b.id = :id")
     void updatePriorityNative(@Param("id") Long id, @Param("priority") String priority);
 
