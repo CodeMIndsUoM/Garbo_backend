@@ -1,22 +1,32 @@
 package com.garbo.core.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
 @Data
+@EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
 @Entity
 @Table(name = "bin_collectors")
 @PrimaryKeyJoinColumn(name = "emp_id")
-public class BinCollector extends User{
-    private String assignedZone;
+public class BinCollector extends User {
+    private String assignedCouncil;
     private String team;
     private String workShift;
     private boolean onDuty;
     private int completedCollections;
     private int missedCollections;
     private double rewardPoints;
+
+    @Column(name = "admin_hidden")
+    private Boolean adminHidden = false;
+
+    public void setAssignedZone(Object object) {
+        this.assignedCouncil = object == null ? null : object.toString();
+    }
 }

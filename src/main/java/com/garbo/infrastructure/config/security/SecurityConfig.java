@@ -3,9 +3,9 @@ package com.garbo.infrastructure.config.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfigurationSource;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtFilter;
@@ -57,11 +58,71 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // allow CORS preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        // allow login POST explicitly
+                        // allow login endpoints without JWT
                         .requestMatchers(HttpMethod.POST, "/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/users/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/admin/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/superadmin/login").permitAll()
+                    // actual controller paths
+                    .requestMatchers(HttpMethod.POST, "/api/admins/login").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/superadmins/login").permitAll()
+                        // field-staff bin report workflow must always use JWT
+                        .requestMatchers(HttpMethod.POST, "/api/bins/*/report").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/bins/*/undo").authenticated()
+                        // allow bin operations for dashboard map interaction
+                        .requestMatchers(HttpMethod.GET, "/api/bins").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/bins/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/bins/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/bins/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/bins/**").permitAll()
+                        // allow driver operations
+                        .requestMatchers(HttpMethod.GET, "/api/drivers/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/drivers/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/drivers/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/drivers/**").permitAll()
+                        // allow vehicle operations
+                        .requestMatchers(HttpMethod.GET, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.PATCH, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").permitAll()
+                        // allow websocket handshake + SockJS endpoints
+                        .requestMatchers("/ws/**").permitAll()
+                        // TEMP: allow route-session testing without JWT
+                        .requestMatchers("/api/route-sessions").permitAll()
+                        .requestMatchers("/api/route-sessions/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/routes/optimize").permitAll()
+                        // allow Spring error endpoint to return real status/details
+                        .requestMatchers("/error").permitAll()
+                        // analytics (NO JWT)
+                        .requestMatchers(HttpMethod.GET, "/api/admin/analytics/**").permitAll()
+                        //admin analytics (NO JWT)
+                        .requestMatchers("/api/admin/bin-analytics/**").permitAll()
+                        // staff analytics (NO JWT)
+                        .requestMatchers("/api/admin/staffanalytics").permitAll()
+                        // complaint analytics (NO JWT)
+                        .requestMatchers("/api/admin/complaintanalytics").permitAll()
+                        // third party analytics (NO JWT)
+                        .requestMatchers("/api/admin/thirdparty/analyze").permitAll()
+                        //bin report analytics (NO JWT)
+                        .requestMatchers("/api/admin/bin-reports/analytics").permitAll()
+                        //vehicle analytics (NO JWT)
+                        .requestMatchers("/api/admin/vehicles/analytics/**").permitAll()
+                        // monthly report generation (NO JWT)
+                        .requestMatchers("/api/admin/reports/**").permitAll()
+
+                        // third-party collector self-registration (public, no JWT)
+                        .requestMatchers("/api/auth/thirdparty-register/**").permitAll()
+                        // public council list + citizen registration
+                        .requestMatchers(HttpMethod.GET, "/api/councils").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+                        // validate token endpoint requires authentication
+                        .requestMatchers(HttpMethod.GET, "/api/auth/validate").authenticated()
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated() // all others need JWT
+
+                        
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authEx) -> {

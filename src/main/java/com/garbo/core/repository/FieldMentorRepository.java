@@ -7,4 +7,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface FieldMentorRepository extends JpaRepository<FieldMentor, Long> {
 
+    java.util.List<FieldMentor> findByAssignedCouncil(String assignedCouncil);
+
 }

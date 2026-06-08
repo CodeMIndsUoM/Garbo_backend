@@ -1,0 +1,29 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://ep-solitary-water-a1k4fpoz-pooler.ap-southeast-1.aws.neon.tech/GarboDB1_dev?sslmode=require&channelBinding=require}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+    username: ${SPRING_DATASOURCE_USERNAME:neondb_owner}
+    password: ${SPRING_DATASOURCE_PASSWORD:npg_HeskrVL7l0Pj}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 60000
+      idle-timeout: 300000
+      max-lifetime: 600000
+
+  jpa:
+    hibernate:
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:update} # Automatically updates the local database structure based on your entity classes
+    show-sql: ${SPRING_JPA_SHOW_SQL:true}
+    properties:
+      hibernate:
+        dialect: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
+
+  flyway:
+    enabled: ${SPRING_FLYWAY_ENABLED:false} # Disabled locally because you mentioned team members change DB manually and don't use flyway
+
+logging:
+  level:
+    root: INFO
+    com.garbo: INFO
+    org.hibernate.SQL: WARN

@@ -1,16 +1,18 @@
 package com.garbo.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
-//import java.util.Collection;
-//import java.util.List;
-
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import jakarta.persistence.Inheritance;
+import jakarta.persistence.InheritanceType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
-//import org.springframework.security.core.GrantedAuthority;
-//import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 @Data
 @AllArgsConstructor
@@ -19,9 +21,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "users")
 @Inheritance(strategy = InheritanceType.JOINED)
 public class User {
-
     @Id
-
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "emp_id")
     private Long empId;
@@ -32,11 +32,12 @@ public class User {
     @Column(name = "email")
     private String email;
 
+    @JsonIgnore
     @Column(name = "password")
     private String password;
 
     @Column(name = "role")
-    private String role; // e.g. ADMIN, CITIZEN, COLLECTOR
+    private String role;
 
     @Column(name = "contact_number")
     private String phone;
@@ -46,6 +47,15 @@ public class User {
 
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
+    @Column(name = "default_address", length = 500)
+    private String defaultAddress;
+
+    @Column(name = "must_change_password")
+    private boolean mustChangePassword = false;
 
     // ================= Security methods =================
 
@@ -80,6 +90,22 @@ public class User {
 
     public String getPhone() {
         return phone;
+    }
+
+    public String getAvatarUrl() {
+        return avatarUrl;
+    }
+
+    public void setAvatarUrl(String avatarUrl) {
+        this.avatarUrl = avatarUrl;
+    }
+
+    public String getDefaultAddress() {
+        return defaultAddress;
+    }
+
+    public void setDefaultAddress(String defaultAddress) {
+        this.defaultAddress = defaultAddress;
     }
 
     public boolean isAccountNonExpired() {
