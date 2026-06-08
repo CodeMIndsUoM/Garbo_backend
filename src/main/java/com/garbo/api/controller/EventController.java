@@ -4,12 +4,14 @@ import com.garbo.api.dto.EventCreateRequest;
 import com.garbo.core.entity.Event;
 import com.garbo.core.service.EventService;
 import com.garbo.infrastructure.config.security.JwtUtil;
+import com.garbo.infrastructure.storage.CloudinaryUploadService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -22,10 +24,12 @@ public class EventController {
 
     private final EventService eventService;
     private final JwtUtil jwtUtil;
+    private final CloudinaryUploadService cloudinaryUploadService;
 
-    public EventController(EventService eventService, JwtUtil jwtUtil) {
+    public EventController(EventService eventService, JwtUtil jwtUtil, CloudinaryUploadService cloudinaryUploadService) {
         this.eventService = eventService;
         this.jwtUtil = jwtUtil;
+        this.cloudinaryUploadService = cloudinaryUploadService;
     }
 
     private String resolveRequesterEmail(HttpServletRequest request) {
@@ -41,6 +45,15 @@ public class EventController {
             }
         }
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid bearer token");
+    }
+
+    @PostMapping("/upload-image")
+    public ResponseEntity<Map<String, String>> uploadEventImage(
+            @RequestParam("photo") MultipartFile photo,
+            HttpServletRequest httpRequest) {
+        resolveRequesterEmail(httpRequest);
+        String imageUrl = cloudinaryUploadService.uploadEventImage(photo);
+        return ResponseEntity.ok(Map.of("imageUrl", imageUrl));
     }
 
     @PostMapping
