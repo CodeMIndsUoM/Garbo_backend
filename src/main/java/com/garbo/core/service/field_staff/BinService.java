@@ -14,6 +14,7 @@ import com.garbo.core.repository.BinRepository;
 import com.garbo.core.repository.CouncilBoundaryRepository;
 import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.service.CouncilAccessService;
+import com.garbo.core.service.UserTaskProgressService;
 import com.garbo.core.service.event.BinChangedEvent;
 import com.garbo.core.service.zone.ZoneClusteringService;
 import jakarta.persistence.EntityNotFoundException;
@@ -46,6 +47,7 @@ public class BinService {
     private final FieldMentorRepository fieldMentorRepository;
     private final CouncilAccessService councilAccessService;
     private final CouncilBoundaryRepository councilBoundaryRepository;
+    private final UserTaskProgressService userTaskProgressService;
     private static final Map<String, CouncilBounds> COUNCIL_BOUNDS = buildCouncilBounds();
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -64,12 +66,14 @@ public class BinService {
             BinReportRepository binReportRepository,
             FieldMentorRepository fieldMentorRepository,
             CouncilAccessService councilAccessService,
-            CouncilBoundaryRepository councilBoundaryRepository) {
+            CouncilBoundaryRepository councilBoundaryRepository,
+            UserTaskProgressService userTaskProgressService) {
         this.binRepository = binRepository;
         this.binReportRepository = binReportRepository;
         this.fieldMentorRepository = fieldMentorRepository;
         this.councilAccessService = councilAccessService;
         this.councilBoundaryRepository = councilBoundaryRepository;
+        this.userTaskProgressService = userTaskProgressService;
     }
 
     // ── Methods from HEAD ─────────────────────────────────────────────────────
@@ -132,6 +136,10 @@ public class BinService {
                 request.getStatus(),
                 request.getFillLevel(),
                 checkedAt));
+
+        if (reporter != null) {
+            userTaskProgressService.incrementFieldMentorReportTasks(reporter.getEmpId(), binId);
+        }
 
         Bin updated = new Bin();
         updated.setId(binId);

@@ -10,8 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class CloudinaryUploadService {
@@ -97,14 +101,11 @@ public class CloudinaryUploadService {
             String folder,
             String publicIdPrefix,
             String missingPhotoMessage) {
-        if (!isConfigured()) {
-            throw new CollectionException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Cloudinary is not configured on backend",
-                    "CLOUDINARY_NOT_CONFIGURED");
-        }
-
         validateImageFile(file, missingPhotoMessage);
+
+        if (!isConfigured()) {
+            return saveLocally(file, folder, publicIdPrefix);
+        }
 
         Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", cloudName,
@@ -143,14 +144,11 @@ public class CloudinaryUploadService {
             String folder,
             String publicIdPrefix,
             String missingPhotoMessage) {
-        if (!isConfigured()) {
-            throw new CollectionException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Cloudinary is not configured on backend",
-                    "CLOUDINARY_NOT_CONFIGURED");
-        }
-
         validateImageBytes(fileBytes, originalFilename, contentType, missingPhotoMessage);
+
+        if (!isConfigured()) {
+            return saveLocallyBytes(fileBytes, originalFilename, folder, publicIdPrefix);
+        }
 
         Cloudinary cloudinary = new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", cloudName,
@@ -188,6 +186,57 @@ public class CloudinaryUploadService {
 
     private boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
+    }
+
+    private String saveLocally(MultipartFile file, String folder, String publicIdPrefix) {
+        try {
+            String subFolder = folder.startsWith("garbo/") ? folder.substring("garbo/".length()) : folder;
+            Path uploadDir = Path.of("uploads", subFolder);
+            Files.createDirectories(uploadDir);
+            String extension = extensionFromFilename(file.getOriginalFilename());
+            String fileName = publicIdPrefix + UUID.randomUUID() + extension;
+            Path target = uploadDir.resolve(fileName);
+            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            return "uploads/" + subFolder + "/" + fileName;
+        } catch (IOException ex) {
+            throw new CollectionException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Local image upload failed",
+                    "UPLOAD_FAILED");
+        }
+    }
+
+    private String saveLocallyBytes(
+            byte[] fileBytes,
+            String originalFilename,
+            String folder,
+            String publicIdPrefix) {
+        try {
+            String subFolder = folder.startsWith("garbo/") ? folder.substring("garbo/".length()) : folder;
+            Path uploadDir = Path.of("uploads", subFolder);
+            Files.createDirectories(uploadDir);
+            String extension = extensionFromFilename(originalFilename);
+            String fileName = publicIdPrefix + UUID.randomUUID() + extension;
+            Path target = uploadDir.resolve(fileName);
+            Files.write(target, fileBytes);
+            return "uploads/" + subFolder + "/" + fileName;
+        } catch (IOException ex) {
+            throw new CollectionException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Local image upload failed",
+                    "UPLOAD_FAILED");
+        }
+    }
+
+    private String extensionFromFilename(String originalFilename) {
+        if (originalFilename == null) {
+            return ".jpg";
+        }
+        int idx = originalFilename.lastIndexOf('.');
+        if (idx > -1) {
+            return originalFilename.substring(idx);
+        }
+        return ".jpg";
     }
 
     private void validateImageFile(MultipartFile file, String missingPhotoMessage) {

@@ -85,7 +85,7 @@ public class LeaderboardService {
      * Execute score award using admin-managed gamification task definitions.
      */
     @Transactional
-    public void awardPointsForTaskCompletion(
+    public boolean awardPointsForTaskCompletion(
             Long userId,
             String role,
             Long taskId,
@@ -95,13 +95,13 @@ public class LeaderboardService {
     ) {
         if (userId == null || role == null || taskId == null) {
             log.warn("Invalid task scoring request. userId={}, role={}, taskId={}", userId, role, taskId);
-            return;
+            return false;
         }
 
         Optional<GamificationTask> taskOpt = gamificationTaskRepository.findById(taskId);
         if (taskOpt.isEmpty()) {
             log.warn("Gamification task not found: {}", taskId);
-            return;
+            return false;
         }
 
         GamificationTask task = taskOpt.get();
@@ -109,7 +109,7 @@ public class LeaderboardService {
 
         if (!task.matchesRole(role) || !task.isPublishedAndActive(now)) {
             log.warn("Task {} is not active for role {}", taskId, role);
-            return;
+            return false;
         }
 
         String normalizedSourceEventId = sourceEventId != null && !sourceEventId.isBlank()
@@ -118,13 +118,7 @@ public class LeaderboardService {
 
         if (scoreTransactionRepository.existsByUserIdAndTaskIdAndSourceEventId(userId, taskId, normalizedSourceEventId)) {
             log.info("Skipping duplicate score transaction for user {} task {} source {}", userId, taskId, normalizedSourceEventId);
-            return;
-        }
-
-        String periodKey = LocalDate.now().format(DateTimeFormatter.ISO_DATE);
-        if (scoreTransactionRepository.existsByUserIdAndTaskIdAndPeriodKey(userId, taskId, periodKey)) {
-            log.info("Skipping same-day duplicate score transaction for user {} task {} period {}", userId, taskId, periodKey);
-            return;
+            return false;
         }
 
         double awardedPoints = task.getBasePoints() * resolvePriorityMultiplier(task, priorityLevel);
@@ -133,7 +127,7 @@ public class LeaderboardService {
             Optional<BinCollector> collectorOpt = binCollectorRepository.findById(userId);
             if (collectorOpt.isEmpty()) {
                 log.warn("Collector not found: {}", userId);
-                return;
+                return false;
             }
             BinCollector collector = collectorOpt.get();
             double before = collector.getRewardPoints();
@@ -155,7 +149,7 @@ public class LeaderboardService {
             Optional<FieldMentor> mentorOpt = fieldMentorRepository.findById(userId);
             if (mentorOpt.isEmpty()) {
                 log.warn("Field mentor not found: {}", userId);
-                return;
+                return false;
             }
             FieldMentor mentor = mentorOpt.get();
             double before = mentor.getRewardPoints();
@@ -175,32 +169,79 @@ public class LeaderboardService {
             );
         } else {
             log.warn("Unsupported role for task scoring: {}", role);
-            return;
+            return false;
         }
 
-        // Do not refresh leaderboard snapshot here because current DB schema enforces
-        // leaderboards.collector_id NOT NULL and breaks mixed-role snapshot writes.
-        // Emit realtime event without forcing snapshot rewrite so task progress + score persist safely.
+        refreshLeaderboard();
+
         eventPublisher.publishEvent(new ScoreAwardedEvent(
                 userId,
                 role.toUpperCase(),
                 taskId,
                 normalizedSourceEventId
         ));
+        return true;
     }
     
     /**
      * Get top leaderboard entries.
      */
+    @Transactional
     public List<LeaderboardUpdatePayload.LeaderboardEntryDto> getTopLeaderboard(int limit) {
+        return getTopLeaderboard(limit, null);
+    }
+
+    @Transactional
+    public List<LeaderboardUpdatePayload.LeaderboardEntryDto> getTopLeaderboard(int limit, String roleFilter) {
+        List<LeaderboardEntryTemp> allEntries = buildAllLeaderboardEntries(roleFilter);
+        allEntries.sort((a, b) -> Double.compare(b.rewardPoints, a.rewardPoints));
+
+        List<LeaderboardUpdatePayload.LeaderboardEntryDto> topEntries = new ArrayList<>();
+        int topLimit = Math.max(0, limit);
+        int count = Math.min(topLimit, allEntries.size());
+
+        for (int index = 0; index < count; index++) {
+            LeaderboardEntryTemp entry = allEntries.get(index);
+            topEntries.add(toEntryDto(entry, index + 1));
+        }
+
+        return topEntries;
+    }
+
+    @Transactional
+    public Optional<LeaderboardUpdatePayload.LeaderboardEntryDto> getUserLeaderboardEntry(
+            Long userId,
+            String roleFilter
+    ) {
+        if (userId == null) {
+            return Optional.empty();
+        }
+
+        List<LeaderboardEntryTemp> allEntries = buildAllLeaderboardEntries(roleFilter);
+        allEntries.sort((a, b) -> Double.compare(b.rewardPoints, a.rewardPoints));
+
+        for (int index = 0; index < allEntries.size(); index++) {
+            LeaderboardEntryTemp entry = allEntries.get(index);
+            if (userId.equals(entry.userId)
+                    && (roleFilter == null
+                    || roleFilter.isBlank()
+                    || roleFilter.equalsIgnoreCase(entry.role))) {
+                return Optional.of(toEntryDto(entry, index + 1));
+            }
+        }
+
+        return Optional.empty();
+    }
+
+    private List<LeaderboardEntryTemp> buildAllLeaderboardEntries(String roleFilter) {
         Map<String, Double> taskPointsByUserRole = scoreTransactionRepository
-            .findTaskScoreAggregates()
-            .stream()
-            .collect(Collectors.toMap(
-                aggregate -> buildUserRoleKey(aggregate.getUserId(), aggregate.getRole()),
-                aggregate -> aggregate.getTotalPoints() != null ? aggregate.getTotalPoints() : 0.0,
-                Double::sum
-            ));
+                .findTaskScoreAggregates()
+                .stream()
+                .collect(Collectors.toMap(
+                        aggregate -> buildUserRoleKey(aggregate.getUserId(), aggregate.getRole()),
+                        aggregate -> aggregate.getTotalPoints() != null ? aggregate.getTotalPoints() : 0.0,
+                        Double::sum
+                ));
 
         Map<Long, Double> completedTaskPointsByUser = userTaskProgressRepository
                 .findCompletedPointsByUser()
@@ -213,47 +254,58 @@ public class LeaderboardService {
 
         List<LeaderboardEntryTemp> allEntries = new ArrayList<>();
         Set<String> includedKeys = new HashSet<>();
+        String normalizedRoleFilter = normalizeRoleFilter(roleFilter);
 
-        for (BinCollector collector : binCollectorRepository.findAll()) {
-            String key = buildUserRoleKey(collector.getEmpId(), "COLLECTOR");
-            double taskOnlyPoints = taskPointsByUserRole.getOrDefault(
-                    key,
-                    completedTaskPointsByUser.getOrDefault(collector.getEmpId(), 0.0)
-            );
-            includedKeys.add(key);
-            allEntries.add(new LeaderboardEntryTemp(
-                    collector.getEmpId(),
-                    collector.getEmpName(),
-                    collector.getEmail(),
-                    "COLLECTOR",
-                    taskOnlyPoints,
-                    collector
-            ));
+        if (normalizedRoleFilter == null || "COLLECTOR".equals(normalizedRoleFilter)) {
+            for (BinCollector collector : binCollectorRepository.findAll()) {
+                String key = buildUserRoleKey(collector.getEmpId(), "COLLECTOR");
+                double rewardPoints = resolveAndPersistRewardPoints(
+                        collector,
+                        null,
+                        taskPointsByUserRole.getOrDefault(key, 0.0),
+                        completedTaskPointsByUser.getOrDefault(collector.getEmpId(), 0.0)
+                );
+                includedKeys.add(key);
+                allEntries.add(new LeaderboardEntryTemp(
+                        collector.getEmpId(),
+                        collector.getEmpName(),
+                        collector.getEmail(),
+                        "COLLECTOR",
+                        rewardPoints,
+                        collector
+                ));
+            }
         }
 
-        for (FieldMentor mentor : fieldMentorRepository.findAll()) {
-            String key = buildUserRoleKey(mentor.getEmpId(), "FIELD_MENTOR");
-            double taskOnlyPoints = taskPointsByUserRole.getOrDefault(
-                    key,
-                    completedTaskPointsByUser.getOrDefault(mentor.getEmpId(), 0.0)
-            );
-            includedKeys.add(key);
-            allEntries.add(new LeaderboardEntryTemp(
-                    mentor.getEmpId(),
-                    mentor.getEmpName(),
-                    mentor.getEmail(),
-                    "FIELD_MENTOR",
-                    taskOnlyPoints,
-                    mentor
-            ));
+        if (normalizedRoleFilter == null || "FIELD_MENTOR".equals(normalizedRoleFilter)) {
+            for (FieldMentor mentor : fieldMentorRepository.findAll()) {
+                String key = buildUserRoleKey(mentor.getEmpId(), "FIELD_MENTOR");
+                double rewardPoints = resolveAndPersistRewardPoints(
+                        null,
+                        mentor,
+                        taskPointsByUserRole.getOrDefault(key, 0.0),
+                        completedTaskPointsByUser.getOrDefault(mentor.getEmpId(), 0.0)
+                );
+                includedKeys.add(key);
+                allEntries.add(new LeaderboardEntryTemp(
+                        mentor.getEmpId(),
+                        mentor.getEmpName(),
+                        mentor.getEmail(),
+                        "FIELD_MENTOR",
+                        rewardPoints,
+                        mentor
+                ));
+            }
         }
 
-        // Include users who have task score transactions but no collector/mentor profile row.
         for (ScoreTransactionRepository.TaskScoreAggregate aggregate : scoreTransactionRepository.findTaskScoreAggregates()) {
             Long userId = aggregate.getUserId();
             String role = aggregate.getRole();
             String key = buildUserRoleKey(userId, role);
             if (includedKeys.contains(key)) {
+                continue;
+            }
+            if (normalizedRoleFilter != null && !normalizedRoleFilter.equalsIgnoreCase(role)) {
                 continue;
             }
 
@@ -262,39 +314,75 @@ public class LeaderboardService {
                 continue;
             }
 
+            double rewardPoints = Math.max(
+                    aggregate.getTotalPoints() != null ? aggregate.getTotalPoints() : 0.0,
+                    completedTaskPointsByUser.getOrDefault(userId, 0.0)
+            );
             allEntries.add(new LeaderboardEntryTemp(
                     userId,
                     user.getEmpName(),
                     user.getEmail(),
                     role,
-                    Math.max(
-                        aggregate.getTotalPoints() != null ? aggregate.getTotalPoints() : 0.0,
-                        completedTaskPointsByUser.getOrDefault(userId, 0.0)
-                    ),
+                    rewardPoints,
                     user
             ));
             includedKeys.add(key);
         }
 
-        allEntries.sort((a, b) -> Double.compare(b.rewardPoints, a.rewardPoints));
+        return allEntries;
+    }
 
-        List<LeaderboardUpdatePayload.LeaderboardEntryDto> topEntries = new ArrayList<>();
-        int topLimit = Math.max(0, limit);
-        int count = Math.min(topLimit, allEntries.size());
-
-        for (int index = 0; index < count; index++) {
-            LeaderboardEntryTemp entry = allEntries.get(index);
-            topEntries.add(new LeaderboardUpdatePayload.LeaderboardEntryDto(
-                    index + 1,
-                    entry.userId,
-                    entry.name,
-                    entry.rewardPoints,
-                    entry.role,
-                    null
-            ));
+    private double resolveAndPersistRewardPoints(
+            BinCollector collector,
+            FieldMentor mentor,
+            double transactionPoints,
+            double progressPoints
+    ) {
+        double computed = Math.max(transactionPoints, progressPoints);
+        if (collector != null) {
+            double stored = collector.getRewardPoints();
+            double resolved = Math.max(stored, computed);
+            if (resolved > stored + 0.001) {
+                collector.setRewardPoints(resolved);
+                binCollectorRepository.save(collector);
+            }
+            return resolved;
         }
+        if (mentor != null) {
+            double stored = mentor.getRewardPoints();
+            double resolved = Math.max(stored, computed);
+            if (resolved > stored + 0.001) {
+                mentor.setRewardPoints(resolved);
+                fieldMentorRepository.save(mentor);
+            }
+            return resolved;
+        }
+        return computed;
+    }
 
-        return topEntries;
+    private LeaderboardUpdatePayload.LeaderboardEntryDto toEntryDto(LeaderboardEntryTemp entry, int rank) {
+        return new LeaderboardUpdatePayload.LeaderboardEntryDto(
+                rank,
+                entry.userId,
+                entry.name,
+                entry.rewardPoints,
+                entry.role,
+                null
+        );
+    }
+
+    private String normalizeRoleFilter(String roleFilter) {
+        if (roleFilter == null || roleFilter.isBlank()) {
+            return null;
+        }
+        String normalized = roleFilter.trim().toUpperCase();
+        if ("BIN_COLLECTOR".equals(normalized) || "COLLECTION_TEAM".equals(normalized)) {
+            return "COLLECTOR";
+        }
+        if ("FIELD_STAFF".equals(normalized)) {
+            return "FIELD_MENTOR";
+        }
+        return normalized;
     }
 
     private String buildUserRoleKey(Long userId, String role) {
@@ -302,64 +390,52 @@ public class LeaderboardService {
     }
     
     /**
-     * Refresh leaderboard rankings.
+     * Refresh leaderboard rankings and persist today's snapshot to leaderboards table.
      * Should be called after any points update.
      */
     @Transactional
     public void refreshLeaderboard() {
-        try {
-            LocalDate today = LocalDate.now();
-            
-            // Clear old entries for today
-            List<Leaderboard> todayEntries = leaderboardRepository.findBySnapshotDate(today);
-            leaderboardRepository.deleteAll(todayEntries);
-            
-            // Collect active collectors.
-            // Note: current production schema enforces leaderboards.collector_id NOT NULL,
-            // so persisting non-collector leaderboard rows is unsafe.
-            List<BinCollector> collectors = binCollectorRepository.findAll();
-            
-            // Create sorted list with collector data
-            List<LeaderboardEntryTemp> allEntries = new ArrayList<>();
-            
-            for (BinCollector collector : collectors) {
-                allEntries.add(new LeaderboardEntryTemp(
-                        collector.getEmpId(),
-                        collector.getEmpName(),
-                        collector.getEmail(),
-                        "COLLECTOR",
-                        collector.getRewardPoints(),
-                        collector
-                ));
+        LocalDate today = LocalDate.now();
+
+        List<LeaderboardEntryTemp> allEntries = buildAllLeaderboardEntries("COLLECTOR");
+        allEntries.sort((a, b) -> Double.compare(b.rewardPoints, a.rewardPoints));
+
+        Set<Long> activeUserIds = new HashSet<>();
+        int rank = 1;
+        for (LeaderboardEntryTemp entry : allEntries) {
+            if (!(entry.userEntity instanceof BinCollector collector)) {
+                continue;
             }
-            
-            // Sort by reward points (descending)
-            allEntries.sort((a, b) -> Double.compare(b.rewardPoints, a.rewardPoints));
-            
-            // Create and save leaderboard entities with ranks
-            for (int rank = 0; rank < allEntries.size(); rank++) {
-                LeaderboardEntryTemp entry = allEntries.get(rank);
-                
-                Leaderboard leaderboard = new Leaderboard();
-                leaderboard.setRank(rank + 1);
-                leaderboard.setUserId(entry.userId);
-                leaderboard.setCollectorName(entry.name);
-                leaderboard.setCollectorEmail(entry.email);
-                leaderboard.setRewardPoints(entry.rewardPoints);
-                leaderboard.setRole(entry.role);
-                leaderboard.setSnapshotDate(today);
-                leaderboard.setLastUpdated(LocalDateTime.now());
-                
-                leaderboard.setCollector((BinCollector) entry.userEntity);
-                
-                leaderboardRepository.save(leaderboard);
+
+            activeUserIds.add(entry.userId);
+
+            Leaderboard leaderboard = leaderboardRepository
+                    .findFirstByUserIdAndRole(entry.userId, entry.role)
+                    .orElseGet(Leaderboard::new);
+
+            if (leaderboard.getVersion() == null) {
+                leaderboard.setVersion(0L);
             }
-            
-            log.info("Leaderboard refreshed with {} entries for date {}", allEntries.size(), today);
-            
-        } catch (Exception e) {
-            log.error("Error refreshing leaderboard: {}", e.getMessage());
+            leaderboard.setRank(rank++);
+            leaderboard.setUserId(entry.userId);
+            leaderboard.setCollector(collector);
+            leaderboard.setCollectorName(entry.name);
+            leaderboard.setCollectorEmail(entry.email);
+            leaderboard.setRewardPoints(entry.rewardPoints);
+            leaderboard.setRole(entry.role);
+            leaderboard.setSnapshotDate(today);
+            leaderboard.setLastUpdated(LocalDateTime.now());
+
+            leaderboardRepository.save(leaderboard);
         }
+
+        for (Leaderboard stale : leaderboardRepository.findByRole("COLLECTOR")) {
+            if (stale.getUserId() != null && !activeUserIds.contains(stale.getUserId())) {
+                leaderboardRepository.delete(stale);
+            }
+        }
+
+        log.info("Leaderboard table refreshed with {} collector entries for date {}", rank - 1, today);
     }
     
     /**

@@ -1,38 +1,79 @@
 package com.garbo.core.service;
 
+import com.garbo.api.dto.ComplaintCreateRequest;
+import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.Complaint;
 import com.garbo.core.entity.User;
+import com.garbo.core.repository.CitizenRepository;
 import com.garbo.core.repository.ComplaintRepository;
 import com.garbo.core.repository.UserRepository;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class ComplaintService {
 
-    @Autowired
-    private ComplaintRepository complaintRepository;
+    private final ComplaintRepository complaintRepository;
+    private final UserRepository userRepository;
+    private final CitizenRepository citizenRepository;
+    private final CouncilAccessService councilAccessService;
 
-    @Autowired
-    private UserRepository userRepository;
+    public ComplaintService(
+            ComplaintRepository complaintRepository,
+            UserRepository userRepository,
+            CitizenRepository citizenRepository,
+            CouncilAccessService councilAccessService) {
+        this.complaintRepository = complaintRepository;
+        this.userRepository = userRepository;
+        this.citizenRepository = citizenRepository;
+        this.councilAccessService = councilAccessService;
+    }
 
-    @Autowired
-    private CouncilAccessService councilAccessService;
-
-    public Complaint createComplaint(Complaint complaint, String citizenEmail) {
-        User citizen = userRepository.findByEmail(citizenEmail)
+    public Complaint createComplaint(ComplaintCreateRequest request, String citizenEmail) {
+        User user = userRepository.findByEmail(citizenEmail)
                 .orElseThrow(() -> new RuntimeException("Citizen not found"));
-        complaint.setCitizenId(citizen.getEmpId());
+
+        Citizen citizen = citizenRepository.findFirstByEmailIgnoreCase(citizenEmail)
+                .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
+
+        String council = citizen.getCouncil();
+        if (council == null || council.isBlank()) {
+            throw new RuntimeException("Citizen council is required before submitting reports");
+        }
+
+        Complaint complaint = new Complaint();
+        complaint.setCitizenId(user.getEmpId());
+        complaint.setCouncil(council);
         complaint.setStatus("PENDING");
-        if (complaint.getDescription() == null || complaint.getDescription().isBlank()) {
-            complaint.setDescription("No description provided");
-        }
-        if (complaint.getLocation() == null || complaint.getLocation().isBlank()) {
-            complaint.setLocation("Unknown Location");
-        }
+        complaint.setTitle(
+                request.getTitle() != null && !request.getTitle().isBlank()
+                        ? request.getTitle().trim()
+                        : (request.getIssueType() != null ? request.getIssueType().trim() : "General Report"));
+        complaint.setIssueType(
+                request.getIssueType() != null && !request.getIssueType().isBlank()
+                        ? request.getIssueType().trim()
+                        : "General");
+        complaint.setUrgency(
+                request.getUrgency() != null && !request.getUrgency().isBlank()
+                        ? request.getUrgency().trim()
+                        : "Normal");
+        complaint.setWasteType(
+                request.getWasteType() != null && !request.getWasteType().isBlank()
+                        ? request.getWasteType().trim()
+                        : null);
+        complaint.setDescription(
+                request.getDescription() != null && !request.getDescription().isBlank()
+                        ? request.getDescription().trim()
+                        : "No description provided");
+        complaint.setLocation(
+                request.getLocation() != null && !request.getLocation().isBlank()
+                        ? request.getLocation().trim()
+                        : "Unknown Location");
+        complaint.setImageUrl(request.getImageUrl());
+
         return complaintRepository.save(complaint);
     }
 
@@ -116,9 +157,8 @@ public class ComplaintService {
 
     public Complaint assignComplaint(Long id, Long personnelId, String requesterEmail) {
         Complaint complaint = getComplaintById(id, requesterEmail);
-        if (!userRepository.existsById(personnelId)) {
-            throw new RuntimeException("Personnel not found");
-        }
+        userRepository.findById(personnelId)
+                .orElseThrow(() -> new RuntimeException("Personnel not found"));
         complaint.setAssignedPersonnelId(personnelId);
         complaint.setStatus("IN_PROGRESS");
         return complaintRepository.save(complaint);

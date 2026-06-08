@@ -77,14 +77,11 @@ public class UserTaskProgressService {
             progress.setCurrentProgress(updated);
 
             if (updated >= progress.getTargetProgress()) {
-                progress.setCompleted(true);
-                progress.setCompletedAt(LocalDateTime.now());
-
                 String completionEventId = sourceEventId != null && !sourceEventId.isBlank()
                         ? sourceEventId
                         : "task-complete-" + userId + "-" + taskId;
 
-                leaderboardService.awardPointsForTaskCompletion(
+                boolean awarded = leaderboardService.awardPointsForTaskCompletion(
                         userId,
                         normalizeRole(role),
                         taskId,
@@ -93,7 +90,13 @@ public class UserTaskProgressService {
                         priorityLevel
                 );
 
-                progress.setPointsEarned(task.getBasePoints() * resolvePriorityMultiplier(task, priorityLevel));
+                if (awarded) {
+                    progress.setCompleted(true);
+                    progress.setCompletedAt(LocalDateTime.now());
+                    progress.setPointsEarned(
+                            task.getBasePoints() * resolvePriorityMultiplier(task, priorityLevel)
+                    );
+                }
             }
         }
 
@@ -230,26 +233,50 @@ public class UserTaskProgressService {
         return updatedProgress;
     }
 
+    @Transactional
+    public List<UserTaskProgress> incrementFieldMentorReportTasks(Long userId, Long binId) {
+        String normalizedRole = "FIELD_MENTOR";
+        List<GamificationTask> activeTasks = gamificationTaskService.getActiveTasksForRole(normalizedRole);
+        List<UserTaskProgress> updatedProgress = new ArrayList<>();
+
+        for (GamificationTask task : activeTasks) {
+            if (!isFieldMentorReportTask(task)) {
+                continue;
+            }
+
+            String sourceEventId = "mentor-report-" + userId + "-" + task.getId() + "-" + binId + "-" + LocalDate.now();
+            Optional<UserTaskProgress> progress = incrementTaskProgress(
+                    userId,
+                    normalizedRole,
+                    task.getId(),
+                    sourceEventId,
+                    "Bin reported",
+                    null,
+                    1.0
+            );
+            progress.ifPresent(updatedProgress::add);
+        }
+
+        return updatedProgress;
+    }
+
+    private boolean isFieldMentorReportTask(GamificationTask task) {
+        String taskType = task.getTaskType() != null ? task.getTaskType().trim().toUpperCase() : "";
+        return "BIN_REPORT".equals(taskType)
+                || "FIELD_MENTOR_REPORT".equals(taskType)
+                || "DAILY_BIN_REPORT".equals(taskType);
+    }
+
     private boolean isActiveBinCollectionTask(GamificationTask task) {
         String taskType = task.getTaskType() != null ? task.getTaskType().trim().toUpperCase() : "";
-        String code = task.getCode() != null ? task.getCode().trim().toUpperCase() : "";
-
         return "ACTIVE_BIN_DAILY".equals(taskType)
-                || "DAILY_ACTIVE_BINS".equals(taskType)
-                || "ACTIVE_BINS_DAILY".equals(taskType)
-                || code.contains("ACTIVE_BIN");
+                || "BIN_COLLECTION".equals(taskType);
     }
 
     private boolean isDailyRouteCompletionTask(GamificationTask task) {
         String taskType = task.getTaskType() != null ? task.getTaskType().trim().toUpperCase() : "";
-        String code = task.getCode() != null ? task.getCode().trim().toUpperCase() : "";
-
         return "DAILY_ROUTE_COMPLETION".equals(taskType)
-                || "ROUTE_DAILY".equals(taskType)
-                || "DAILY_ROUTES".equals(taskType)
-                || code.contains("ROUTES_2_DAILY")
-                || code.contains("ROUTES_3_DAILY")
-                || (code.contains("ROUTE") && code.contains("DAILY"));
+                || "ROUTE_COMPLETION".equals(taskType);
     }
 
     private String buildSourceEventId(Long userId, Long taskId, Long binId, String sessionId) {
