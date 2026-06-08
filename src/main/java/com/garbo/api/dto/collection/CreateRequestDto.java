@@ -11,10 +11,11 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
+import java.util.List;
 
 public record CreateRequestDto(
-        @NotNull(message = "Waste type is required")
         WasteType wasteType,
+        List<WasteType> wasteTypes,
         @NotBlank(message = "Quantity label is required")
         @Size(max = 50, message = "Quantity label must be at most 50 characters")
         String quantityLabel,

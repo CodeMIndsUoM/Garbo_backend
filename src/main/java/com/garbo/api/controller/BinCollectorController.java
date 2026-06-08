@@ -146,6 +146,7 @@ public class BinCollectorController {
                 progress.getTask().getCode(),
                 progress.getTask().getTitle(),
                 progress.getTask().getDescription(),
+                progress.getTask().getBasePoints(),
                 progress.getCurrentProgress(),
                 progress.getTargetProgress(),
                 progress.isCompleted(),
