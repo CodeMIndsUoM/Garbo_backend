@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -147,6 +148,87 @@ public class ThirdPartyCollectorRegistrationService {
 
     public List<ThirdPartyCollector> getByStatus(RegistrationStatus status) {
         return repository.findByRegistrationStatus(status);
+    }
+
+    public List<ThirdPartyCollector> getActiveCollectors(String councilFilter) {
+        return repository.findAll().stream()
+                .filter(this::isActiveCollector)
+                .filter(collector -> matchesCouncil(councilFilter, collector.getAssignedCouncils()))
+                .toList();
+    }
+
+    public List<ThirdPartyCollector> getRevokedCollectors(String councilFilter) {
+        return repository.findAll().stream()
+                .filter(this::isRevokedCollector)
+                .filter(collector -> matchesCouncil(councilFilter, collector.getAssignedCouncils()))
+                .toList();
+    }
+
+    public List<ThirdPartyCollector> getPendingCollectors(String councilFilter) {
+        return getByStatus(RegistrationStatus.PENDING).stream()
+                .filter(collector -> matchesCouncil(councilFilter, collector.getAssignedCouncils()))
+                .toList();
+    }
+
+    public ThirdPartyCollector getCollector(Long empId) {
+        return repository.findById(empId)
+                .orElseThrow(() -> new IllegalArgumentException("Third-party collector not found with id: " + empId));
+    }
+
+    public ThirdPartyCollector revoke(Long empId, String reason) {
+        ThirdPartyCollector collector = getCollector(empId);
+        if (!isActiveCollector(collector)) {
+            throw new IllegalStateException(
+                    "Only active third-party collectors can be revoked. Current: " + collector.getRegistrationStatus());
+        }
+        collector.setAdminRevoked(true);
+        if (collector.getRegistrationStatus() == null) {
+            collector.setRegistrationStatus(RegistrationStatus.APPROVED);
+        }
+        ThirdPartyCollector saved = repository.save(collector);
+        log.info("Third-party collector revoked: empId={}, email={}, reason={}",
+                saved.getEmpId(), saved.getEmail(), reason);
+        return saved;
+    }
+
+    public ThirdPartyCollector unrevoke(Long empId) {
+        ThirdPartyCollector collector = getCollector(empId);
+        if (!isRevokedCollector(collector)) {
+            throw new IllegalStateException("Only revoked third-party collectors can be restored");
+        }
+        collector.setAdminRevoked(false);
+        collector.setRegistrationStatus(RegistrationStatus.APPROVED);
+        ThirdPartyCollector saved = repository.save(collector);
+        log.info("Third-party collector restored: empId={}, email={}", saved.getEmpId(), saved.getEmail());
+        return saved;
+    }
+
+    private boolean isActiveCollector(ThirdPartyCollector collector) {
+        if (Boolean.TRUE.equals(collector.getAdminRevoked())) {
+            return false;
+        }
+        RegistrationStatus status = collector.getRegistrationStatus();
+        if (status == RegistrationStatus.PENDING || status == RegistrationStatus.REJECTED) {
+            return false;
+        }
+        return status == RegistrationStatus.APPROVED || status == null;
+    }
+
+    private boolean isRevokedCollector(ThirdPartyCollector collector) {
+        return Boolean.TRUE.equals(collector.getAdminRevoked());
+    }
+
+    private boolean matchesCouncil(String councilFilter, String assignedCouncils) {
+        if (councilFilter == null || councilFilter.isBlank()) {
+            return true;
+        }
+        if (assignedCouncils == null || assignedCouncils.isBlank()) {
+            return false;
+        }
+        String needle = councilFilter.trim().toLowerCase();
+        return Arrays.stream(assignedCouncils.split(","))
+                .map(String::trim)
+                .anyMatch(part -> part.equalsIgnoreCase(needle));
     }
 
     public List<String> getAvailableCouncils() {
