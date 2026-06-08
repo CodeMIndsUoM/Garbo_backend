@@ -5,6 +5,7 @@ import com.garbo.infrastructure.config.security.JwtUtil;
 import com.garbo.core.service.UserService;
 import com.garbo.core.entity.AdminNew;
 import com.garbo.core.entity.BinCollector;
+import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.entity.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -81,10 +82,14 @@ public class AuthController {
                 response.put("empId", user.getEmpId());
                 response.put("empName", user.getEmpName());
                 
-                if (user instanceof BinCollector) {
-                    BinCollector collector = (BinCollector) user;
+                if (user instanceof BinCollector collector) {
                     response.put("onDuty", collector.isOnDuty());
                     response.put("rewardPoints", collector.getRewardPoints());
+                }
+
+                if (user instanceof FieldMentor mentor) {
+                    response.put("onDuty", mentor.isOnDuty());
+                    response.put("rewardPoints", mentor.getRewardPoints());
                 }
 
                 if (user instanceof com.garbo.core.entity.ThirdPartyCollector) {

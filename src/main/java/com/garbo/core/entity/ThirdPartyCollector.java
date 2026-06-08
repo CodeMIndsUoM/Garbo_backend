@@ -56,4 +56,7 @@ public class ThirdPartyCollector extends User {
 
     @Column(name = "admin_revoked")
     private Boolean adminRevoked = false;
+
+    @Column(name = "admin_hidden")
+    private Boolean adminHidden = false;
 }
