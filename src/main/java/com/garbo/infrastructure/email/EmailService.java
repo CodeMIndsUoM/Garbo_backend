@@ -1,32 +1,40 @@
 package com.garbo.infrastructure.email;
 
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
 
     private final JavaMailSender mailSender;
+    private final String fromAddress;
 
-    public EmailService(JavaMailSender mailSender) {
+    public EmailService(
+            JavaMailSender mailSender,
+            @Value("${spring.mail.username:}") String fromAddress) {
         this.mailSender = mailSender;
+        this.fromAddress = fromAddress;
     }
 
-    public void sendAdminCredentials(String toEmail, String tempPassword) {
-        SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setTo(toEmail);
-        msg.setSubject("Your Account Credentials");
-        StringBuilder body = new StringBuilder();
-        body.append("Hello,").append(System.lineSeparator()).append(System.lineSeparator());
-        body.append("Your account has been created.").append(System.lineSeparator());
-        body.append("Email: ").append(toEmail == null ? "" : toEmail).append(System.lineSeparator());
-        body.append("Temporary password: ").append(tempPassword == null ? "" : tempPassword)
-                .append(System.lineSeparator()).append(System.lineSeparator());
-        body.append("Please change your password after first login.");
-        msg.setText(body.toString());
+    public void sendAdminCredentials(String toEmail, String tempPassword) throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-        mailSender.send(msg);
+        if (fromAddress != null && !fromAddress.isBlank()) {
+            helper.setFrom(fromAddress);
+        }
+        helper.setTo(toEmail);
+        helper.setSubject("Your Garbo account credentials");
+        helper.setText(
+                AdminCredentialsEmailTemplate.buildPlainText(toEmail, tempPassword),
+                AdminCredentialsEmailTemplate.buildHtml(toEmail, tempPassword));
+
+        mailSender.send(message);
     }
 
     public void sendRegistrationApproved(String toEmail, String name) {

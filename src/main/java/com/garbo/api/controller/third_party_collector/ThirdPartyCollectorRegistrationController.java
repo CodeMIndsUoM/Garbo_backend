@@ -158,8 +158,98 @@ public class ThirdPartyCollectorRegistrationController {
     }
 
     @GetMapping("/pending")
-    public ResponseEntity<ApiResponse<List<ThirdPartyCollector>>> getPending() {
-        return ResponseEntity.ok(
-                ApiResponse.success(registrationService.getByStatus(RegistrationStatus.PENDING)));
+    public ResponseEntity<ApiResponse<List<ThirdPartyCollector>>> getPending(
+            @RequestParam(required = false) String council) {
+        return ResponseEntity.ok(ApiResponse.success(registrationService.getPendingCollectors(council)));
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<ApiResponse<List<ThirdPartyCollector>>> getActive(
+            @RequestParam(required = false) String council) {
+        return ResponseEntity.ok(ApiResponse.success(registrationService.getActiveCollectors(council)));
+    }
+
+    @GetMapping("/revoked")
+    public ResponseEntity<ApiResponse<List<ThirdPartyCollector>>> getRevoked(
+            @RequestParam(required = false) String council) {
+        return ResponseEntity.ok(ApiResponse.success(registrationService.getRevokedCollectors(council)));
+    }
+
+    @GetMapping("/{empId}")
+    public ResponseEntity<ApiResponse<ThirdPartyCollector>> getCollector(@PathVariable Long empId) {
+        try {
+            return ResponseEntity.ok(ApiResponse.success(registrationService.getCollector(empId)));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.error(ex.getMessage(), "NOT_FOUND"));
+        }
+    }
+
+    @PostMapping("/{empId}/revoke")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> revoke(
+            @PathVariable Long empId,
+            @RequestBody(required = false) Map<String, String> body) {
+        try {
+            String reason = (body != null) ? body.getOrDefault("reason", "Revoked by admin") : "Revoked by admin";
+            ThirdPartyCollector collector = registrationService.revoke(empId, reason);
+            Map<String, Object> data = Map.of(
+                    "empId", collector.getEmpId(),
+                    "email", collector.getEmail(),
+                    "registrationStatus", collector.getRegistrationStatus().name());
+            return ResponseEntity.ok(ApiResponse.success(data));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.error(ex.getMessage(), "NOT_FOUND"));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(409)
+                    .body(ApiResponse.error(ex.getMessage(), "STATE_ERROR"));
+        }
+    }
+
+    @PostMapping("/{empId}/unrevoke")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> unrevoke(@PathVariable Long empId) {
+        try {
+            ThirdPartyCollector collector = registrationService.unrevoke(empId);
+            Map<String, Object> data = Map.of(
+                    "empId", collector.getEmpId(),
+                    "email", collector.getEmail(),
+                    "registrationStatus", collector.getRegistrationStatus().name());
+            return ResponseEntity.ok(ApiResponse.success(data));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.error(ex.getMessage(), "NOT_FOUND"));
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(409)
+                    .body(ApiResponse.error(ex.getMessage(), "STATE_ERROR"));
+        }
+    }
+
+    @PostMapping("/{empId}/hide")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> hide(@PathVariable Long empId) {
+        try {
+            registrationService.hideCollector(empId);
+            return ResponseEntity.ok(ApiResponse.success(Map.of(
+                    "empId", empId,
+                    "message", "Collector hidden from admin list")));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(404)
+                    .body(ApiResponse.error(ex.getMessage(), "NOT_FOUND"));
+        }
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{empId}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> delete(@PathVariable Long empId) {
+        String result = registrationService.deleteCollector(empId);
+        return switch (result) {
+            case "DELETED" -> ResponseEntity.ok(ApiResponse.success(Map.of(
+                    "empId", empId,
+                    "message", "Collector deleted")));
+            case "NOT_FOUND" -> ResponseEntity.status(404)
+                    .body(ApiResponse.error("Collector not found", "NOT_FOUND"));
+            case "CONFLICT" -> ResponseEntity.status(409)
+                    .body(ApiResponse.error("Cannot delete due to linked records", "CONFLICT"));
+            default -> ResponseEntity.status(500)
+                    .body(ApiResponse.error("Failed to delete collector", "ERROR"));
+        };
     }
 }

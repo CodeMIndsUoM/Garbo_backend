@@ -1,7 +1,10 @@
 package com.garbo.api.controller;
 
+import com.garbo.api.dto.AutoRoutePreviewRequestDTO;
+import com.garbo.api.dto.AutoRoutePreviewResponseDTO;
 import com.garbo.api.dto.RouteAssignmentRequestDTO;
 import com.garbo.api.dto.RouteSessionSnapshotDTO;
+import com.garbo.core.service.route.AutoRouteService;
 import com.garbo.core.repository.RouteBinStopRepository;
 import com.garbo.core.entity.RouteVehicleRoute;
 import com.garbo.core.entity.RouteAssignment;
@@ -37,9 +40,30 @@ public class RouteSessionController {
 
     private final RouteSessionService     routeSessionService;
     private final RouteAssignmentService  routeAssignmentService;
+    private final AutoRouteService        autoRouteService;
     private final RouteAssignmentRepository assignmentRepository;
     private final RouteVehicleRouteRepository vehicleRouteRepository;
     private final UserRepository          userRepository;
+
+    @PostMapping("/auto-preview")
+    public ResponseEntity<?> previewAutoRoutes(@RequestBody AutoRoutePreviewRequestDTO request) {
+        try {
+            if (request.getCouncil() == null || request.getCouncil().isBlank()) {
+                return badRequest("council is required");
+            }
+            AutoRoutePreviewResponseDTO preview = autoRouteService.preview(
+                    request.getCouncil(),
+                    request.getMinFillStatus(),
+                    request.isUseZones()
+            );
+            return ResponseEntity.ok(preview);
+        } catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Auto route preview failed", e);
+            return serverError("Auto route preview failed: " + e.getMessage());
+        }
+    }
 
     @PostMapping
     public ResponseEntity<?> createRouteSession(@RequestBody RouteAssignmentRequestDTO request) {

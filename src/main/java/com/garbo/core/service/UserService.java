@@ -11,6 +11,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import com.garbo.core.entity.AdminNew;
+import com.garbo.core.entity.BinCollector;
+import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.entity.User;
 import com.garbo.core.repository.AdminNewRepository;
 import com.garbo.core.repository.UserRepository;
@@ -253,10 +255,19 @@ public class UserService {
             throw new IllegalArgumentException("Invalid current password");
         }
 
+        boolean firstLogin = user.isMustChangePassword();
         String hashed = passwordEncoder.encode(newPassword);
 
         user.setPassword(hashed);
         user.setMustChangePassword(false);
+
+        if (firstLogin) {
+            if (user instanceof FieldMentor mentor) {
+                mentor.setOnDuty(true);
+            } else if (user instanceof BinCollector collector) {
+                collector.setOnDuty(true);
+            }
+        }
 
         userRepo.save(user);
     }
