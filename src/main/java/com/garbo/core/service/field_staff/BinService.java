@@ -16,6 +16,7 @@ import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.service.CouncilAccessService;
 import com.garbo.core.service.UserTaskProgressService;
 import com.garbo.core.service.event.BinChangedEvent;
+import com.garbo.core.service.zone.ZoneClusteringService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.security.access.AccessDeniedException;
@@ -57,6 +58,9 @@ public class BinService {
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+
+    @Autowired
+    private ZoneClusteringService zoneClusteringService;
 
     public BinService(BinRepository binRepository,
             BinReportRepository binReportRepository,
@@ -265,6 +269,7 @@ public class BinService {
         payload.setLongitude(latLng[1]);
         payload.setLastChecked(LocalDateTime.now());
         normalizeCreateModel(payload);
+        assignZoneIfMissing(payload, council);
 
         Bin saved = binRepository.save(payload);
         eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
@@ -327,8 +332,9 @@ public class BinService {
         bin.setLng(dto.getLng());
         bin.setFillLevel(dto.getFillLevel());
         bin.setPriority(dto.getPriority());
-        String zone = dto.getZone() == null || dto.getZone().isBlank() ? "unassigned" : dto.getZone();
-        bin.setZone(zone);
+        if (dto.getZone() != null && !dto.getZone().isBlank()) {
+            bin.setZone(dto.getZone());
+        }
         Bin saved = binRepository.save(bin);
         eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
         return saved;
@@ -397,9 +403,22 @@ public class BinService {
         } else {
             bin.setPriority(bin.getPriority().trim().toLowerCase(Locale.ROOT));
         }
-        if (bin.getZone() == null || bin.getZone().isBlank()) {
-            bin.setZone("unassigned");
+    }
+
+    /** Backend assigns zone from coordinates when admin omits it (W5). */
+    private void assignZoneIfMissing(Bin bin, String council) {
+        if (bin.getZone() != null && !bin.getZone().isBlank()
+                && !"unassigned".equalsIgnoreCase(bin.getZone().trim())) {
+            return;
         }
+        if (council == null || bin.getLatitude() == null || bin.getLongitude() == null) {
+            bin.setZone("1");
+            return;
+        }
+        List<Bin> councilBins = binRepository.findAllByCouncil(council);
+        String zone = zoneClusteringService.assignZoneForCoordinates(
+                council, bin.getLatitude(), bin.getLongitude(), councilBins);
+        bin.setZone(zone);
     }
 
     private void normalizeReadModel(Bin bin) {

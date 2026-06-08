@@ -32,7 +32,7 @@ public class AdminThirdPartyRegistrationController {
         String council = councilAccessService.isSuperAdmin(email)
                 ? null
                 : councilAccessService.resolveCouncilForEmail(email).orElse(null);
-        return ResponseEntity.ok(ApiResponse.success(registrationService.getPendingForCouncil(council)));
+        return ResponseEntity.ok(ApiResponse.success(registrationService.getPendingCollectors(council)));
     }
 
     @PostMapping("/{empId}/approve")

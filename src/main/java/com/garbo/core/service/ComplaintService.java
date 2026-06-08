@@ -111,7 +111,8 @@ public class ComplaintService {
                     .orElseThrow(() -> new RuntimeException("Citizen not found"));
             Complaint ownComplaint = complaintRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Complaint not found"));
-            if (!ownComplaint.getCitizenId().equals(citizen.getEmpId())) {
+            if (ownComplaint.getCitizenId() == null
+                    || !ownComplaint.getCitizenId().equals(citizen.getEmpId())) {
                 throw new AccessDeniedException("Complaint is not visible to this citizen");
             }
             return ownComplaint;

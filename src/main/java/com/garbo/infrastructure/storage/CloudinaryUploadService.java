@@ -88,6 +88,14 @@ public class CloudinaryUploadService {
                 "NIC photo is required");
     }
 
+    public String uploadEventImage(MultipartFile file) {
+        return uploadImage(
+                file,
+                "garbo/events",
+                "event-" + System.currentTimeMillis() + "-",
+                "Event image is required");
+    }
+
     private String uploadImage(
             MultipartFile file,
             String folder,

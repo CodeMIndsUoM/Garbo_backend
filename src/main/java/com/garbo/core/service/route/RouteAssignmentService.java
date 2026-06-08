@@ -13,8 +13,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -32,6 +34,7 @@ public class RouteAssignmentService {
     private final VehicleRepository         vehicleRepository;
     private final BinCollectorRepository    collectorRepository;
     private final BinRepository             binRepository;
+    private final UserRepository            userRepository;
     private final RouteCollectionBroadcaster routeCollectionBroadcaster;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -237,50 +240,105 @@ public class RouteAssignmentService {
         }
     }
 
+    /**
+     * Clears route history using the same scope as GET /user/{userId}/active:
+     * superadmin → all sessions; council admin → council sessions; others → own sessions.
+     */
     @Transactional
     public void clearHistoryForUser(Long userId, RouteSessionService sessionService) {
-        List<RouteSession> sessions = routeSessionRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        List<RouteSession> sessions = resolveSessionsForClear(userId);
         for (RouteSession session : sessions) {
-            UUID sessionId = session.getSessionId();
-
-            // 1. Mark bins as unassigned
-            if (session.getSelectedBinIds() != null) {
-                try {
-                    List<Long> binIds = objectMapper.readValue(
-                        session.getSelectedBinIds(),
-                        new com.fasterxml.jackson.core.type.TypeReference<List<Long>>() {}
-                    );
-                    if (binIds != null) {
-                        for (Long binId : binIds) {
-                            binRepository.updateAssignedStatus(binId, false);
-                        }
-                    }
-                } catch (Exception e) {
-                    log.warn("Failed to parse selectedBinIds for session clear: {}", e.getMessage());
-                }
-            }
-
-            // 2. Reset vehicle status and delete assignments
-            routeAssignmentRepository.findBySessionId(sessionId).ifPresent(assignment -> {
-                Vehicle vehicle = assignment.getVehicle();
-                if (vehicle != null) {
-                    vehicle.setStatus("available");
-                    vehicle.setAssignedDriverId(null);
-                    vehicleRepository.save(vehicle);
-                }
-                routeAssignmentRepository.delete(assignment);
-            });
-
-            // 3. Delete bin stops and routes
-            binStopRepository.deleteBySessionId(sessionId);
-            vehicleRouteRepository.deleteBySessionId(sessionId);
-
-            // 4. Delete the session from database
-            routeSessionRepository.delete(session);
-
-            // 5. Remove from RouteSessionService in-memory tracking
-            sessionService.deleteSession(sessionId);
+            deleteSessionCompletely(session, sessionService);
         }
         sessionService.deleteByUser(userId);
+        if (isSuperAdmin(userId)) {
+            sessionService.clearAllSessions();
+        }
+    }
+
+    private List<RouteSession> resolveSessionsForClear(Long userId) {
+        return userRepository.findById(userId)
+                .map(user -> {
+                    String role = user.getRole();
+                    if (isSuperAdminRole(role)) {
+                        return routeSessionRepository.findAll();
+                    }
+                    if (isAdminRole(role)) {
+                        String council = null;
+                        if (user instanceof AdminNew admin) {
+                            council = admin.getCouncil();
+                        }
+                        if (council != null && !council.isBlank()) {
+                            return findSessionsByCouncil(council);
+                        }
+                        return routeSessionRepository.findAll();
+                    }
+                    return routeSessionRepository.findByUserIdOrderByCreatedAtDesc(userId);
+                })
+                .orElseGet(() -> routeSessionRepository.findByUserIdOrderByCreatedAtDesc(userId));
+    }
+
+    private List<RouteSession> findSessionsByCouncil(String council) {
+        Set<UUID> sessionIds = new LinkedHashSet<>();
+        for (Object[] row : routeAssignmentRepository.findAllByCouncilWithStatus(council)) {
+            RouteAssignment assignment = (RouteAssignment) row[0];
+            sessionIds.add(assignment.getSessionId());
+        }
+        List<RouteSession> sessions = new ArrayList<>();
+        for (UUID sessionId : sessionIds) {
+            routeSessionRepository.findById(sessionId).ifPresent(sessions::add);
+        }
+        return sessions;
+    }
+
+    private void deleteSessionCompletely(RouteSession session, RouteSessionService sessionService) {
+        UUID sessionId = session.getSessionId();
+
+        if (session.getSelectedBinIds() != null) {
+            try {
+                List<Long> binIds = objectMapper.readValue(
+                        session.getSelectedBinIds(),
+                        new com.fasterxml.jackson.core.type.TypeReference<List<Long>>() {}
+                );
+                if (binIds != null) {
+                    for (Long binId : binIds) {
+                        binRepository.updateAssignedStatus(binId, false);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to parse selectedBinIds for session clear: {}", e.getMessage());
+            }
+        }
+
+        routeAssignmentRepository.findBySessionId(sessionId).ifPresent(assignment -> {
+            Vehicle vehicle = assignment.getVehicle();
+            if (vehicle != null) {
+                vehicle.setStatus("available");
+                vehicle.setAssignedDriverId(null);
+                vehicleRepository.save(vehicle);
+            }
+            routeAssignmentRepository.delete(assignment);
+        });
+
+        binStopRepository.deleteBySessionId(sessionId);
+        vehicleRouteRepository.deleteBySessionId(sessionId);
+        routeSessionRepository.delete(session);
+        sessionService.deleteSession(sessionId);
+    }
+
+    private boolean isSuperAdmin(Long userId) {
+        return userRepository.findById(userId)
+                .map(u -> isSuperAdminRole(u.getRole()))
+                .orElse(false);
+    }
+
+    private boolean isSuperAdminRole(String role) {
+        return role != null
+                && (role.equalsIgnoreCase("superadmin") || role.equalsIgnoreCase("role_superadmin"));
+    }
+
+    private boolean isAdminRole(String role) {
+        return role != null
+                && (role.equalsIgnoreCase("admin") || role.equalsIgnoreCase("role_admin"));
     }
 }

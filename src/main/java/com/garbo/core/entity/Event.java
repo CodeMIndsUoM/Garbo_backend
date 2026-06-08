@@ -1,5 +1,6 @@
 package com.garbo.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -42,6 +43,7 @@ public class Event {
     @Column(nullable = false)
     private String council;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizer_citizen_id", nullable = false)
     private User organizerCitizen;

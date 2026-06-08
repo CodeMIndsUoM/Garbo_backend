@@ -54,4 +54,10 @@ public class ThirdPartyCollector extends User {
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_status")
     private RegistrationStatus registrationStatus;
+
+    @Column(name = "admin_revoked")
+    private Boolean adminRevoked = false;
+
+    @Column(name = "admin_hidden")
+    private Boolean adminHidden = false;
 }
