@@ -15,6 +15,7 @@ import java.util.UUID;
 public class RouteCollectionBroadcaster {
 
     private final SimpMessagingTemplate messagingTemplate;
+    private final CouncilBinStompBroadcaster councilBinStompBroadcaster;
 
     public void broadcastBinStatusUpdate(UUID sessionId, Long binId, String status) {
         Map<String, Object> payload = new LinkedHashMap<>();
@@ -26,6 +27,10 @@ public class RouteCollectionBroadcaster {
         try {
             messagingTemplate.convertAndSend("/topic/route-sessions/" + sessionId + "/bins", payload);
             messagingTemplate.convertAndSend("/topic/route-collection", payload);
+            councilBinStompBroadcaster.publishCollectionUpdate(
+                    binId,
+                    status,
+                    sessionId != null ? sessionId.toString() : null);
             log.debug("Broadcast bin collection update session={} bin={} status={}", sessionId, binId, status);
         } catch (Exception e) {
             log.warn("Failed to broadcast bin collection update: {}", e.getMessage());
