@@ -31,16 +31,44 @@ public class CouncilAccessService {
             return Optional.empty();
         }
 
-        Optional<Citizen> citizen = citizenRepository.findFirstByEmailIgnoreCase(email);
+        String normalizedEmail = UserLookup.normalizeEmail(email);
+
+        Optional<Citizen> citizen = citizenRepository.findFirstByEmailIgnoreCase(normalizedEmail);
         if (citizen.isPresent()) {
-            return normalizeCouncil(citizen.get().getCouncil());
+            Optional<String> council = councilFromCitizen(citizen.get());
+            if (council.isPresent()) {
+                return council;
+            }
         }
 
-        Optional<AdminNew> admin = adminNewRepository.findFirstByEmailIgnoreCase(email);
+        Optional<User> user = userRepository.findFirstByEmailIgnoreCase(normalizedEmail);
+        if (user.isPresent() && user.get() instanceof Citizen citizenUser) {
+            Optional<String> council = councilFromCitizen(citizenUser);
+            if (council.isPresent()) {
+                return council;
+            }
+        }
+
+        Optional<AdminNew> admin = adminNewRepository.findFirstByEmailIgnoreCase(normalizedEmail);
         if (admin.isPresent()) {
             return normalizeCouncil(admin.get().getCouncil());
         }
 
+        return Optional.empty();
+    }
+
+    private Optional<String> councilFromCitizen(Citizen citizen) {
+        Optional<String> direct = normalizeCouncil(citizen.getCouncil());
+        if (direct.isPresent()) {
+            return direct;
+        }
+        try {
+            if (citizen.getCouncilEntity() != null) {
+                return normalizeCouncil(citizen.getCouncilEntity().getName());
+            }
+        } catch (Exception ignored) {
+            // Lazy councilEntity may be unavailable outside a session; ignore.
+        }
         return Optional.empty();
     }
 

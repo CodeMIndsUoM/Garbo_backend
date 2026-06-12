@@ -3,6 +3,7 @@ package com.garbo.core.service;
 import com.garbo.api.dto.ComplaintCreateRequest;
 import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.Complaint;
+import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.User;
 import com.garbo.core.repository.CitizenRepository;
 import com.garbo.core.repository.ComplaintRepository;
@@ -44,13 +45,11 @@ public class ComplaintService {
     }
 
     public Complaint createComplaint(ComplaintCreateRequest request, String citizenEmail) {
-        User user = userRepository.findByEmail(citizenEmail)
-                .orElseThrow(() -> new RuntimeException("Citizen not found"));
+        User user = UserLookup.requireUser(userRepository, citizenEmail);
 
-        Citizen citizen = citizenRepository.findFirstByEmailIgnoreCase(citizenEmail)
-                .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
+        Citizen citizen = UserLookup.requireCitizen(citizenRepository, citizenEmail);
 
-        String council = citizen.getCouncil();
+        String council = UserLookup.resolveCitizenCouncil(citizen);
         if (council == null || council.isBlank()) {
             throw new RuntimeException("Citizen council is required before submitting reports");
         }
@@ -89,8 +88,7 @@ public class ComplaintService {
     }
 
     public List<Complaint> getComplaintsByCitizen(String email) {
-        User citizen = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Citizen not found"));
+        User citizen = UserLookup.requireUser(userRepository, email);
         return complaintRepository.findByCitizen(citizen);
     }
 
@@ -118,8 +116,7 @@ public class ComplaintService {
         }
 
         if (isCitizen(requesterEmail)) {
-            User citizen = userRepository.findByEmail(requesterEmail)
-                    .orElseThrow(() -> new RuntimeException("Citizen not found"));
+            User citizen = UserLookup.requireUser(userRepository, requesterEmail);
             Complaint ownComplaint = complaintRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Complaint not found"));
             if (ownComplaint.getCitizenId() == null
@@ -134,7 +131,7 @@ public class ComplaintService {
     }
 
     private boolean isCitizen(String requesterEmail) {
-        return userRepository.findByEmail(requesterEmail)
+        return UserLookup.findUser(userRepository, requesterEmail)
                 .map(user -> {
                     String role = user.getRole();
                     if (role == null) {

@@ -1,13 +1,22 @@
 package com.garbo.api.exception;
 
 import com.garbo.api.dto.common.ApiResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.Map;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, String>> handleRuntimeException(RuntimeException e) {
+        return ResponseEntity.badRequest()
+                .body(Map.of("error", e.getMessage() == null ? "Request failed" : e.getMessage()));
+    }
 
     @ExceptionHandler(CollectionException.class)
     public ResponseEntity<ApiResponse<Object>> handleCollectionException(CollectionException e) {

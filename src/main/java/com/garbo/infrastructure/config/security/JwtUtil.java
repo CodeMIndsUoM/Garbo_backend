@@ -21,13 +21,25 @@ public class JwtUtil {
 
     // Generate JWT token
     public String generateToken(String username, String role) {
-        return Jwts.builder()
+        return generateToken(username, role, null);
+    }
+
+    public String generateToken(String username, String role, String council) {
+        JwtBuilder builder = Jwts.builder()
                 .setSubject(username)
                 .claim("role", role)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION));
+        if (council != null && !council.isBlank()) {
+            builder.claim("council", council.trim());
+        }
+        return builder.signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String extractCouncil(String token) {
+        Object council = getClaims(token).get("council");
+        return council == null ? null : council.toString();
     }
 
     // Extract username from JWT
@@ -42,7 +54,7 @@ public class JwtUtil {
 
     // Validate token (checks expiration)
     public boolean isTokenValid(String token, String username) {
-        return extractUsername(token).equals(username) && !isTokenExpired(token);
+        return extractUsername(token).equalsIgnoreCase(username) && !isTokenExpired(token);
     }
 
     // Check if expired
