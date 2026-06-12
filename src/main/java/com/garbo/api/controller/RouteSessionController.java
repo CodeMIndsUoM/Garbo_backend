@@ -1,11 +1,19 @@
 package com.garbo.api.controller;
 
+import com.garbo.api.dto.AutoRoutePreviewRequestDTO;
+import com.garbo.api.dto.AutoRoutePreviewResponseDTO;
 import com.garbo.api.dto.RouteAssignmentRequestDTO;
 import com.garbo.api.dto.RouteSessionSnapshotDTO;
+import com.garbo.core.service.route.AutoRouteService;
 import com.garbo.core.repository.RouteBinStopRepository;
 import com.garbo.core.entity.RouteVehicleRoute;
+import com.garbo.core.entity.RouteAssignment;
 import com.garbo.core.repository.RouteAssignmentRepository;
 import com.garbo.core.repository.RouteVehicleRouteRepository;
+import com.garbo.core.repository.UserRepository;
+import com.garbo.core.entity.User;
+import com.garbo.core.entity.AdminNew;
+import com.garbo.core.entity.BinCollector;
 import com.garbo.core.service.route.RouteAssignmentService;
 import com.garbo.core.service.route.RouteSessionService;
 import com.garbo.core.service.CurrentUserService;
@@ -17,6 +25,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * REST controller for route session lifecycle.
@@ -30,16 +40,34 @@ public class RouteSessionController {
 
     private final RouteSessionService     routeSessionService;
     private final RouteAssignmentService  routeAssignmentService;
+    private final AutoRouteService        autoRouteService;
     private final RouteAssignmentRepository assignmentRepository;
     private final RouteVehicleRouteRepository vehicleRouteRepository;
-    private final RouteBinStopRepository  binStopRepository;
+    private final UserRepository          userRepository;
+
+    @PostMapping("/auto-preview")
+    public ResponseEntity<?> previewAutoRoutes(@RequestBody AutoRoutePreviewRequestDTO request) {
+        try {
+            if (request.getCouncil() == null || request.getCouncil().isBlank()) {
+                return badRequest("council is required");
+            }
+            AutoRoutePreviewResponseDTO preview = autoRouteService.preview(
+                    request.getCouncil(),
+                    request.getMinFillStatus(),
+                    request.isUseZones()
+            );
+            return ResponseEntity.ok(preview);
+        } catch (IllegalArgumentException e) {
+            return badRequest(e.getMessage());
+        } catch (Exception e) {
+            log.error("Auto route preview failed", e);
+            return serverError("Auto route preview failed: " + e.getMessage());
+        }
+    }
 
     @PostMapping
     public ResponseEntity<?> createRouteSession(@RequestBody RouteAssignmentRequestDTO request) {
         try {
-            if (request.getUserId() == null || request.getUserId() <= 0) {
-                return badRequest("userId is required");
-            }
             if (!request.hasValidDepot()) {
                 return badRequest("depotLat and depotLng are required");
             }
@@ -47,17 +75,11 @@ public class RouteSessionController {
                 return badRequest("At least one bin must be selected");
             }
             if (!request.hasValidTeam()) {
-                return badRequest("vehicleId, driverId, and at least 2 collectorIds are required");
+                return badRequest("vehicleId and driverId are required");
             }
 
+            request.setUserId(request.getDriverId());
             RouteSessionSnapshotDTO snapshot = routeSessionService.optimizeAndBroadcast(request);
-
-            if ("READY".equalsIgnoreCase(snapshot.status)) {
-                routeAssignmentService.persist(request, snapshot);
-                log.info("Route session created and persisted: sessionId={}, user={}",
-                        snapshot.sessionId, request.getUserId());
-            }
-
             return ResponseEntity.ok(snapshot);
         } catch (Exception e) {
             log.error("Unexpected error creating route session", e);
@@ -78,18 +100,57 @@ public class RouteSessionController {
     @GetMapping("/user/{userId}/active")
     public ResponseEntity<?> getActiveSnapshotByUser(@PathVariable Long userId) {
         try {
-            var assignments = assignmentRepository.findActiveByUserId(userId);
-            var result = assignments.stream().map(a -> {
+            List<Object[]> rows;
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                String role = user.getRole();
+                if (role != null && (role.equalsIgnoreCase("superadmin") || role.equalsIgnoreCase("role_superadmin"))) {
+                    rows = assignmentRepository.findAllWithStatus();
+                } else if (role != null && (role.equalsIgnoreCase("admin") || role.equalsIgnoreCase("role_admin"))) {
+                    String council = null;
+                    if (user instanceof AdminNew) {
+                        council = ((AdminNew) user).getCouncil();
+                    }
+                    if (council != null && !council.isBlank()) {
+                        rows = assignmentRepository.findAllByCouncilWithStatus(council);
+                    } else {
+                        rows = assignmentRepository.findAllWithStatus();
+                    }
+                } else {
+                    rows = assignmentRepository.findAllByUserIdWithStatus(userId);
+                }
+            } else {
+                rows = assignmentRepository.findAllByUserIdWithStatus(userId);
+            }
+
+            var result = rows.stream().map(row -> {
+                RouteAssignment a = (RouteAssignment) row[0];
+                String status = (String) row[1];
                 Map<String, Object> map = new LinkedHashMap<>();
                 map.put("id", a.getId());
                 map.put("sessionId", a.getSessionId());
                 map.put("vehicleCode", a.getVehicle().getLicensePlate());
+                map.put("driverName", a.getDriver() != null ? a.getDriver().getEmpName() : "");
+                map.put("status", status);
+                map.put("createdDate", a.getCreatedAt() != null ? a.getCreatedAt().toString() : "");
                 return map;
             }).toList();
             return ResponseEntity.ok(Map.of("success", true, "data", result));
         } catch (Exception e) {
-            log.error("Failed to fetch active assignments", e);
+            log.error("Failed to fetch assignments with status", e);
             return ResponseEntity.ok(Map.of("success", true, "data", java.util.Collections.emptyList()));
+        }
+    }
+
+    @DeleteMapping("/user/{userId}/clear")
+    public ResponseEntity<?> clearHistory(@PathVariable Long userId) {
+        try {
+            routeAssignmentService.clearHistoryForUser(userId, routeSessionService);
+            return ResponseEntity.ok(Map.of("success", true, "message", "Route history cleared successfully"));
+        } catch (Exception e) {
+            log.error("Failed to clear route history for user {}", userId, e);
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "error", "Failed to clear route history: " + e.getMessage()));
         }
     }
 
@@ -111,14 +172,6 @@ public class RouteSessionController {
                 ? council
                 : CurrentUserService.getCurrentCouncil().orElse(null);
         return ResponseEntity.ok(Map.of("success", true, "data", routeAssignmentService.getAvailableDrivers(effectiveCouncil)));
-    }
-
-    @GetMapping("/available-collectors")
-    public ResponseEntity<?> getAvailableCollectors(@RequestParam(required = false) String council) {
-        String effectiveCouncil = (council != null && !council.isBlank())
-                ? council
-                : CurrentUserService.getCurrentCouncil().orElse(null);
-        return ResponseEntity.ok(Map.of("success", true, "data", routeAssignmentService.getAvailableCollectors(effectiveCouncil)));
     }
 
     @GetMapping("/{sessionId}/progress")
@@ -157,6 +210,16 @@ public class RouteSessionController {
             return ResponseEntity.ok(Map.of("sessionId", sessionId, "binId", binId, "status", updated ? "SKIPPED" : "NOT_UPDATED"));
         } catch (Exception e) {
             return serverError("Failed to mark bin skipped: " + e.getMessage());
+        }
+    }
+
+    @PatchMapping("/{sessionId}/bins/{binId}/pending")
+    public ResponseEntity<?> resetBinToPending(@PathVariable String sessionId, @PathVariable Long binId) {
+        try {
+            boolean updated = routeAssignmentService.markBinPending(UUID.fromString(sessionId), binId);
+            return ResponseEntity.ok(Map.of("sessionId", sessionId, "binId", binId, "status", updated ? "PENDING" : "NOT_UPDATED"));
+        } catch (Exception e) {
+            return serverError("Failed to reset bin to pending: " + e.getMessage());
         }
     }
 

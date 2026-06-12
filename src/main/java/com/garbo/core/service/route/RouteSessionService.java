@@ -345,4 +345,9 @@ public class RouteSessionService {
         UUID sid = activeSessionIdByUser.remove(userId);
         if (sid != null) sessionsById.remove(sid);
     }
+
+    public void clearAllSessions() {
+        activeSessionIdByUser.clear();
+        sessionsById.clear();
+    }
 }

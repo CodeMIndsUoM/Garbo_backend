@@ -18,7 +18,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import com.garbo.core.entity.User;
 import com.garbo.core.entity.AdminNew;
 import com.garbo.core.service.CollectorPerformanceService;
@@ -71,7 +73,7 @@ public class UserController {
                 if (contactNumber != null)
                     admin.setPhone(contactNumber.toString());
                 // Only superadmin may create AdminNew via this endpoint
-                String callerRole = currentUserService.getCurrentRole().orElse("");
+                String callerRole = com.garbo.core.service.CurrentUserService.getCurrentRole().orElse("");
                 if (!callerRole.equals("superadmin")) {
                     return ResponseEntity.status(403).body(Map.of(
                             "success", false,
@@ -127,6 +129,52 @@ public class UserController {
         } catch (Exception e) {
             log.error("Failed to fetch users", e);
             return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to fetch users"));
+        }
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<?> getUser(@PathVariable Long userId) {
+        try {
+            Optional<User> userOpt = userService.getById(userId);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "User not found"));
+            }
+            return ResponseEntity.ok().body(Map.of("success", true, "data", userOpt.get()));
+        } catch (Exception e) {
+            log.error("Failed to fetch user {}", userId, e);
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to fetch user"));
+        }
+    }
+
+    @PostMapping("/{userId}/avatar")
+    public ResponseEntity<?> uploadAvatar(
+            @PathVariable Long userId,
+            @RequestParam("photo") MultipartFile photo) {
+        try {
+            Optional<User> updated = userService.uploadAvatar(userId, photo);
+            if (updated.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "User not found or invalid photo"));
+            }
+            return ResponseEntity.ok().body(Map.of(
+                    "success", true,
+                    "data", Map.of("avatarUrl", updated.get().getAvatarUrl())));
+        } catch (Exception e) {
+            log.error("Failed to upload avatar for user {}", userId, e);
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to upload avatar"));
+        }
+    }
+
+    @DeleteMapping("/{userId}/avatar")
+    public ResponseEntity<?> removeAvatar(@PathVariable Long userId) {
+        try {
+            Optional<User> updated = userService.removeAvatar(userId);
+            if (updated.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("success", false, "message", "User not found"));
+            }
+            return ResponseEntity.ok().body(Map.of("success", true, "message", "Avatar removed"));
+        } catch (Exception e) {
+            log.error("Failed to remove avatar for user {}", userId, e);
+            return ResponseEntity.status(500).body(Map.of("success", false, "message", "Failed to remove avatar"));
         }
     }
 

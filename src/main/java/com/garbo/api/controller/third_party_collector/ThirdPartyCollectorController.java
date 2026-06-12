@@ -1,8 +1,8 @@
 package com.garbo.api.controller.third_party_collector;
 
 import com.garbo.api.dto.common.ApiResponse;
-import com.garbo.core.dto.collection.OfferDto;
-import com.garbo.core.dto.collection.RequestSummaryDto;
+import com.garbo.api.dto.collection.OfferDto;
+import com.garbo.api.dto.collection.RequestSummaryDto;
 import com.garbo.core.enums.OfferStatus;
 import com.garbo.core.service.shared.CollectionRequestService;
 import com.garbo.core.service.third_party_collector.ThirdPartyCollectorService;
@@ -18,9 +18,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.garbo.core.entity.ThirdPartyCollector;
+import com.garbo.infrastructure.storage.CloudinaryUploadService;
 
 import java.util.Map;
 import java.util.List;
+
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.multipart.MultipartFile;
 
 // Third-party collector flow:
 //   Collectors browse the open-request feed, send offers (via
@@ -32,11 +36,14 @@ import java.util.List;
 public class ThirdPartyCollectorController {
     private final ThirdPartyCollectorService thirdPartyCollectorService;
     private final CollectionRequestService collectionRequestService;
+    private final CloudinaryUploadService cloudinaryUploadService;
 
     public ThirdPartyCollectorController(ThirdPartyCollectorService thirdPartyCollectorService,
-            CollectionRequestService collectionRequestService) {
+            CollectionRequestService collectionRequestService,
+            CloudinaryUploadService cloudinaryUploadService) {
         this.thirdPartyCollectorService = thirdPartyCollectorService;
         this.collectionRequestService = collectionRequestService;
+        this.cloudinaryUploadService = cloudinaryUploadService;
     }
 
     // Collector feed of OPEN citizen requests (optional geo query for proximity).
@@ -56,6 +63,7 @@ public class ThirdPartyCollectorController {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listMyOffers(collectorId, status)));
     }
 
+    // Bulk hide rejected/withdrawn/cancelled/completed offers from collector list.
     @PostMapping("/{collectorId}/my-offers/hide")
     public ResponseEntity<ApiResponse<Map<String, Integer>>> hideMyOffers(
             @PathVariable Long collectorId,
@@ -71,11 +79,12 @@ public class ThirdPartyCollectorController {
     }
 
     @GetMapping("/{collectorId}/dashboard")
-    public ResponseEntity<ApiResponse<com.garbo.core.dto.collection.CollectorDashboardDto>> getDashboard(
+    public ResponseEntity<ApiResponse<com.garbo.api.dto.collection.CollectorDashboardDto>> getDashboard(
             @PathVariable Long collectorId) {
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.getCollectorDashboard(collectorId)));
     }
 
+    // Collector profile for app profile view/edit.
     @GetMapping("/{collectorId}/profile")
     public ResponseEntity<ApiResponse<ThirdPartyCollector>> getProfile(@PathVariable Long collectorId) {
         return thirdPartyCollectorService.getProfile(collectorId)
@@ -83,11 +92,26 @@ public class ThirdPartyCollectorController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // Updates collector profile fields.
     @PutMapping("/{collectorId}/profile")
     public ResponseEntity<ApiResponse<ThirdPartyCollector>> updateProfile(
             @PathVariable Long collectorId,
             @RequestBody ThirdPartyCollector updatedDetails) {
         ThirdPartyCollector updated = thirdPartyCollectorService.updateProfile(collectorId, updatedDetails);
         return ResponseEntity.ok(ApiResponse.success(updated));
+    }
+
+    @PostMapping("/{collectorId}/avatar")
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadAvatar(
+            @PathVariable Long collectorId,
+            @RequestParam("photo") MultipartFile photo) {
+        ThirdPartyCollector updated = thirdPartyCollectorService.uploadAvatar(collectorId, photo);
+        return ResponseEntity.ok(ApiResponse.success(Map.of("avatarUrl", updated.getAvatarUrl())));
+    }
+
+    @DeleteMapping("/{collectorId}/avatar")
+    public ResponseEntity<ApiResponse<Map<String, String>>> removeAvatar(@PathVariable Long collectorId) {
+        thirdPartyCollectorService.removeAvatar(collectorId);
+        return ResponseEntity.ok(ApiResponse.success(Map.of("message", "Avatar removed")));
     }
 }

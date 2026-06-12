@@ -22,6 +22,7 @@ import java.time.LocalDate;
 @PrimaryKeyJoinColumn(name = "emp_id")
 public class ThirdPartyCollector extends User {
     @JsonProperty("NIC")
+    @Column(name = "nic")
     private String NIC;
     private String company;
     private String contractId;
@@ -53,4 +54,10 @@ public class ThirdPartyCollector extends User {
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_status")
     private RegistrationStatus registrationStatus;
+
+    @Column(name = "admin_revoked")
+    private Boolean adminRevoked = false;
+
+    @Column(name = "admin_hidden")
+    private Boolean adminHidden = false;
 }

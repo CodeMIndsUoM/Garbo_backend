@@ -89,9 +89,8 @@ public class SecurityConfig {
                         // allow websocket handshake + SockJS endpoints
                         .requestMatchers("/ws/**").permitAll()
                         // TEMP: allow route-session testing without JWT
-                        .requestMatchers(HttpMethod.POST, "/api/route-sessions").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/route-sessions/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/route-sessions/**").permitAll()
+                        .requestMatchers("/api/route-sessions").permitAll()
+                        .requestMatchers("/api/route-sessions/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/routes/optimize").permitAll()
                         // allow Spring error endpoint to return real status/details
                         .requestMatchers("/error").permitAll()
@@ -114,6 +113,11 @@ public class SecurityConfig {
 
                         // third-party collector self-registration (public, no JWT)
                         .requestMatchers("/api/auth/thirdparty-register/**").permitAll()
+                        // public council list + citizen registration
+                        .requestMatchers(HttpMethod.GET, "/api/councils").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
+                        // validate token endpoint requires authentication
+                        .requestMatchers(HttpMethod.GET, "/api/auth/validate").authenticated()
                         // any other auth endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated() // all others need JWT
