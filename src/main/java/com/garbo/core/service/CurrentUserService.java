@@ -2,6 +2,7 @@ package com.garbo.core.service;
 
 import com.garbo.core.entity.AdminNew;
 import com.garbo.core.entity.BinCollector;
+import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.entity.User;
 import com.garbo.core.repository.UserRepository;
@@ -61,6 +62,12 @@ public class CurrentUserService {
         }
         if (u instanceof FieldMentor) {
             return Optional.ofNullable(((FieldMentor) u).getAssignedCouncil());
+        }
+        if (u instanceof Citizen citizen) {
+            String council = UserLookup.resolveCitizenCouncil(citizen);
+            return council == null || council.isBlank()
+                    ? Optional.empty()
+                    : Optional.of(council);
         }
         return Optional.empty();
     }

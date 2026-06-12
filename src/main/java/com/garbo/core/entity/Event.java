@@ -46,7 +46,6 @@ public class Event {
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizer_citizen_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonIgnore
     private User organizerCitizen;
 
     private LocalDateTime createdAt;

@@ -47,6 +47,18 @@ public class EventController {
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid bearer token");
     }
 
+    private String resolveCouncilFromToken(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return null;
+        }
+        try {
+            return jwtUtil.extractCouncil(authHeader.substring(7));
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     @PostMapping("/upload-image")
     public ResponseEntity<Map<String, String>> uploadEventImage(
             @RequestParam("photo") MultipartFile photo,
@@ -68,7 +80,9 @@ public class EventController {
 
     @GetMapping
     public ResponseEntity<List<Event>> getVisibleEvents(HttpServletRequest request) {
-        return ResponseEntity.ok(eventService.getVisibleEvents(resolveRequesterEmail(request)));
+        return ResponseEntity.ok(eventService.getVisibleEvents(
+                resolveRequesterEmail(request),
+                resolveCouncilFromToken(request)));
     }
 
     @GetMapping("/my")
