@@ -6,19 +6,32 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface BinReportRepository extends JpaRepository<BinReport, Long> {
+
+    @Transactional
+    @Modifying
+    @Query("UPDATE BinReport r SET r.photoUrl = :photoUrl WHERE r.id = :reportId")
+    int updatePhotoUrl(@Param("reportId") Long reportId, @Param("photoUrl") String photoUrl);
+
+    Optional<BinReport> findFirstByBin_IdOrderByReportedAtDesc(Long binId);
 
     @Modifying
     @Query("DELETE FROM BinReport r WHERE r.bin.id = :binId")
     int deleteByBinId(@Param("binId") Long binId);
 
-    // ── All councils ───────────────────────────────────────────────────────────
+    @Transactional
+    @Modifying
+    @Query("DELETE FROM BinReport r WHERE r.bin.id IN :binIds")
+    int deleteByBinIds(@Param("binIds") List<Long> binIds);
 
+    // KPI: Total reports today
     @Query("SELECT COUNT(r) FROM BinReport r WHERE r.reportedAt >= :start AND r.reportedAt < :end")
     long countReportsBetween(
         @Param("start") LocalDateTime start,

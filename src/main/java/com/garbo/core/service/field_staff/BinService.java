@@ -1,39 +1,57 @@
 package com.garbo.core.service.field_staff;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.garbo.api.dto.BinDTO;
-import com.garbo.core.dto.BinReportRequest;
+import com.garbo.api.dto.BinReportRequest;
+import com.garbo.api.dto.CouncilBoundaryDTO;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.BinReport;
-import com.garbo.core.entity.CouncilBoundary;
 import com.garbo.core.entity.FieldMentor;
+import com.garbo.core.entity.CouncilBoundary;
 import com.garbo.core.repository.BinReportRepository;
 import com.garbo.core.repository.BinRepository;
 import com.garbo.core.repository.CouncilBoundaryRepository;
 import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.service.CouncilAccessService;
+import com.garbo.core.service.UserTaskProgressService;
 import com.garbo.core.service.event.BinChangedEvent;
+import com.garbo.core.service.zone.ZoneClusteringService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
+// Bin service includes multiple feature areas.
+// In this scoped refactor pass, mobile-critical methods are:
+//   - getAssignedBins
+//   - reportBinStatus
+//   - undoBinReport
 @Service
 public class BinService {
 
-    // ── Dependencies ──────────────────────────────────────────────────────────
+    // ── HEAD dependencies ─────────────────────────────────────────────────────
 
-    private final BinReportRepository       binReportRepository;
-    private final FieldMentorRepository     fieldMentorRepository;
-    private final CouncilAccessService      councilAccessService;
+    private final BinReportRepository binReportRepository;
+    private final FieldMentorRepository fieldMentorRepository;
+    private final CouncilAccessService councilAccessService;
     private final CouncilBoundaryRepository councilBoundaryRepository;
+    private final UserTaskProgressService userTaskProgressService;
+    private static final Map<String, CouncilBounds> COUNCIL_BOUNDS = buildCouncilBounds();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    // ── kevin-RWS dependencies ────────────────────────────────────────────────
 
     @Autowired
     private BinRepository binRepository;
@@ -41,19 +59,24 @@ public class BinService {
     @Autowired
     private ApplicationEventPublisher eventPublisher;
 
+    @Autowired
+    private ZoneClusteringService zoneClusteringService;
+
     public BinService(BinRepository binRepository,
-                      BinReportRepository binReportRepository,
-                      FieldMentorRepository fieldMentorRepository,
-                      CouncilAccessService councilAccessService,
-                      CouncilBoundaryRepository councilBoundaryRepository) {
-        this.binRepository            = binRepository;
-        this.binReportRepository      = binReportRepository;
-        this.fieldMentorRepository    = fieldMentorRepository;
-        this.councilAccessService     = councilAccessService;
+            BinReportRepository binReportRepository,
+            FieldMentorRepository fieldMentorRepository,
+            CouncilAccessService councilAccessService,
+            CouncilBoundaryRepository councilBoundaryRepository,
+            UserTaskProgressService userTaskProgressService) {
+        this.binRepository = binRepository;
+        this.binReportRepository = binReportRepository;
+        this.fieldMentorRepository = fieldMentorRepository;
+        this.councilAccessService = councilAccessService;
         this.councilBoundaryRepository = councilBoundaryRepository;
+        this.userTaskProgressService = userTaskProgressService;
     }
 
-    // ── Field-staff methods ───────────────────────────────────────────────────
+    // ── Methods from HEAD ─────────────────────────────────────────────────────
 
     public List<Bin> getAssignedBins(Long empId) {
         return binRepository.findByAssignedToEmpId(empId);
@@ -62,7 +85,7 @@ public class BinService {
     // Shared report operation used by both anonymous JSON report and field-staff
     // multipart report.
     @Transactional
-    public Bin reportBinStatus(Long binId, Long reporterId, BinReportRequest request) {
+    public BinStatusReportResult reportBinStatus(Long binId, Long reporterId, BinReportRequest request) {
         Bin bin = binRepository.findByNumericId(binId)
                 .orElseThrow(() -> new EntityNotFoundException("Bin not found with ID: " + binId));
 
@@ -72,6 +95,7 @@ public class BinService {
                     .orElseThrow(() -> new EntityNotFoundException("Field Mentor not found with ID: " + reporterId));
         }
 
+        // Create Report
         BinReport report = new BinReport();
         report.setBin(bin);
         report.setReporter(reporter);
@@ -81,31 +105,77 @@ public class BinService {
         report.setLatitude(request.getLatitude());
         report.setLongitude(request.getLongitude());
         report.setPhotoUrl(request.getPhotoUrl());
-        report.setSource(reporter != null ? "FIELD_STAFF" : "ANONYMOUS");
 
-        binReportRepository.save(report);
+        // Determine source
+        if (reporter != null) {
+            report.setSource("FIELD_STAFF");
+        } else {
+            report.setSource("ANONYMOUS");
+        }
 
-        Integer effectiveFillLevel =
-                "full".equalsIgnoreCase(request.getStatus()) ? 100 :
-                "half".equalsIgnoreCase(request.getStatus()) ? 50  : 0;
+        BinReport savedReport = binReportRepository.save(report);
 
+        // Update the bin via native query because bins.id is stored as text in DB.
+        Integer effectiveFillLevel = "full".equalsIgnoreCase(request.getStatus()) ? 100
+                : "half".equalsIgnoreCase(request.getStatus()) ? 50 : 0;
         int updatedRows = binRepository.updateStatusForReport(binId, request.getStatus(), effectiveFillLevel);
         if (updatedRows == 0) {
             throw new EntityNotFoundException("Bin not found with ID: " + binId);
         }
 
+        LocalDateTime checkedAt = LocalDateTime.now();
+        bin.setStatus(request.getStatus());
+        bin.setFillLevel(request.getFillLevel());
+        bin.setLastChecked(checkedAt);
+
         // Trigger realtime websocket push for dashboards listening to bin-status
         // changes.
-        eventPublisher.publishEvent(new BinChangedEvent("STATUS_REPORTED", binId));
+        String reporterName = reporter != null ? reporter.getEmpName() : null;
+        eventPublisher.publishEvent(new BinChangedEvent(
+                "STATUS_REPORTED",
+                binId,
+                request.getStatus(),
+                effectiveFillLevel,
+                checkedAt,
+                savedReport.getId(),
+                request.getNotes(),
+                request.getPhotoUrl(),
+                reporterName));
+
+        if (reporter != null) {
+            userTaskProgressService.incrementFieldMentorReportTasks(reporter.getEmpId(), binId);
+        }
 
         Bin updated = new Bin();
         updated.setId(binId);
         updated.setStatus(request.getStatus());
         updated.setFillLevel(effectiveFillLevel);
-        updated.setLastChecked(LocalDateTime.now());
-        return updated;
+        updated.setLastChecked(checkedAt);
+        return new BinStatusReportResult(updated, savedReport.getId());
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public com.garbo.api.dto.BinLatestReportDTO getLatestReport(Long binId) {
+        Bin bin = binRepository.findByNumericId(binId)
+                .orElseThrow(() -> new EntityNotFoundException("Bin not found with ID: " + binId));
+
+        return binReportRepository.findFirstByBin_IdOrderByReportedAtDesc(binId)
+                .map(report -> com.garbo.api.dto.BinLatestReportDTO.builder()
+                        .reportId(report.getId())
+                        .binId(binId)
+                        .binCode(bin.getBinCode())
+                        .council(bin.getCouncil())
+                        .status(report.getStatus())
+                        .fillLevel(report.getFillLevel())
+                        .notes(report.getNotes())
+                        .photoUrl(report.getPhotoUrl())
+                        .reporterName(report.getReporter() != null ? report.getReporter().getEmpName() : null)
+                        .reportedAt(report.getReportedAt())
+                        .build())
+                .orElse(null);
+    }
+
+    // Field-staff undo operation used by dedicated mobile undo endpoint.
     @Transactional
     public Bin undoBinReport(Long binId, Long reporterId) {
         if (reporterId != null) {
@@ -120,8 +190,14 @@ public class BinService {
 
         // Trigger realtime websocket push for dashboards listening to bin-status
         // changes.
-        eventPublisher.publishEvent(new BinChangedEvent("STATUS_UNDONE", binId));
+        eventPublisher.publishEvent(new BinChangedEvent(
+                "STATUS_UNDONE",
+                binId,
+                "notChecked",
+                0,
+                null));
 
+        // Return a lightweight response object with final state expected by mobile.
         Bin updated = new Bin();
         updated.setId(binId);
         updated.setStatus("notChecked");
@@ -129,8 +205,6 @@ public class BinService {
         updated.setLastChecked(null);
         return updated;
     }
-
-    // ── Admin bin management methods ──────────────────────────────────────────
 
     public Bin createBin(Bin bin) {
         if (bin.getId() != null && binRepository.existsById(bin.getId())) {
@@ -149,10 +223,6 @@ public class BinService {
     }
 
     /**
-     * Creates a bin for the currently logged-in admin.
-     * Council is resolved automatically from the admin's email via CouncilAccessService.
-     * Coordinates are validated against the council boundary stored in DB.
-     */
      * Format bins for API response with human-readable display codes.
      * Transforms Bin entities into Map<String, Object> for JSON serialization.
      */
@@ -166,7 +236,8 @@ public class BinService {
             map.put("displayCode", formatDisplayCode(bin));
 
             String fullLocation = bin.getLocation() != null ? bin.getLocation() : "Unknown";
-            // Split "Galle Road, Colombo 03" into location="Galle Road" and address="Colombo 03"
+            // Split "Galle Road, Colombo 03" into location="Galle Road" and
+            // address="Colombo 03"
             String locationName = fullLocation;
             String addressName = fullLocation;
             if (fullLocation.contains(",")) {
@@ -181,18 +252,39 @@ public class BinService {
             map.put("status", bin.getStatus() != null ? bin.getStatus() : "notChecked");
             map.put("fillLevel", bin.getFillLevel());
             map.put("lastChecked", bin.getLastChecked());
+            map.put("lat", bin.getLatitude());
+            map.put("lng", bin.getLongitude());
+            if (bin.getAssignedTo() != null) {
+                map.put("assignedToName", bin.getAssignedTo().getEmpName());
+            }
             return map;
         }).toList();
-                
+
     }
 
     public Bin createBinForCurrentUser(Bin payload) {
-        String email   = currentEmail();
-        String council = councilAccessService.resolveCouncilForEmail(email)
-                .orElseThrow(() -> new AccessDeniedException("Your account has no assigned council"));
-
+        String email = currentEmail();
+        String council = councilAccessService.resolveCouncilForEmail(email).orElse(null);
         double[] latLng = resolveIncomingCoordinates(payload);
-        validateCoordinatesInCouncil(council, latLng[0], latLng[1]);
+
+        if (council == null) {
+            // Verify if user is Superadmin
+            if (councilAccessService.isSuperAdmin(email)) {
+                // Use council from payload if provided, otherwise resolve automatically from coordinates
+                if (payload.getCouncil() != null && !payload.getCouncil().isBlank()) {
+                    council = payload.getCouncil();
+                } else {
+                    council = resolveCouncilFromCoordinates(latLng[0], latLng[1]);
+                }
+                if (council == null) {
+                    throw new IllegalArgumentException("Coordinates are outside any supported municipal council boundary");
+                }
+            } else {
+                throw new AccessDeniedException("Your account has no assigned council");
+            }
+        } else {
+            validateCoordinatesInCouncil(council, latLng[0], latLng[1]);
+        }
 
         String generatedCode = generateNextBinCode(council);
         payload.setBinCode(generatedCode);
@@ -203,6 +295,7 @@ public class BinService {
         payload.setLongitude(latLng[1]);
         payload.setLastChecked(LocalDateTime.now());
         normalizeCreateModel(payload);
+        assignZoneIfMissing(payload, council);
 
         Bin saved = binRepository.save(payload);
         eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
@@ -217,10 +310,25 @@ public class BinService {
         eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
     }
 
+    @Transactional
+    public void deleteBinsForCurrentUser(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return;
+        }
+        for (Long id : ids) {
+            getBinWithCouncilAccess(id);
+        }
+        binReportRepository.deleteByBinIds(ids);
+        binRepository.deleteAllByIds(ids);
+        for (Long id : ids) {
+            eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
+        }
+    }
+
     public Bin updatePriorityForCurrentUser(Long id, String priority) {
         Bin bin = getBinWithCouncilAccess(id);
-        String normalized = (priority == null || priority.isBlank())
-                ? "medium" : priority.trim().toLowerCase(Locale.ROOT);
+        String normalized = (priority == null || priority.isBlank()) ? "medium"
+                : priority.trim().toLowerCase(Locale.ROOT);
         if (!normalized.equals("low") && !normalized.equals("medium") && !normalized.equals("high")) {
             throw new IllegalArgumentException("Priority must be low, medium, or high");
         }
@@ -233,7 +341,7 @@ public class BinService {
 
     public Bin updateZoneForCurrentUser(Long id, String zone) {
         Bin bin = getBinWithCouncilAccess(id);
-        String safeZone = (zone == null || zone.isBlank()) ? "unassigned" : zone.trim();
+        String safeZone = zone == null || zone.isBlank() ? "unassigned" : zone.trim();
         bin.setZone(safeZone);
         binRepository.updateZoneNative(id, safeZone);
         eventPublisher.publishEvent(new BinChangedEvent("UPDATED", id));
@@ -241,28 +349,30 @@ public class BinService {
         return bin;
     }
 
-    // ── Legacy kevin-RWS methods ──────────────────────────────────────────────
+    // ── Methods from kevin-RWS ────────────────────────────────────────────────
 
+    // Add new bin
     public Bin addBin(BinDTO dto) {
         Bin bin = new Bin();
         bin.setLatitude(dto.getLat());
         bin.setLng(dto.getLng());
         bin.setFillLevel(dto.getFillLevel());
         bin.setPriority(dto.getPriority());
-        String zone = (dto.getZone() == null || dto.getZone().isBlank()) ? "unassigned" : dto.getZone();
-        bin.setZone(zone);
+        if (dto.getZone() != null && !dto.getZone().isBlank()) {
+            bin.setZone(dto.getZone());
+        }
         Bin saved = binRepository.save(bin);
         eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
         return saved;
     }
 
-    @Transactional
+    // Remove bin
     public void deleteBin(Long id) {
-        binReportRepository.deleteByBinId(id);
         binRepository.deleteByIdNative(id);
         eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
     }
 
+    // Get all bins (for map)
     public List<Bin> getAllBins() {
         return binRepository.findAllForMap()
                 .stream()
@@ -279,23 +389,24 @@ public class BinService {
                 .toList();
     }
 
+    // Get bin details
     public Bin getBinById(Long id) {
         return binRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Bin not found"));
     }
 
+    // Update bin priority
     public void updatePriority(Long id, String priority) {
         binRepository.updatePriorityNative(id, priority);
         eventPublisher.publishEvent(new BinChangedEvent("UPDATED", id));
     }
 
+    // Update bin zone
     public void updateZone(Long id, String zone) {
-        String safeZone = (zone == null || zone.isBlank()) ? "unassigned" : zone;
+        String safeZone = zone == null || zone.isBlank() ? "unassigned" : zone;
         binRepository.updateZoneNative(id, safeZone);
         eventPublisher.publishEvent(new BinChangedEvent("UPDATED", id));
     }
-
-    // ── Private helpers ───────────────────────────────────────────────────────
 
     private void normalizeCreateModel(Bin bin) {
         if (bin.getStatus() == null || bin.getStatus().isBlank()) {
@@ -304,6 +415,7 @@ public class BinService {
             bin.setStatus(bin.getStatus().trim().toLowerCase(Locale.ROOT));
         }
 
+        // Map status to fill level for legacy support/optimization
         if ("full".equalsIgnoreCase(bin.getStatus())) {
             bin.setFillLevel(100);
         } else if ("half".equalsIgnoreCase(bin.getStatus())) {
@@ -317,10 +429,22 @@ public class BinService {
         } else {
             bin.setPriority(bin.getPriority().trim().toLowerCase(Locale.ROOT));
         }
+    }
 
-        if (bin.getZone() == null || bin.getZone().isBlank()) {
-            bin.setZone("unassigned");
+    /** Backend assigns zone from coordinates when admin omits it (W5). */
+    private void assignZoneIfMissing(Bin bin, String council) {
+        if (bin.getZone() != null && !bin.getZone().isBlank()
+                && !"unassigned".equalsIgnoreCase(bin.getZone().trim())) {
+            return;
         }
+        if (council == null || bin.getLatitude() == null || bin.getLongitude() == null) {
+            bin.setZone("1");
+            return;
+        }
+        List<Bin> councilBins = binRepository.findAllByCouncil(council);
+        String zone = zoneClusteringService.assignZoneForCoordinates(
+                council, bin.getLatitude(), bin.getLongitude(), councilBins);
+        bin.setZone(zone);
     }
 
     private void normalizeReadModel(Bin bin) {
@@ -342,15 +466,12 @@ public class BinService {
     }
 
     private Bin getBinWithCouncilAccess(Long id) {
-        Bin existing = binRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("Bin not found"));
-
-        String email      = currentEmail();
+        Bin existing = binRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Bin not found"));
+        String email = currentEmail();
         boolean superAdmin = councilAccessService.isSuperAdmin(email);
-
+        Optional<String> councilOpt = councilAccessService.resolveCouncilForEmail(email);
         if (!superAdmin) {
-            String requesterCouncil = councilAccessService.resolveCouncilForEmail(email)
-                    .orElse("");
+            String requesterCouncil = councilOpt.orElse("");
             if (requesterCouncil.isBlank()
                     || existing.getCouncil() == null
                     || !existing.getCouncil().equalsIgnoreCase(requesterCouncil)) {
@@ -374,8 +495,8 @@ public class BinService {
             String trimmed = binCode.trim();
             int lastDash = trimmed.lastIndexOf('-');
             String numericSuffix = lastDash >= 0 && lastDash < trimmed.length() - 1
-                ? trimmed.substring(lastDash + 1).trim()
-                : trimmed;
+                    ? trimmed.substring(lastDash + 1).trim()
+                    : trimmed;
             if (numericSuffix.matches("\\d+")) {
                 codePart = String.format("BIN-%02d", Integer.parseInt(numericSuffix));
             }
@@ -405,8 +526,7 @@ public class BinService {
         String prefix = council.trim() + "-";
         int nextNumber = councilBins.stream()
                 .map(Bin::getBinCode)
-                .filter(code -> code != null
-                        && code.regionMatches(true, 0, prefix, 0, prefix.length()))
+                .filter(code -> code != null && code.regionMatches(true, 0, prefix, 0, prefix.length()))
                 .map(code -> code.substring(prefix.length()).trim())
                 .filter(s -> s.matches("\\d+"))
                 .mapToInt(Integer::parseInt)
@@ -426,7 +546,7 @@ public class BinService {
             if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
                 throw new IllegalArgumentException("Latitude/longitude out of range");
             }
-            return new double[]{ lat, lng };
+            return new double[] { lat, lng };
         } catch (NumberFormatException ex) {
             throw new IllegalArgumentException("Location must contain valid latitude and longitude");
         }
@@ -442,38 +562,132 @@ public class BinService {
             if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
                 throw new IllegalArgumentException("Latitude/longitude out of range");
             }
-            return new double[]{ lat, lng };
+            return new double[] { lat, lng };
         }
         throw new IllegalArgumentException("Location is required as lat,lng");
     }
 
-    /**
-     * Validates that the given coordinates fall within the council boundary
-     * stored in the council_boundaries table using ray-casting algorithm.
-     */
-    private void validateCoordinatesInCouncil(String council, double lat, double lng) {
-        List<CouncilBoundary> points =
-            councilBoundaryRepository.findByCouncilIgnoreCaseOrderByPointOrderAsc(council);
-
-        if (points.isEmpty()) {
-            throw new IllegalArgumentException(
-                "No boundary configured for council: " + council);
-        }
-
-        // Ray-casting point-in-polygon
+    private boolean isPointInPolygon(double lat, double lng, List<CouncilBoundaryDTO.CoordinatePoint> polygon) {
         boolean inside = false;
-        int n = points.size();
+        int n = polygon.size();
         for (int i = 0, j = n - 1; i < n; j = i++) {
-            double xi = points.get(i).getLat(), yi = points.get(i).getLng();
-            double xj = points.get(j).getLat(), yj = points.get(j).getLng();
-            boolean intersect = ((yi > lng) != (yj > lng))
-                && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
-            if (intersect) inside = !inside;
+            double xi = polygon.get(i).getLng();
+            double yi = polygon.get(i).getLat();
+            double xj = polygon.get(j).getLng();
+            double yj = polygon.get(j).getLat();
+
+            boolean intersect = ((yi > lat) != (yj > lat))
+                    && (lng < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+            if (intersect) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    private void validateCoordinatesInCouncil(String council, double lat, double lng) {
+        Optional<CouncilBoundary> dbBoundary = councilBoundaryRepository.findByCouncilIgnoreCase(council);
+        if (dbBoundary.isPresent()) {
+            List<CouncilBoundaryDTO.CoordinatePoint> points = null;
+            try {
+                points = objectMapper.readValue(
+                    dbBoundary.get().getBoundaryPoints(),
+                    new TypeReference<List<CouncilBoundaryDTO.CoordinatePoint>>() {}
+                );
+            } catch (Exception e) {
+                // Ignore parsing errors and fallback
+            }
+            if (points != null && !points.isEmpty()) {
+                if (!isPointInPolygon(lat, lng, points)) {
+                    throw new IllegalArgumentException("Coordinates are outside the council boundary");
+                }
+                return;
+            }
         }
 
-        if (!inside) {
-            throw new IllegalArgumentException(
-                "Coordinates are outside the council boundary");
+        // Fallback to legacy rectangular bounds
+        CouncilBounds bounds = COUNCIL_BOUNDS.get(council.toLowerCase(Locale.ROOT));
+        if (bounds == null) {
+            throw new IllegalArgumentException("Unsupported council for coordinate validation: " + council);
+        }
+        if (!bounds.contains(lat, lng)) {
+            throw new IllegalArgumentException("Coordinates are outside the council boundary");
+        }
+    }
+
+    private static Map<String, CouncilBounds> buildCouncilBounds() {
+        Map<String, CouncilBounds> bounds = new HashMap<>();
+        bounds.put("colombo", new CouncilBounds(6.83, 6.98, 79.82, 79.91));
+        bounds.put("dehiwala-mt. lavinia", new CouncilBounds(6.79, 6.88, 79.84, 79.92));
+        bounds.put("kaduwela", new CouncilBounds(6.91, 7.03, 79.96, 80.08));
+        bounds.put("moratuwa", new CouncilBounds(6.74, 6.83, 79.85, 79.92));
+        bounds.put("sri jayewardenepura kotte", new CouncilBounds(6.86, 6.93, 79.89, 79.95));
+        return bounds;
+    }
+
+    public record BinStatusReportResult(Bin bin, Long reportId) {
+    }
+
+    private String resolveCouncilFromCoordinates(double lat, double lng) {
+        // Query all council boundary points from DB
+        List<CouncilBoundary> allBoundaries = councilBoundaryRepository.findAll();
+        if (allBoundaries == null || allBoundaries.isEmpty()) {
+            // Fallback to legacy rectangular bounds
+            for (Map.Entry<String, CouncilBounds> entry : COUNCIL_BOUNDS.entrySet()) {
+                if (entry.getValue().contains(lat, lng)) {
+                    return getStandardCouncilName(entry.getKey());
+                }
+            }
+            return null;
+        }
+
+        // Perform point-in-polygon checks
+        for (CouncilBoundary cb : allBoundaries) {
+            List<CouncilBoundaryDTO.CoordinatePoint> points = null;
+            try {
+                points = objectMapper.readValue(
+                    cb.getBoundaryPoints(),
+                    new TypeReference<List<CouncilBoundaryDTO.CoordinatePoint>>() {}
+                );
+            } catch (Exception e) {
+                // Ignore parsing errors
+            }
+            if (points != null && !points.isEmpty()) {
+                if (isPointInPolygon(lat, lng, points)) {
+                    return cb.getCouncil();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private String getStandardCouncilName(String lowercaseName) {
+        switch (lowercaseName) {
+            case "colombo": return "Colombo";
+            case "dehiwala-mt. lavinia": return "Dehiwala-Mt. Lavinia";
+            case "kaduwela": return "Kaduwela";
+            case "moratuwa": return "Moratuwa";
+            case "sri jayewardenepura kotte": return "Sri Jayewardenepura Kotte";
+            default: return lowercaseName;
+        }
+    }
+
+    private static class CouncilBounds {
+        private final double minLat;
+        private final double maxLat;
+        private final double minLng;
+        private final double maxLng;
+
+        private CouncilBounds(double minLat, double maxLat, double minLng, double maxLng) {
+            this.minLat = minLat;
+            this.maxLat = maxLat;
+            this.minLng = minLng;
+            this.maxLng = maxLng;
+        }
+
+        private boolean contains(double lat, double lng) {
+            return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
         }
     }
 }

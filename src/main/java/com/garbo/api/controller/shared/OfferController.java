@@ -1,9 +1,9 @@
 package com.garbo.api.controller.shared;
 
 import com.garbo.api.dto.common.ApiResponse;
-import com.garbo.core.dto.collection.CancelOfferDto;
-import com.garbo.core.dto.collection.ConfirmDto;
-import com.garbo.core.dto.collection.OfferDto;
+import com.garbo.api.dto.collection.CancelOfferDto;
+import com.garbo.api.dto.collection.ConfirmDto;
+import com.garbo.api.dto.collection.OfferDto;
 import com.garbo.core.service.shared.CollectionRequestService;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;

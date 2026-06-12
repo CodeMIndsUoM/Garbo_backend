@@ -31,10 +31,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain)
             throws ServletException, IOException {
 
-        // Skip JWT processing for authentication endpoints
+        // Skip JWT processing for authentication endpoints (except validate)
         String path = request.getServletPath();
         System.out.println("JwtAuthenticationFilter: incoming path=" + path);
-        if (path != null && path.startsWith("/api/auth/")) {
+        if (path != null && path.startsWith("/api/auth/") && !path.equals("/api/auth/validate")) {
             System.out.println("JwtAuthenticationFilter: skipping auth filter for " + path);
             filterChain.doFilter(request, response);
             return;

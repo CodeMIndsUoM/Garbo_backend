@@ -91,6 +91,7 @@ public class DataSeeder implements CommandLineRunner {
         collector.setTeam("Collection Team A");
         collector.setWorkShift("Morning");
         collector.setOnDuty(true);
+        collector.setMustChangePassword(true);
         collector.setCompletedCollections(0);
         collector.setMissedCollections(0);
         collector.setRewardPoints(0);

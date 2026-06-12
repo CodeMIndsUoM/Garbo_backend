@@ -106,7 +106,7 @@ public class LeaderboardBroadcaster {
             );
             broadcastLeaderboardUpdate(event);
         } catch (Exception e) {
-            log.error("Error broadcasting leaderboard after score-awarded event: {}", e.getMessage());
+            log.error("Error broadcasting leaderboard after score-awarded event: {}", e.getMessage(), e);
         }
     }
 

@@ -67,6 +67,10 @@ public class GamificationTask {
     @Column(name = "updated_by_admin_id")
     private Long updatedByAdminId;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "family_id")
+    private TaskFamily family;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -102,7 +106,24 @@ public class GamificationTask {
     }
 
     public boolean matchesRole(String role) {
-        return "ALL".equalsIgnoreCase(roleScope) || roleScope.equalsIgnoreCase(role);
+        if ("ALL".equalsIgnoreCase(roleScope)) {
+            return true;
+        }
+        return normalizeRole(roleScope).equals(normalizeRole(role));
+    }
+
+    private String normalizeRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "";
+        }
+        String normalized = role.trim().toUpperCase();
+        if ("BIN_COLLECTOR".equals(normalized) || "COLLECTION_TEAM".equals(normalized)) {
+            return "COLLECTOR";
+        }
+        if ("FIELD_STAFF".equals(normalized)) {
+            return "FIELD_MENTOR";
+        }
+        return normalized;
     }
 
     public boolean isPublishedAndActive(LocalDateTime now) {

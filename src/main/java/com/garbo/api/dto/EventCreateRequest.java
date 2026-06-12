@@ -16,4 +16,6 @@ public class EventCreateRequest {
     private String category;
     private String imageUrl;
     private Integer maxParticipants;
+    /** Required when an admin creates an event (no citizen profile). */
+    private String council;
 }

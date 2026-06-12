@@ -127,14 +127,18 @@ public class AdminStaffService {
                 ? fieldMentorRepository.findAll()
                 : fieldMentorRepository.findByAssignedCouncil(adminCouncil);
         for (FieldMentor m : mentors) {
-            out.add(mapToListDto(m));
+            if (!Boolean.TRUE.equals(m.getAdminHidden())) {
+                out.add(mapToListDto(m));
+            }
         }
 
         List<BinCollector> collectors = adminCouncil == null
                 ? binCollectorRepository.findAll()
                 : binCollectorRepository.findByAssignedCouncil(adminCouncil);
         for (BinCollector c : collectors) {
-            out.add(mapToListDto(c));
+            if (!Boolean.TRUE.equals(c.getAdminHidden())) {
+                out.add(mapToListDto(c));
+            }
         }
 
         return out;
@@ -154,23 +158,40 @@ public class AdminStaffService {
         return dto;
     }
 
-    public String deleteInternalUser(Long id, String adminCouncil) {
+    public String hideInternalUser(Long id, String adminCouncil) {
         var opt = userRepository.findById(id);
-        if (opt.isEmpty())
+        if (opt.isEmpty()) {
             return "NOT_FOUND";
+        }
 
         User u = opt.get();
+        if (!canManageInternalUser(u, adminCouncil)) {
+            return u instanceof FieldMentor || u instanceof BinCollector ? "FORBIDDEN" : "NOT_INTERNAL";
+        }
 
-        String assigned = null;
-        if (u instanceof FieldMentor)
-            assigned = ((FieldMentor) u).getAssignedCouncil();
-        else if (u instanceof BinCollector)
-            assigned = ((BinCollector) u).getAssignedCouncil();
-        else
-            return "NOT_INTERNAL"; // do not allow deleting other user types
+        if (u instanceof FieldMentor mentor) {
+            mentor.setAdminHidden(true);
+            fieldMentorRepository.save(mentor);
+            return "HIDDEN";
+        }
+        if (u instanceof BinCollector collector) {
+            collector.setAdminHidden(true);
+            binCollectorRepository.save(collector);
+            return "HIDDEN";
+        }
+        return "NOT_INTERNAL";
+    }
 
-        if (assigned == null || !assigned.equals(adminCouncil))
-            return "FORBIDDEN";
+    public String deleteInternalUser(Long id, String adminCouncil) {
+        var opt = userRepository.findById(id);
+        if (opt.isEmpty()) {
+            return "NOT_FOUND";
+        }
+
+        User u = opt.get();
+        if (!canManageInternalUser(u, adminCouncil)) {
+            return u instanceof FieldMentor || u instanceof BinCollector ? "FORBIDDEN" : "NOT_INTERNAL";
+        }
 
         try {
             userRepository.deleteById(id);
@@ -182,6 +203,22 @@ public class AdminStaffService {
             log.error("Unexpected error deleting user {}", id, ex);
             return "ERROR";
         }
+    }
+
+    private boolean canManageInternalUser(User user, String adminCouncil) {
+        String assigned = null;
+        if (user instanceof FieldMentor mentor) {
+            assigned = mentor.getAssignedCouncil();
+        } else if (user instanceof BinCollector collector) {
+            assigned = collector.getAssignedCouncil();
+        } else {
+            return false;
+        }
+
+        if (adminCouncil == null) {
+            return true;
+        }
+        return assigned != null && assigned.equals(adminCouncil);
     }
 
     private UserSummaryDto mapToDto(User u) {

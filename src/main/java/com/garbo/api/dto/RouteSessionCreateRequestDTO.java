@@ -21,7 +21,8 @@ public class RouteSessionCreateRequestDTO {
     private Long driverId;
 
     /**
-     * Collector emp_ids — minimum 2 required when creating a route assignment.
+     * Optional support labour IDs. The bin collector/driver is the required
+     * assignee for the route.
      */
     private List<Long> collectorIds;
     // ────────────────────────────────────────────────────────────────────────
@@ -31,14 +32,12 @@ public class RouteSessionCreateRequestDTO {
     }
 
     /**
-     * Returns true when all team fields are present and at least 2 collectors
-     * have been selected. Used by RouteAssignmentService before persisting.
+     * Returns true when the route has the required vehicle and bin collector.
+     * Additional collectors are optional support labour.
      */
     public boolean hasValidTeam() {
         return vehicleId != null
-                && driverId != null
-                && collectorIds != null
-                && collectorIds.size() >= 2;
+                && driverId != null;
     }
 
     public int[] getValidatedCapacities() {

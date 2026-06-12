@@ -35,6 +35,10 @@ public class Vehicle {
     @Column(name = "capacity")
     private Double capacity;
 
+    /** Maximum bins this vehicle can collect in one route trip. */
+    @Column(name = "max_bins")
+    private Integer maxBins;
+
     @Column(name = "status")
     private String status = "available";
 

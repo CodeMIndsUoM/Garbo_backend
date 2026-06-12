@@ -26,14 +26,17 @@ public class AdminStaffController {
     @PostMapping("/field-mentors")
     public ResponseEntity<?> createFieldMentor(@RequestBody StaffCreateRequest req) {
         String role = CurrentUserService.getCurrentRole().orElse("");
-        if (!"admin".equals(role)) {
+        if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
         }
 
-        String council = CurrentUserService.getCurrentCouncil().orElse(null);
+        String council = resolveCreateCouncil(role, req);
         if (council == null) {
             return ResponseEntity.status(400)
-                    .body(Map.of("success", false, "message", "Admin has no council assigned"));
+                    .body(Map.of("success", false, "message",
+                            "superadmin".equals(role)
+                                    ? "Council is required when creating staff"
+                                    : "Admin has no council assigned"));
         }
 
         var createdOpt = adminStaffService.createFieldMentor(req, council);
@@ -51,14 +54,17 @@ public class AdminStaffController {
     @PostMapping("/bin-collectors")
     public ResponseEntity<?> createBinCollector(@RequestBody StaffCreateRequest req) {
         String role = CurrentUserService.getCurrentRole().orElse("");
-        if (!"admin".equals(role)) {
+        if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
         }
 
-        String council = CurrentUserService.getCurrentCouncil().orElse(null);
+        String council = resolveCreateCouncil(role, req);
         if (council == null) {
             return ResponseEntity.status(400)
-                    .body(Map.of("success", false, "message", "Admin has no council assigned"));
+                    .body(Map.of("success", false, "message",
+                            "superadmin".equals(role)
+                                    ? "Council is required when creating staff"
+                                    : "Admin has no council assigned"));
         }
 
         var createdOpt = adminStaffService.createBinCollector(req, council);
@@ -99,15 +105,49 @@ public class AdminStaffController {
         return ResponseEntity.ok(resp);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteStaff(@PathVariable Long id) {
+    private String resolveCreateCouncil(String role, StaffCreateRequest req) {
+        if ("superadmin".equals(role)) {
+            if (req == null || req.getCouncil() == null || req.getCouncil().isBlank()) {
+                return null;
+            }
+            return req.getCouncil().trim();
+        }
+        return CurrentUserService.getCurrentCouncil().orElse(null);
+    }
+
+    @PostMapping("/{id}/hide")
+    public ResponseEntity<?> hideStaff(@PathVariable Long id) {
         String role = CurrentUserService.getCurrentRole().orElse("");
-        if (!"admin".equals(role)) {
+        if (!"admin".equals(role) && !"superadmin".equals(role)) {
             return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
         }
 
-        String council = CurrentUserService.getCurrentCouncil().orElse(null);
-        if (council == null) {
+        String council = resolveManageCouncil(role);
+        if ("admin".equals(role) && council == null) {
+            return ResponseEntity.status(400)
+                    .body(Map.of("success", false, "message", "Admin has no council assigned"));
+        }
+
+        String result = adminStaffService.hideInternalUser(id, council);
+        return switch (result) {
+            case "HIDDEN" -> ResponseEntity.ok(Map.of("success", true, "message", "Hidden"));
+            case "NOT_FOUND" -> ResponseEntity.status(404).body(Map.of("success", false, "message", "User not found"));
+            case "NOT_INTERNAL" ->
+                ResponseEntity.status(400).body(Map.of("success", false, "message", "User is not manageable"));
+            case "FORBIDDEN" -> ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
+            default -> ResponseEntity.status(500).body(Map.of("success", false, "message", "Unknown error"));
+        };
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteStaff(@PathVariable Long id) {
+        String role = CurrentUserService.getCurrentRole().orElse("");
+        if (!"admin".equals(role) && !"superadmin".equals(role)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
+        }
+
+        String council = resolveManageCouncil(role);
+        if ("admin".equals(role) && council == null) {
             return ResponseEntity.status(400)
                     .body(Map.of("success", false, "message", "Admin has no council assigned"));
         }
@@ -123,5 +163,12 @@ public class AdminStaffController {
             case "DELETED" -> ResponseEntity.ok(Map.of("success", true, "message", "Deleted"));
             default -> ResponseEntity.status(500).body(Map.of("success", false, "message", "Unknown error"));
         };
+    }
+
+    private String resolveManageCouncil(String role) {
+        if ("superadmin".equals(role)) {
+            return null;
+        }
+        return CurrentUserService.getCurrentCouncil().orElse(null);
     }
 }

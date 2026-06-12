@@ -67,6 +67,36 @@ public interface RouteAssignmentRepository extends JpaRepository<RouteAssignment
     """)
     List<RouteAssignment> findActiveByUserId(@Param("userId") Long userId);
 
+    @Query("""
+        SELECT a, s.status FROM RouteAssignment a
+        JOIN FETCH a.vehicle
+        JOIN FETCH a.driver
+        JOIN RouteSession s ON s.sessionId = a.sessionId
+        ORDER BY a.createdAt DESC
+    """)
+    List<Object[]> findAllWithStatus();
+
+    @Query("""
+        SELECT a, s.status FROM RouteAssignment a
+        JOIN FETCH a.vehicle
+        JOIN FETCH a.driver
+        JOIN RouteSession s ON s.sessionId = a.sessionId
+        WHERE LOWER(a.vehicle.assignedCouncil) = LOWER(:council)
+           OR LOWER(a.driver.assignedCouncil) = LOWER(:council)
+        ORDER BY a.createdAt DESC
+    """)
+    List<Object[]> findAllByCouncilWithStatus(@Param("council") String council);
+
+    @Query("""
+        SELECT a, s.status FROM RouteAssignment a
+        JOIN FETCH a.vehicle
+        JOIN FETCH a.driver
+        JOIN RouteSession s ON s.sessionId = a.sessionId
+        WHERE s.userId = :userId OR a.driver.empId = :userId
+        ORDER BY a.createdAt DESC
+    """)
+    List<Object[]> findAllByUserIdWithStatus(@Param("userId") Long userId);
+
     @org.springframework.transaction.annotation.Transactional
     void deleteByVehicleId(Long vehicleId);
 

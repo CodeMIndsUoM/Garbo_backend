@@ -39,16 +39,27 @@ public class EventService {
         return createEventInternal(request, citizenEmail, true);
     }
 
-    private Event createEventInternal(EventCreateRequest request, String citizenEmail, boolean suggestedByCitizen) {
-        User citizenUser = userRepository.findByEmail(citizenEmail)
-                .orElseThrow(() -> new RuntimeException("Citizen not found"));
+    private Event createEventInternal(EventCreateRequest request, String requesterEmail, boolean suggestedByCitizen) {
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Citizen citizenProfile = citizenRepository.findFirstByEmailIgnoreCase(citizenEmail)
-                .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
-
-        String council = citizenProfile.getCouncil();
-        if (council == null || council.isBlank()) {
-            throw new RuntimeException("Citizen council is required before creating events");
+        String council;
+        if (councilAccessService.isSuperAdmin(requesterEmail)
+                || councilAccessService.resolveCouncilForEmail(requesterEmail).isPresent()) {
+            council = request.getCouncil();
+            if (council == null || council.isBlank()) {
+                council = councilAccessService.resolveCouncilForEmail(requesterEmail).orElse(null);
+            }
+            if (council == null || council.isBlank()) {
+                throw new RuntimeException("Council is required when creating an event");
+            }
+        } else {
+            Citizen citizenProfile = citizenRepository.findFirstByEmailIgnoreCase(requesterEmail)
+                    .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
+            council = citizenProfile.getCouncil();
+            if (council == null || council.isBlank()) {
+                throw new RuntimeException("Citizen council is required before creating events");
+            }
         }
         if (request.getTitle() == null || request.getTitle().isBlank()) {
             throw new RuntimeException("Event title is required");
@@ -68,7 +79,7 @@ public class EventService {
         event.setImageUrl(request.getImageUrl());
         event.setMaxParticipants(request.getMaxParticipants());
         event.setCouncil(council);
-        event.setOrganizerCitizen(citizenUser);
+        event.setOrganizerCitizen(requester);
         event.setStatus(suggestedByCitizen ? "PENDING_APPROVAL" : "ACTIVE");
         event.setEnrolledCount(0);
         return eventRepository.save(event);
