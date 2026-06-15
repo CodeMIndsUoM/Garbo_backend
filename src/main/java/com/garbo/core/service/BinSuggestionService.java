@@ -8,6 +8,7 @@ import com.garbo.core.repository.BinSuggestionRepository;
 import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.repository.UserRepository;
 import com.garbo.core.service.field_staff.BinService;
+import com.garbo.core.service.notification.NotificationPublisher;
 import com.garbo.infrastructure.websocket.TaskAlertBroadcaster;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ public class BinSuggestionService {
     private final CouncilAccessService councilAccessService;
     private final BinService binService;
     private final TaskAlertBroadcaster taskAlertBroadcaster;
+    private final NotificationPublisher notificationPublisher;
 
     public BinSuggestionService(
             BinSuggestionRepository binSuggestionRepository,
@@ -36,13 +38,15 @@ public class BinSuggestionService {
             UserRepository userRepository,
             CouncilAccessService councilAccessService,
             BinService binService,
-            TaskAlertBroadcaster taskAlertBroadcaster) {
+            TaskAlertBroadcaster taskAlertBroadcaster,
+            NotificationPublisher notificationPublisher) {
         this.binSuggestionRepository = binSuggestionRepository;
         this.fieldMentorRepository = fieldMentorRepository;
         this.userRepository = userRepository;
         this.councilAccessService = councilAccessService;
         this.binService = binService;
         this.taskAlertBroadcaster = taskAlertBroadcaster;
+        this.notificationPublisher = notificationPublisher;
     }
 
     @Transactional
@@ -67,7 +71,9 @@ public class BinSuggestionService {
         suggestion.setImageUrl(trimOrNull(request.getImageUrl()));
         suggestion.setStatus("PENDING");
 
-        return binSuggestionRepository.save(suggestion);
+        BinSuggestion saved = binSuggestionRepository.save(suggestion);
+        notificationPublisher.binSuggestionSubmitted(saved);
+        return saved;
     }
 
     public List<BinSuggestion> getMySuggestions(String mentorEmail) {
@@ -149,6 +155,7 @@ public class BinSuggestionService {
 
         BinSuggestion saved = binSuggestionRepository.save(suggestion);
         taskAlertBroadcaster.notifyMentorBinSuggestionUpdated(saved);
+        notificationPublisher.binSuggestionResolved(saved);
         return saved;
     }
 

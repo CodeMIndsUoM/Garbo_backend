@@ -5,6 +5,7 @@ import com.garbo.api.dto.RouteAssignmentRequestDTO;
 import com.garbo.api.dto.RouteSessionSnapshotDTO;
 import com.garbo.core.entity.*;
 import com.garbo.core.repository.*;
+import com.garbo.core.service.notification.NotificationPublisher;
 import com.garbo.infrastructure.websocket.RouteCollectionBroadcaster;
 import com.garbo.infrastructure.websocket.TaskAlertBroadcaster;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class RouteAssignmentService {
     private final RouteCollectionBroadcaster routeCollectionBroadcaster;
     private final com.garbo.core.service.field_staff.BinService binService;
     private final TaskAlertBroadcaster taskAlertBroadcaster;
+    private final NotificationPublisher notificationPublisher;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -76,6 +78,7 @@ public class RouteAssignmentService {
                 sessionId.toString(),
                 binCount,
                 request.getVehicleId());
+        notificationPublisher.routeAssigned(request.getUserId(), sessionId.toString(), binCount);
     }
 
     @Transactional

@@ -15,6 +15,9 @@ spring:
   flyway:
     enabled: ${SPRING_FLYWAY_ENABLED:false}
 
+firebase:
+  enabled: ${FIREBASE_ENABLED:false}
+
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}
   api-key: ${CLOUDINARY_API_KEY:}

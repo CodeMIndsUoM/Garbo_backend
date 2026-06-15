@@ -17,6 +17,7 @@ import com.garbo.core.repository.CouncilBoundaryRepository;
 import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.service.CouncilAccessService;
 import com.garbo.core.service.UserTaskProgressService;
+import com.garbo.core.service.notification.NotificationPublisher;
 import com.garbo.core.service.event.BinChangedEvent;
 import com.garbo.core.service.zone.ZoneClusteringService;
 import com.garbo.core.entity.RouteBinStop;
@@ -82,6 +83,9 @@ public class BinService {
 
     @Autowired
     private TaskProgressBroadcaster taskProgressBroadcaster;
+
+    @Autowired
+    private NotificationPublisher notificationPublisher;
 
     @Autowired
     private RouteCollectionBroadcaster routeCollectionBroadcaster;
@@ -178,6 +182,10 @@ public class BinService {
                 reporterName,
                 savedReport.isDiscrepancy(),
                 savedReport.getPreviousStatus()));
+
+        if (savedReport.isDiscrepancy()) {
+            notificationPublisher.binDiscrepancyReported(bin, savedReport.getId());
+        }
 
         if (reporter != null) {
             var updatedTasks = userTaskProgressService.incrementFieldMentorReportTasks(
@@ -453,6 +461,7 @@ public class BinService {
         eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
         if (saved.getAssignedTo() != null) {
             taskAlertBroadcaster.notifyMentorBinAssigned(saved.getAssignedTo(), saved);
+            notificationPublisher.binAssigned(saved.getAssignedTo(), saved);
         }
         return saved;
     }
@@ -527,6 +536,7 @@ public class BinService {
                 LocalDateTime.now()));
         if (saved.getAssignedTo() != null) {
             taskAlertBroadcaster.notifyMentorBinAssigned(saved.getAssignedTo(), saved);
+            notificationPublisher.binAssigned(saved.getAssignedTo(), saved);
         }
         normalizeReadModel(saved);
         return saved;
