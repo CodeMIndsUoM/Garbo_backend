@@ -2,6 +2,7 @@ package com.garbo.infrastructure.config.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -10,13 +11,18 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-    // Strong secret key, use a longer random string in production
-    private final String SECRET = "my_super_secret_key_my_super_secret_key"; // at least 256-bit for HS256
+    private final String secret;
+    private final long expiration = 24 * 60 * 60 * 1000; // 24 hours
 
-    private final long EXPIRATION = 24 * 60 * 60 * 1000; // 24 hours
+    public JwtUtil(@Value("${jwt.secret}") String secret) {
+        if (secret == null || secret.length() < 32) {
+            throw new IllegalStateException("jwt.secret must be at least 32 characters");
+        }
+        this.secret = secret;
+    }
 
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
     // Generate JWT token
@@ -29,7 +35,7 @@ public class JwtUtil {
                 .setSubject(username)
                 .claim("role", role)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION));
+                .setExpiration(new Date(System.currentTimeMillis() + expiration));
         if (council != null && !council.isBlank()) {
             builder.claim("council", council.trim());
         }
@@ -63,7 +69,6 @@ public class JwtUtil {
     }
 
     private Claims getClaims(String token) {
-        // Use parserBuilder to be compatible with newer jjwt versions
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
                 .build()
