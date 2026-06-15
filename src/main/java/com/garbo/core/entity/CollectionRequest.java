@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Data
@@ -43,6 +45,16 @@ public class CollectionRequest {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private WasteType wasteType;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "collection_request_waste_types",
+            joinColumns = @JoinColumn(name = "request_id")
+    )
+    @OrderColumn(name = "sort_order")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "waste_type", length = 20, nullable = false)
+    private List<WasteType> wasteTypes = new ArrayList<>();
 
     @Column(name = "quantity_label", nullable = false, length = 50)
     private String quantityLabel;

@@ -3,18 +3,30 @@ package com.garbo.core.service;
 import com.garbo.api.dto.ComplaintCreateRequest;
 import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.Complaint;
+import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.User;
 import com.garbo.core.repository.CitizenRepository;
 import com.garbo.core.repository.ComplaintRepository;
 import com.garbo.core.repository.UserRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 public class ComplaintService {
+
+    private static final Set<String> ALLOWED_STATUSES = Set.of(
+            "PENDING",
+            "APPROVED",
+            "ACCEPTED",
+            "REJECTED",
+            "IN_PROGRESS"
+    );
 
     private final ComplaintRepository complaintRepository;
     private final UserRepository userRepository;
@@ -33,13 +45,11 @@ public class ComplaintService {
     }
 
     public Complaint createComplaint(ComplaintCreateRequest request, String citizenEmail) {
-        User user = userRepository.findByEmail(citizenEmail)
-                .orElseThrow(() -> new RuntimeException("Citizen not found"));
+        User user = UserLookup.requireUser(userRepository, citizenEmail);
 
-        Citizen citizen = citizenRepository.findFirstByEmailIgnoreCase(citizenEmail)
-                .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
+        Citizen citizen = UserLookup.requireCitizen(citizenRepository, citizenEmail);
 
-        String council = citizen.getCouncil();
+        String council = UserLookup.resolveCitizenCouncil(citizen);
         if (council == null || council.isBlank()) {
             throw new RuntimeException("Citizen council is required before submitting reports");
         }
@@ -78,8 +88,7 @@ public class ComplaintService {
     }
 
     public List<Complaint> getComplaintsByCitizen(String email) {
-        User citizen = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Citizen not found"));
+        User citizen = UserLookup.requireUser(userRepository, email);
         return complaintRepository.findByCitizen(citizen);
     }
 
@@ -107,8 +116,7 @@ public class ComplaintService {
         }
 
         if (isCitizen(requesterEmail)) {
-            User citizen = userRepository.findByEmail(requesterEmail)
-                    .orElseThrow(() -> new RuntimeException("Citizen not found"));
+            User citizen = UserLookup.requireUser(userRepository, requesterEmail);
             Complaint ownComplaint = complaintRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("Complaint not found"));
             if (ownComplaint.getCitizenId() == null
@@ -123,7 +131,7 @@ public class ComplaintService {
     }
 
     private boolean isCitizen(String requesterEmail) {
-        return userRepository.findByEmail(requesterEmail)
+        return UserLookup.findUser(userRepository, requesterEmail)
                 .map(user -> {
                     String role = user.getRole();
                     if (role == null) {
@@ -141,18 +149,51 @@ public class ComplaintService {
     }
 
     public Complaint updateStatus(Long id, String status, String requesterEmail) {
+        return updateStatus(id, status, null, requesterEmail);
+    }
+
+    @Transactional
+    public Complaint updateStatus(Long id, String status, String resolutionNotes, String requesterEmail) {
+        assertAdminCanModerate(requesterEmail);
+
+        if (status == null || status.isBlank()) {
+            throw new IllegalArgumentException("Status is required");
+        }
+
+        String normalizedStatus = normalizeStatus(status);
+        if (!ALLOWED_STATUSES.contains(normalizedStatus)) {
+            throw new IllegalArgumentException("Unsupported complaint status: " + status);
+        }
+
         Complaint complaint = getComplaintById(id, requesterEmail);
-        complaint.setStatus(status);
+        complaint.setStatus(normalizedStatus);
+        if (resolutionNotes != null && !resolutionNotes.isBlank()) {
+            complaint.setResolutionNotes(resolutionNotes.trim());
+        } else if ("REJECTED".equals(normalizedStatus) && complaint.getResolutionNotes() == null) {
+            complaint.setResolutionNotes("Rejected by admin");
+        }
         return complaintRepository.save(complaint);
     }
 
-    public Complaint updateStatus(Long id, String status, String resolutionNotes, String requesterEmail) {
-        Complaint complaint = getComplaintById(id, requesterEmail);
-        complaint.setStatus(status);
-        if (resolutionNotes != null && !resolutionNotes.isBlank()) {
-            complaint.setResolutionNotes(resolutionNotes);
+    private void assertAdminCanModerate(String requesterEmail) {
+        if (councilAccessService.isAdmin(requesterEmail)) {
+            return;
         }
-        return complaintRepository.save(complaint);
+        throw new AccessDeniedException("Only admins can approve or reject complaints");
+    }
+
+    private String normalizeStatus(String status) {
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
+        if ("APPROVE".equals(normalized)) {
+            return "APPROVED";
+        }
+        if ("REJECT".equals(normalized)) {
+            return "REJECTED";
+        }
+        if ("ACCEPT".equals(normalized)) {
+            return "ACCEPTED";
+        }
+        return normalized;
     }
 
     public Complaint assignComplaint(Long id, Long personnelId, String requesterEmail) {

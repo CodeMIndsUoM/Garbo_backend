@@ -2,6 +2,7 @@ package com.garbo.api.controller;
 
 import com.garbo.infrastructure.config.security.CustomUserDetailsService;
 import com.garbo.infrastructure.config.security.JwtUtil;
+import com.garbo.core.service.UserLookup;
 import com.garbo.core.service.UserService;
 import com.garbo.core.service.CitizenService;
 import com.garbo.api.dto.CitizenRegisterRequest;
@@ -45,6 +46,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         String email = request.get("email");
+        if (email == null || email.isBlank()) {
+            email = request.get("username");
+        }
+        email = UserLookup.normalizeEmail(email);
         String password = request.get("password");
 
         System.out.println("AuthController.login called for email=" + email);
@@ -70,8 +75,17 @@ public class AuthController {
                     .findFirst()
                     .map(auth -> auth.getAuthority().replace("ROLE_", "").trim().toLowerCase())
                     .orElse("unknown");
-            // Generate JWT
-            String token = jwtUtil.generateToken(email, role);
+
+            java.util.Optional<User> userOpt = userService.getByEmail(email);
+
+            // Generate JWT (embed council for citizens so event filtering works immediately after login)
+            String councilForToken = null;
+            if (userOpt.isPresent() && userOpt.get() instanceof Citizen citizenForToken) {
+                if (citizenForToken.getCouncil() != null && !citizenForToken.getCouncil().isBlank()) {
+                    councilForToken = citizenForToken.getCouncil();
+                }
+            }
+            String token = jwtUtil.generateToken(email, role, councilForToken);
 
             // Prepare response (use Object values so booleans remain booleans)
             Map<String, Object> response = new HashMap<>();
@@ -80,7 +94,6 @@ public class AuthController {
             response.put("email", email);
 
             // Fetch user entity to include mustChangePassword flag and user info
-            java.util.Optional<User> userOpt = userService.getByEmail(email);
             boolean mustChange = false;
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
