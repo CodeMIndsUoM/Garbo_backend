@@ -69,4 +69,20 @@ public class EmailService {
         msg.setText(body.toString());
         mailSender.send(msg);
     }
+
+    public void sendPasswordResetEmail(String toEmail, String token) {
+        SimpleMailMessage msg = new SimpleMailMessage();
+        if (fromAddress != null && !fromAddress.isBlank()) {
+            msg.setFrom(fromAddress);
+        }
+        msg.setTo(toEmail);
+        msg.setSubject("Garbo password reset");
+        StringBuilder body = new StringBuilder();
+        body.append("Use this code to reset your Garbo password:").append(System.lineSeparator());
+        body.append(token).append(System.lineSeparator()).append(System.lineSeparator());
+        body.append("This code expires in 1 hour.").append(System.lineSeparator());
+        body.append("If you did not request a reset, you can ignore this email.");
+        msg.setText(body.toString());
+        mailSender.send(msg);
+    }
 }

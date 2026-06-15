@@ -5,6 +5,7 @@ import com.garbo.core.entity.Council;
 import com.garbo.core.enums.RegistrationStatus;
 import com.garbo.core.repository.ThirdPartyCollectorRepository;
 import com.garbo.core.repository.CouncilRepository;
+import com.garbo.core.service.notification.NotificationPublisher;
 import com.garbo.common.logging.AdminCreationLogger;
 import com.garbo.infrastructure.email.EmailService;
 import org.slf4j.Logger;
@@ -31,16 +32,19 @@ public class ThirdPartyCollectorRegistrationService {
     private final CouncilRepository councilRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final NotificationPublisher notificationPublisher;
 
     public ThirdPartyCollectorRegistrationService(
             ThirdPartyCollectorRepository repository,
             CouncilRepository councilRepository,
             PasswordEncoder passwordEncoder,
-            EmailService emailService) {
+            EmailService emailService,
+            NotificationPublisher notificationPublisher) {
         this.repository = repository;
         this.councilRepository = councilRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.notificationPublisher = notificationPublisher;
     }
 
     public ThirdPartyCollector register(
@@ -95,6 +99,7 @@ public class ThirdPartyCollectorRegistrationService {
 
         ThirdPartyCollector saved = repository.save(collector);
         log.info("Third-party collector registration submitted: empId={}, email={}", saved.getEmpId(), saved.getEmail());
+        notificationPublisher.thirdPartyRegistrationPending(saved);
         return saved;
     }
 
@@ -134,6 +139,7 @@ public class ThirdPartyCollectorRegistrationService {
                 log.warn("Failed to send approval email to {}: {}", saved.getEmail(), e.getMessage());
             }
         }
+        notificationPublisher.registrationApproved(saved);
         return saved;
     }
 
@@ -154,6 +160,7 @@ public class ThirdPartyCollectorRegistrationService {
         } catch (Exception e) {
             log.warn("Failed to send rejection email to {}: {}", saved.getEmail(), e.getMessage());
         }
+        notificationPublisher.registrationRejected(saved);
         return saved;
     }
 

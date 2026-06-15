@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.garbo.api.dto.BinDTO;
 import com.garbo.api.dto.BinReportRequest;
+import com.garbo.api.dto.BinUpdateRequest;
 import com.garbo.api.dto.CouncilBoundaryDTO;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.BinReport;
+import com.garbo.core.entity.BinSuggestion;
 import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.entity.CouncilBoundary;
 import com.garbo.core.repository.BinReportRepository;
@@ -15,8 +17,15 @@ import com.garbo.core.repository.CouncilBoundaryRepository;
 import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.service.CouncilAccessService;
 import com.garbo.core.service.UserTaskProgressService;
+import com.garbo.core.service.notification.NotificationPublisher;
 import com.garbo.core.service.event.BinChangedEvent;
 import com.garbo.core.service.zone.ZoneClusteringService;
+import com.garbo.core.entity.RouteBinStop;
+import com.garbo.core.repository.RouteBinStopRepository;
+import com.garbo.infrastructure.websocket.TaskProgressBroadcaster;
+import com.garbo.infrastructure.websocket.RouteCollectionBroadcaster;
+import com.garbo.infrastructure.websocket.TaskAlertBroadcaster;
+import lombok.extern.slf4j.Slf4j;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import org.springframework.security.access.AccessDeniedException;
@@ -27,11 +36,14 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 // Bin service includes multiple feature areas.
 // In this scoped refactor pass, mobile-critical methods are:
@@ -39,6 +51,7 @@ import java.util.Optional;
 //   - reportBinStatus
 //   - undoBinReport
 @Service
+@Slf4j
 public class BinService {
 
     // ── HEAD dependencies ─────────────────────────────────────────────────────
@@ -61,6 +74,21 @@ public class BinService {
 
     @Autowired
     private ZoneClusteringService zoneClusteringService;
+
+    @Autowired
+    private TaskAlertBroadcaster taskAlertBroadcaster;
+
+    @Autowired
+    private RouteBinStopRepository routeBinStopRepository;
+
+    @Autowired
+    private TaskProgressBroadcaster taskProgressBroadcaster;
+
+    @Autowired
+    private NotificationPublisher notificationPublisher;
+
+    @Autowired
+    private RouteCollectionBroadcaster routeCollectionBroadcaster;
 
     public BinService(BinRepository binRepository,
             BinReportRepository binReportRepository,
@@ -95,6 +123,8 @@ public class BinService {
                     .orElseThrow(() -> new EntityNotFoundException("Field Mentor not found with ID: " + reporterId));
         }
 
+        String previousStatus = bin.getStatus();
+
         // Create Report
         BinReport report = new BinReport();
         report.setBin(bin);
@@ -111,6 +141,15 @@ public class BinService {
             report.setSource("FIELD_STAFF");
         } else {
             report.setSource("ANONYMOUS");
+        }
+
+        if (previousStatus != null && "empty".equalsIgnoreCase(previousStatus.trim())) {
+            String newStatus = request.getStatus();
+            if (newStatus != null
+                    && ("half".equalsIgnoreCase(newStatus) || "full".equalsIgnoreCase(newStatus))) {
+                report.setDiscrepancy(true);
+                report.setPreviousStatus(previousStatus);
+            }
         }
 
         BinReport savedReport = binReportRepository.save(report);
@@ -140,10 +179,25 @@ public class BinService {
                 savedReport.getId(),
                 request.getNotes(),
                 request.getPhotoUrl(),
-                reporterName));
+                reporterName,
+                savedReport.isDiscrepancy(),
+                savedReport.getPreviousStatus()));
+
+        if (savedReport.isDiscrepancy()) {
+            notificationPublisher.binDiscrepancyReported(bin, savedReport.getId());
+        }
 
         if (reporter != null) {
-            userTaskProgressService.incrementFieldMentorReportTasks(reporter.getEmpId(), binId);
+            var updatedTasks = userTaskProgressService.incrementFieldMentorReportTasks(
+                    reporter.getEmpId(),
+                    binId
+            );
+            taskProgressBroadcaster.broadcastTaskProgressUpdate(
+                    reporter.getEmpId(),
+                    binId,
+                    updatedTasks.size(),
+                    updatedTasks
+            );
         }
 
         Bin updated = new Bin();
@@ -151,7 +205,11 @@ public class BinService {
         updated.setStatus(request.getStatus());
         updated.setFillLevel(effectiveFillLevel);
         updated.setLastChecked(checkedAt);
-        return new BinStatusReportResult(updated, savedReport.getId());
+        return new BinStatusReportResult(
+                updated,
+                savedReport.getId(),
+                savedReport.isDiscrepancy(),
+                savedReport.getPreviousStatus());
     }
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
@@ -171,6 +229,8 @@ public class BinService {
                         .photoUrl(report.getPhotoUrl())
                         .reporterName(report.getReporter() != null ? report.getReporter().getEmpName() : null)
                         .reportedAt(report.getReportedAt())
+                        .discrepancy(report.isDiscrepancy())
+                        .previousStatus(report.getPreviousStatus())
                         .build())
                 .orElse(null);
     }
@@ -227,7 +287,44 @@ public class BinService {
      * Transforms Bin entities into Map<String, Object> for JSON serialization.
      */
     public List<Map<String, Object>> getFormattedBinsForCouncil(String council) {
-        List<Bin> bins = getBins(council);
+        return toFormattedBins(getBins(council));
+    }
+
+    public List<Map<String, Object>> getFormattedBinsForMentor(Long empId) {
+        if (empId == null) {
+            return List.of();
+        }
+        List<Bin> bins = binRepository.findByAssignedToEmpId(empId);
+        bins.forEach(this::normalizeReadModel);
+        return toFormattedBins(bins);
+    }
+
+    private List<Map<String, Object>> toFormattedBins(List<Bin> bins) {
+        List<Long> binIds = bins.stream()
+                .map(Bin::getId)
+                .filter(Objects::nonNull)
+                .toList();
+        Map<Long, ActiveDiscrepancy> activeDiscrepancies = new HashMap<>();
+        if (!binIds.isEmpty()) {
+            try {
+                for (Object[] row : binReportRepository.findActiveDiscrepancyDetails(binIds)) {
+                    if (row == null || row.length < 1 || row[0] == null) {
+                        continue;
+                    }
+                    Long binId = ((Number) row[0]).longValue();
+                    String status = row.length > 1 && row[1] != null ? row[1].toString() : null;
+                    Integer fillLevel = row.length > 2 && row[2] != null ? ((Number) row[2]).intValue() : null;
+                    String previousStatus = row.length > 3 && row[3] != null ? row[3].toString() : null;
+                    String reporterName = row.length > 4 && row[4] != null ? row[4].toString() : null;
+                    activeDiscrepancies.put(
+                            binId,
+                            new ActiveDiscrepancy(status, fillLevel, previousStatus, reporterName));
+                }
+            } catch (RuntimeException ex) {
+                log.warn("Failed to load active bin discrepancies: {}", ex.getMessage());
+            }
+        }
+
         return bins.stream().map(bin -> {
             Map<String, Object> map = new HashMap<>();
             map.put("id", bin.getId());
@@ -236,8 +333,6 @@ public class BinService {
             map.put("displayCode", formatDisplayCode(bin));
 
             String fullLocation = bin.getLocation() != null ? bin.getLocation() : "Unknown";
-            // Split "Galle Road, Colombo 03" into location="Galle Road" and
-            // address="Colombo 03"
             String locationName = fullLocation;
             String addressName = fullLocation;
             if (fullLocation.contains(",")) {
@@ -249,17 +344,41 @@ public class BinService {
             map.put("address", addressName);
 
             map.put("category", bin.getCategory() != null ? bin.getCategory() : "public");
-            map.put("status", bin.getStatus() != null ? bin.getStatus() : "notChecked");
-            map.put("fillLevel", bin.getFillLevel());
+            String rowStatus = bin.getStatus() != null ? bin.getStatus() : "notChecked";
+            Integer rowFillLevel = bin.getFillLevel();
+            ActiveDiscrepancy discrepancy = activeDiscrepancies.get(bin.getId());
+            boolean hasDiscrepancy = discrepancy != null;
+            if (hasDiscrepancy && discrepancy.status() != null) {
+                map.put("discrepancyStatus", discrepancy.status());
+                rowStatus = discrepancy.status();
+                if (discrepancy.fillLevel() != null) {
+                    rowFillLevel = discrepancy.fillLevel();
+                }
+                if (discrepancy.previousStatus() != null) {
+                    map.put("discrepancyPreviousStatus", discrepancy.previousStatus());
+                }
+                if (discrepancy.reporterName() != null) {
+                    map.put("discrepancyReporterName", discrepancy.reporterName());
+                }
+            }
+            map.put("status", rowStatus);
+            map.put("fillLevel", rowFillLevel);
             map.put("lastChecked", bin.getLastChecked());
             map.put("lat", bin.getLatitude());
             map.put("lng", bin.getLongitude());
+            map.put("latitude", bin.getLatitude());
+            map.put("longitude", bin.getLongitude());
+            map.put("zone", bin.getZone() != null ? bin.getZone() : "unassigned");
+            map.put("priority", bin.getPriority() != null ? bin.getPriority() : "medium");
+            map.put("coordinates", bin.getCoordinates());
+            map.put("isAssigned", Boolean.TRUE.equals(bin.getIsAssigned()) || bin.getAssignedTo() != null);
+            map.put("hasDiscrepancy", hasDiscrepancy);
             if (bin.getAssignedTo() != null) {
                 map.put("assignedToName", bin.getAssignedTo().getEmpName());
+                map.put("assignedToEmpId", bin.getAssignedTo().getEmpId());
             }
             return map;
         }).toList();
-
     }
 
     public Bin createBinForCurrentUser(Bin payload) {
@@ -299,6 +418,51 @@ public class BinService {
 
         Bin saved = binRepository.save(payload);
         eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
+        return saved;
+    }
+
+    @Transactional
+    public Bin createBinFromSuggestion(BinSuggestion suggestion) {
+        if (suggestion == null || suggestion.getCouncil() == null || suggestion.getCouncil().isBlank()) {
+            throw new IllegalArgumentException("Suggestion council is required");
+        }
+        if (suggestion.getLatitude() == null || suggestion.getLongitude() == null) {
+            throw new IllegalArgumentException("Suggestion coordinates are required");
+        }
+
+        String council = suggestion.getCouncil().trim();
+        double lat = suggestion.getLatitude();
+        double lng = suggestion.getLongitude();
+
+        Bin payload = new Bin();
+        payload.setCategory(
+                suggestion.getCategory() != null && !suggestion.getCategory().isBlank()
+                        ? suggestion.getCategory().trim()
+                        : "general");
+        payload.setStatus("empty");
+        payload.setCouncil(council);
+        payload.setLatitude(lat);
+        payload.setLongitude(lng);
+        payload.setLocation(lat + "," + lng);
+        payload.setCoordinates(lat + "," + lng);
+        payload.setLastChecked(LocalDateTime.now());
+        payload.setBinCode(generateNextBinCode(council));
+        normalizeCreateModel(payload);
+        assignZoneIfMissing(payload, council);
+
+        if (suggestion.getMentorId() != null) {
+            fieldMentorRepository.findById(suggestion.getMentorId()).ifPresent(mentor -> {
+                payload.setAssignedTo(mentor);
+                payload.setIsAssigned(true);
+            });
+        }
+
+        Bin saved = binRepository.save(payload);
+        eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
+        if (saved.getAssignedTo() != null) {
+            taskAlertBroadcaster.notifyMentorBinAssigned(saved.getAssignedTo(), saved);
+            notificationPublisher.binAssigned(saved.getAssignedTo(), saved);
+        }
         return saved;
     }
 
@@ -347,6 +511,158 @@ public class BinService {
         eventPublisher.publishEvent(new BinChangedEvent("UPDATED", id));
         normalizeReadModel(bin);
         return bin;
+    }
+
+    @Transactional
+    public Bin assignMentorToBin(Long binId, Long mentorEmpId) {
+        Bin bin = getBinWithCouncilAccess(binId);
+        if (mentorEmpId == null) {
+            bin.setAssignedTo(null);
+        } else {
+            FieldMentor mentor = fieldMentorRepository.findById(mentorEmpId)
+                    .orElseThrow(() -> new NoSuchElementException("Field mentor not found"));
+            if (bin.getCouncil() != null && mentor.getAssignedCouncil() != null
+                    && !bin.getCouncil().equalsIgnoreCase(mentor.getAssignedCouncil())) {
+                throw new IllegalArgumentException("Mentor must belong to the same council as the bin");
+            }
+            bin.setAssignedTo(mentor);
+        }
+        Bin saved = binRepository.save(bin);
+        eventPublisher.publishEvent(new BinChangedEvent(
+                "MENTOR_ASSIGNED",
+                saved.getId(),
+                saved.getStatus(),
+                saved.getFillLevel(),
+                LocalDateTime.now()));
+        if (saved.getAssignedTo() != null) {
+            taskAlertBroadcaster.notifyMentorBinAssigned(saved.getAssignedTo(), saved);
+            notificationPublisher.binAssigned(saved.getAssignedTo(), saved);
+        }
+        normalizeReadModel(saved);
+        return saved;
+    }
+
+    @Transactional
+    public Bin updateBinForCurrentUser(Long binId, BinUpdateRequest request) {
+        Bin bin = getBinWithCouncilAccess(binId);
+        if (request == null) {
+            throw new IllegalArgumentException("Update payload is required");
+        }
+        if (request.getCategory() != null && !request.getCategory().isBlank()) {
+            bin.setCategory(request.getCategory().trim());
+        }
+        if (request.getBinCode() != null && !request.getBinCode().isBlank()) {
+            bin.setBinCode(request.getBinCode().trim());
+        }
+        if (request.getPriority() != null && !request.getPriority().isBlank()) {
+            String normalized = request.getPriority().trim().toLowerCase(Locale.ROOT);
+            if (!normalized.equals("low") && !normalized.equals("medium") && !normalized.equals("high")) {
+                throw new IllegalArgumentException("Priority must be low, medium, or high");
+            }
+            bin.setPriority(normalized);
+        }
+        if (request.getStatus() != null && !request.getStatus().isBlank()) {
+            bin.setStatus(request.getStatus().trim().toLowerCase(Locale.ROOT));
+            if ("full".equalsIgnoreCase(bin.getStatus())) {
+                bin.setFillLevel(100);
+            } else if ("half".equalsIgnoreCase(bin.getStatus())) {
+                bin.setFillLevel(50);
+            } else if ("empty".equalsIgnoreCase(bin.getStatus())) {
+                bin.setFillLevel(0);
+            }
+        }
+        Double lat = request.getLatitude();
+        Double lng = request.getLongitude();
+        if (lat != null && lng != null) {
+            String email = currentEmail();
+            Optional<String> councilOpt = councilAccessService.resolveCouncilForEmail(email);
+            if (councilOpt.isPresent()) {
+                validateCoordinatesInCouncil(councilOpt.get(), lat, lng);
+            }
+            bin.setLatitude(lat);
+            bin.setLongitude(lng);
+            bin.setCoordinates(lat + "," + lng);
+            bin.setLocation(lat + "," + lng);
+        } else if (request.getLocation() != null && !request.getLocation().isBlank()) {
+            bin.setLocation(request.getLocation().trim());
+            double[] parsed = parseCoordinates(request.getLocation().trim());
+            if (parsed != null) {
+                bin.setLatitude(parsed[0]);
+                bin.setLongitude(parsed[1]);
+                bin.setCoordinates(parsed[0] + "," + parsed[1]);
+            }
+        }
+        Bin saved = binRepository.save(bin);
+        eventPublisher.publishEvent(new BinChangedEvent("UPDATED", saved.getId()));
+        normalizeReadModel(saved);
+        return saved;
+    }
+
+    /** Resets bin to empty after collection (collector or admin). */
+    @Transactional
+    public void resetBinAfterCollection(Long binId) {
+        if (binId == null) {
+            return;
+        }
+        Bin bin = binRepository.findByNumericId(binId)
+                .orElseThrow(() -> new EntityNotFoundException("Bin not found with ID: " + binId));
+        int updated = binRepository.resetAfterCollection(binId);
+        if (updated == 0) {
+            throw new EntityNotFoundException("Bin not found with ID: " + binId);
+        }
+
+        BinReport collectionReport = new BinReport();
+        collectionReport.setBin(bin);
+        collectionReport.setStatus("empty");
+        collectionReport.setFillLevel(0);
+        collectionReport.setSource("COLLECTION");
+        collectionReport.setDiscrepancy(false);
+        binReportRepository.save(collectionReport);
+
+        eventPublisher.publishEvent(new BinChangedEvent(
+                "COLLECTED",
+                binId,
+                "empty",
+                0,
+                LocalDateTime.now()));
+    }
+
+    /** Admin manual collection — resets bin and marks any pending route stops collected. */
+    @Transactional
+    public void adminCollectBin(Long binId) {
+        getBinWithCouncilAccess(binId);
+        if (binId == null || binId <= 0) {
+            throw new IllegalArgumentException("Invalid bin id for admin collection");
+        }
+        List<RouteBinStop> pendingStops = routeBinStopRepository.findPendingStopsByBinId(binId);
+        for (RouteBinStop stop : pendingStops) {
+            int updated = routeBinStopRepository.markCollected(stop.getId(), LocalDateTime.now());
+            if (updated > 0 && stop.getVehicleRoute() != null) {
+                routeCollectionBroadcaster.broadcastBinStatusUpdate(
+                        stop.getVehicleRoute().getSessionId(),
+                        binId,
+                        "COLLECTED");
+            }
+        }
+        resetBinAfterCollection(binId);
+    }
+
+    private double[] parseCoordinates(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String[] parts = value.split(",");
+        if (parts.length < 2) {
+            return null;
+        }
+        try {
+            return new double[] {
+                    Double.parseDouble(parts[0].trim()),
+                    Double.parseDouble(parts[1].trim())
+            };
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 
     // ── Methods from kevin-RWS ────────────────────────────────────────────────
@@ -625,7 +941,18 @@ public class BinService {
         return bounds;
     }
 
-    public record BinStatusReportResult(Bin bin, Long reportId) {
+    public record BinStatusReportResult(
+            Bin bin,
+            Long reportId,
+            boolean discrepancy,
+            String previousStatus) {
+    }
+
+    private record ActiveDiscrepancy(
+            String status,
+            Integer fillLevel,
+            String previousStatus,
+            String reporterName) {
     }
 
     private String resolveCouncilFromCoordinates(double lat, double lng) {

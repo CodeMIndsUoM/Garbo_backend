@@ -6,6 +6,8 @@ import com.garbo.core.service.UserLookup;
 import com.garbo.core.service.UserService;
 import com.garbo.core.service.CitizenService;
 import com.garbo.api.dto.CitizenRegisterRequest;
+import com.garbo.api.dto.ForgotPasswordRequest;
+import com.garbo.api.dto.ResetPasswordRequest;
 import com.garbo.core.entity.AdminNew;
 import com.garbo.core.entity.BinCollector;
 import com.garbo.core.entity.Citizen;
@@ -210,5 +212,39 @@ public class AuthController {
         Map<String, String> response = new HashMap<>();
         response.put("message", "Token is valid");
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        String email = request != null ? request.getEmail() : null;
+        if (email != null && !email.isBlank()) {
+            userService.requestPasswordReset(email.trim());
+        }
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "If an account exists for that email, reset instructions have been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        if (request == null || request.getToken() == null || request.getNewPassword() == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Token and new password are required"));
+        }
+        try {
+            userService.resetPasswordWithToken(request.getToken(), request.getNewPassword());
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Password reset successfully"));
+        } catch (java.util.NoSuchElementException ex) {
+            return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "message", "Invalid or expired reset token"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", ex.getMessage()));
+        }
     }
 }

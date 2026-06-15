@@ -40,8 +40,9 @@ public class LeaderboardBroadcaster {
     public synchronized void broadcastLeaderboardUpdate(ScoreAwardedEvent triggerEvent) {
         try {
             // Get top 10 leaderboard entries
-            List<LeaderboardUpdatePayload.LeaderboardEntryDto> topEntries = 
-                    leaderboardService.getTopLeaderboard(10);
+            String roleFilter = triggerEvent != null ? triggerEvent.getRole() : null;
+            List<LeaderboardUpdatePayload.LeaderboardEntryDto> topEntries =
+                    leaderboardService.getTopLeaderboard(10, roleFilter);
             
             if (topEntries.isEmpty()) {
                 log.debug("No leaderboard entries to broadcast");
