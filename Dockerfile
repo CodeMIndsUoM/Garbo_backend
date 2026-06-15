@@ -26,4 +26,4 @@ EXPOSE 8081
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD curl -f http://localhost:${SERVER_PORT:-8081}/actuator/health || exit 1
 
-ENTRYPOINT ["sh", "-c", "java -XX:MaxRAMPercentage=70.0 -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "if [ -n \"${PROD_SPRING_DATASOURCE_URL:-}\" ]; then export SPRING_DATASOURCE_URL=\"$PROD_SPRING_DATASOURCE_URL\"; export SPRING_DATASOURCE_USERNAME=\"$PROD_SPRING_DATASOURCE_USERNAME\"; export SPRING_DATASOURCE_PASSWORD=\"$PROD_SPRING_DATASOURCE_PASSWORD\"; fi; exec java -XX:MaxRAMPercentage=70.0 -jar app.jar"]
