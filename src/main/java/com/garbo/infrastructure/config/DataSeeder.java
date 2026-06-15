@@ -3,8 +3,10 @@ package com.garbo.infrastructure.config;
 import com.garbo.core.entity.BinCollector;
 import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.FieldMentor;
+import com.garbo.core.entity.GamificationTask;
 import com.garbo.core.entity.ThirdPartyCollector;
 import com.garbo.core.repository.FieldMentorRepository;
+import com.garbo.core.repository.GamificationTaskRepository;
 import com.garbo.core.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
@@ -19,15 +21,18 @@ public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final FieldMentorRepository fieldMentorRepository;
+    private final GamificationTaskRepository gamificationTaskRepository;
     private final PasswordEncoder passwordEncoder;
     private final EntityManager entityManager;
 
     public DataSeeder(UserRepository userRepository,
             FieldMentorRepository fieldMentorRepository,
+            GamificationTaskRepository gamificationTaskRepository,
             PasswordEncoder passwordEncoder,
             EntityManager entityManager) {
         this.userRepository = userRepository;
         this.fieldMentorRepository = fieldMentorRepository;
+        this.gamificationTaskRepository = gamificationTaskRepository;
         this.passwordEncoder = passwordEncoder;
         this.entityManager = entityManager;
     }
@@ -37,6 +42,7 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
         seedMobileTestUsers();
         seedFieldMentorDemoUser();
+        seedFieldMentorGamificationTasks();
         assignBinsToSasindu();
     }
 
@@ -258,5 +264,51 @@ public class DataSeeder implements CommandLineRunner {
         } catch (Exception e) {
             System.out.println("Could not assign bins to Sasindu: " + e.getMessage());
         }
+    }
+
+    private void seedFieldMentorGamificationTasks() {
+        seedFieldMentorTask(
+                "FM_DAILY_BIN_REPORT",
+                "Daily Bin Reports",
+                "Report bin status 5 times today to earn points.",
+                "DAILY_BIN_REPORT",
+                10,
+                5
+        );
+        seedFieldMentorTask(
+                "FM_WEEKLY_REPORTS",
+                "Weekly Reporter",
+                "Report bin status 20 times to complete this weekly challenge.",
+                "BIN_REPORT",
+                25,
+                20
+        );
+    }
+
+    private void seedFieldMentorTask(
+            String code,
+            String title,
+            String description,
+            String taskType,
+            double basePoints,
+            double targetProgress
+    ) {
+        if (gamificationTaskRepository.findByCode(code).isPresent()) {
+            System.out.println("Gamification task already exists, skipping seed: " + code);
+            return;
+        }
+
+        GamificationTask task = new GamificationTask();
+        task.setCode(code);
+        task.setTitle(title);
+        task.setDescription(description);
+        task.setRoleScope("FIELD_MENTOR");
+        task.setTaskType(taskType);
+        task.setScoringType("FIXED");
+        task.setBasePoints(basePoints);
+        task.setTargetProgress(targetProgress);
+        task.setStatus("PUBLISHED");
+        gamificationTaskRepository.save(task);
+        System.out.println("Seeded field mentor gamification task: " + code);
     }
 }
