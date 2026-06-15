@@ -26,3 +26,12 @@ server:
 logging:
   level:
     root: ${LOGGING_LEVEL_ROOT:INFO}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
