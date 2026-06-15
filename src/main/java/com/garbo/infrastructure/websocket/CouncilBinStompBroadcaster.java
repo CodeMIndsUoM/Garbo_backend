@@ -44,6 +44,9 @@ public class CouncilBinStompBroadcaster {
                     .photoUrl(event.getPhotoUrl())
                     .reporterName(event.getReporterName())
                     .reportedAt(reportedAt)
+                    .hasDiscrepancy(Boolean.TRUE.equals(event.getDiscrepancy()))
+                    .discrepancy(event.getDiscrepancy())
+                    .previousStatus(event.getPreviousStatus())
                     .timestamp(System.currentTimeMillis())
                     .build();
             send(message);
@@ -78,6 +81,10 @@ public class CouncilBinStompBroadcaster {
         String council = binOpt.map(Bin::getCouncil).orElse(null);
         String binStatus = binOpt.map(Bin::getStatus).orElse(null);
         Integer fillLevel = binOpt.map(Bin::getFillLevel).orElse(null);
+        if ("COLLECTED".equalsIgnoreCase(collectionStatus)) {
+            binStatus = "empty";
+            fillLevel = 0;
+        }
 
         CouncilBinUpdateMessage message = CouncilBinUpdateMessage.builder()
                 .type("BIN_COLLECTED")
@@ -87,6 +94,7 @@ public class CouncilBinStompBroadcaster {
                 .council(council)
                 .collectionStatus(collectionStatus)
                 .sessionId(sessionId)
+                .hasDiscrepancy(false)
                 .timestamp(System.currentTimeMillis())
                 .build();
         send(message);

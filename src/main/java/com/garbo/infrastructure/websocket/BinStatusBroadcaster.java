@@ -23,7 +23,8 @@ public class BinStatusBroadcaster {
 
     private static final Set<String> BIN_STATUS_PUSH_TYPES = Set.of(
             "STATUS_REPORTED",
-            "STATUS_UNDONE"
+            "STATUS_UNDONE",
+            "COLLECTED"
     );
 
     private final BinRepository binRepository;

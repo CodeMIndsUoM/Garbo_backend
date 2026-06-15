@@ -1,5 +1,7 @@
 package com.garbo.core.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -55,7 +57,20 @@ public class Bin {
 
     @ManyToOne
     @JoinColumn(name = "assigned_to", referencedColumnName = "emp_id", nullable = true)
+    @JsonIgnore
     private FieldMentor assignedTo;
+
+    @Transient
+    @JsonProperty("assignedToEmpId")
+    public Long getAssignedToEmpId() {
+        return assignedTo != null ? assignedTo.getEmpId() : null;
+    }
+
+    @Transient
+    @JsonProperty("assignedToName")
+    public String getAssignedToName() {
+        return assignedTo != null ? assignedTo.getEmpName() : null;
+    }
 
     // Compatibility getters for team's Route Optimization code
     public Double getLat() {
