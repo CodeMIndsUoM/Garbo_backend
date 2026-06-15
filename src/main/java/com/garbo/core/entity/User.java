@@ -57,6 +57,14 @@ public class User {
     @Column(name = "must_change_password")
     private boolean mustChangePassword = false;
 
+    @JsonIgnore
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
+
+    @JsonIgnore
+    @Column(name = "password_reset_expires_at")
+    private LocalDateTime passwordResetExpiresAt;
+
     // ================= Security methods =================
 
     // @Override

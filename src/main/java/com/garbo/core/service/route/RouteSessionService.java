@@ -4,7 +4,10 @@ import com.garbo.api.dto.*;
 import com.garbo.api.dto.RouteResponseDTO.BinStop;
 import com.garbo.api.dto.RouteResponseDTO.VehicleRoute;
 import com.garbo.core.entity.Bin;
+import com.garbo.core.entity.Complaint;
 import com.garbo.core.repository.BinRepository;
+import com.garbo.core.repository.ComplaintRepository;
+import com.garbo.core.service.ComplaintService;
 import com.garbo.core.service.event.BinChangedEvent;
 import com.garbo.domain.OSRMClient;
 import com.garbo.domain.ORToolsWrapper;
@@ -24,6 +27,8 @@ public class RouteSessionService {
     private static final long RECOMPUTE_DEBOUNCE_MS = 1500;
 
     private final BinRepository binRepository;
+    private final ComplaintRepository complaintRepository;
+    private final ComplaintService complaintService;
     private final SimpMessagingTemplate messagingTemplate;
     private final RouteAssignmentService routeAssignmentService;
 
@@ -34,9 +39,13 @@ public class RouteSessionService {
     private final ExecutorService          computePool  = Executors.newFixedThreadPool(2);
 
     public RouteSessionService(BinRepository binRepository,
+                               ComplaintRepository complaintRepository,
+                               ComplaintService complaintService,
                                SimpMessagingTemplate messagingTemplate,
                                RouteAssignmentService routeAssignmentService) {
         this.binRepository         = binRepository;
+        this.complaintRepository   = complaintRepository;
+        this.complaintService      = complaintService;
         this.messagingTemplate     = messagingTemplate;
         this.routeAssignmentService = routeAssignmentService;
     }
@@ -137,15 +146,43 @@ public class RouteSessionService {
     // =========================================================
     private List<Bin> loadBins(RouteSessionCreateRequestDTO config) {
         List<Long> selected = config.getSelectedBinIds();
-        if (selected == null || selected.isEmpty()) {
-            return binRepository.findAll();
-        }
-        List<Bin> bins = binRepository.findAllByIdWithCast(selected);
-        Map<Long, Bin> map = new HashMap<>();
-        for (Bin b : bins) map.put((Long) b.getId(), b);
         List<Bin> ordered = new ArrayList<>();
-        for (Long id : selected) {
-            if (map.containsKey(id)) ordered.add(map.get(id));
+        if (selected == null || selected.isEmpty()) {
+            ordered = new ArrayList<>(binRepository.findAll());
+        } else {
+            List<Bin> bins = binRepository.findAllByIdWithCast(selected);
+            Map<Long, Bin> map = new HashMap<>();
+            for (Bin b : bins) map.put((Long) b.getId(), b);
+            for (Long id : selected) {
+                if (id != null && id > 0 && map.containsKey(id)) {
+                    ordered.add(map.get(id));
+                }
+            }
+        }
+
+        List<Long> complaintIds = config.getComplaintIds();
+        if (complaintIds != null) {
+            for (Long complaintId : complaintIds) {
+                if (complaintId == null) {
+                    continue;
+                }
+                Complaint complaint = complaintRepository.findById(complaintId).orElse(null);
+                if (complaint == null) {
+                    continue;
+                }
+                double[] coords = complaintService.parseComplaintCoordinates(complaint);
+                if (coords == null) {
+                    continue;
+                }
+                Bin virtual = new Bin(coords[0], coords[1], 100, "full");
+                virtual.setId(-complaintId);
+                virtual.setLocation(complaint.getLocation());
+                virtual.setBinCode("CMP-" + complaintId);
+                virtual.setCouncil(complaint.getCouncil());
+                virtual.setPriority("high");
+                ordered.add(virtual);
+            }
+            complaintService.markComplaintsRouted(complaintIds);
         }
         return ordered;
     }

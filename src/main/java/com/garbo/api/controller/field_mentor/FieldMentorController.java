@@ -92,18 +92,17 @@ public class FieldMentorController {
         }
     }
 
-    // Get all bins assigned to the field mentor's council
+    // Bins assigned to the authenticated field mentor
     @GetMapping("/me/bins")
     @PreAuthorize("hasRole('FIELD_MENTOR')")
     public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAssignedBins() {
-        String council = CurrentUserService.getCurrentCouncil()
-                .orElse(null);
-        if (council == null || council.isBlank()) {
+        Long empId = CurrentUserService.getCurrentEmpId().orElse(null);
+        if (empId == null) {
             return ResponseEntity.status(403)
-                    .body(ApiResponse.error("No council assigned for field mentor", "COUNCIL_NOT_FOUND"));
+                    .body(ApiResponse.error("Authenticated field mentor not found", "USER_NOT_FOUND"));
         }
         return ResponseEntity.ok(ApiResponse.success(
-                binService.getFormattedBinsForCouncil(council)));
+                binService.getFormattedBinsForMentor(empId)));
     }
 
 }
