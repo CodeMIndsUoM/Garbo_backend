@@ -23,9 +23,21 @@ cloudinary:
   api-key: ${CLOUDINARY_API_KEY:}
   api-secret: ${CLOUDINARY_API_SECRET:}
 
+jwt:
+  secret: ${JWT_SECRET:my_super_secret_key_my_super_secret_key}
+
 server:
   port: ${SERVER_PORT:8081}
 
 logging:
   level:
     root: ${LOGGING_LEVEL_ROOT:INFO}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
