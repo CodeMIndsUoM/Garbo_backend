@@ -121,6 +121,7 @@ public class UserGamificationTaskService {
         return "ACTIVE_BIN_DAILY".equals(taskType)
                 || "DAILY_ACTIVE_BINS".equals(taskType)
                 || "ACTIVE_BINS_DAILY".equals(taskType)
+                || "DAILY_BIN_REPORT".equals(taskType)
                 || code.contains("DAILY");
     }
 }

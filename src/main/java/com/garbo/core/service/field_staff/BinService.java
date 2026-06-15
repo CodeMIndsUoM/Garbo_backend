@@ -21,6 +21,7 @@ import com.garbo.core.service.event.BinChangedEvent;
 import com.garbo.core.service.zone.ZoneClusteringService;
 import com.garbo.core.entity.RouteBinStop;
 import com.garbo.core.repository.RouteBinStopRepository;
+import com.garbo.infrastructure.websocket.TaskProgressBroadcaster;
 import com.garbo.infrastructure.websocket.RouteCollectionBroadcaster;
 import com.garbo.infrastructure.websocket.TaskAlertBroadcaster;
 import lombok.extern.slf4j.Slf4j;
@@ -78,6 +79,9 @@ public class BinService {
 
     @Autowired
     private RouteBinStopRepository routeBinStopRepository;
+
+    @Autowired
+    private TaskProgressBroadcaster taskProgressBroadcaster;
 
     @Autowired
     private RouteCollectionBroadcaster routeCollectionBroadcaster;
@@ -176,7 +180,16 @@ public class BinService {
                 savedReport.getPreviousStatus()));
 
         if (reporter != null) {
-            userTaskProgressService.incrementFieldMentorReportTasks(reporter.getEmpId(), binId);
+            var updatedTasks = userTaskProgressService.incrementFieldMentorReportTasks(
+                    reporter.getEmpId(),
+                    binId
+            );
+            taskProgressBroadcaster.broadcastTaskProgressUpdate(
+                    reporter.getEmpId(),
+                    binId,
+                    updatedTasks.size(),
+                    updatedTasks
+            );
         }
 
         Bin updated = new Bin();
