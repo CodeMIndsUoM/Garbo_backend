@@ -18,6 +18,7 @@ import com.garbo.core.entity.User;
 import com.garbo.core.enums.CancellationReason;
 import com.garbo.core.enums.OfferStatus;
 import com.garbo.core.enums.RequestStatus;
+import com.garbo.core.enums.WasteType;
 import com.garbo.core.repository.CitizenRepository;
 import com.garbo.core.repository.CollectionOfferRepository;
 import com.garbo.core.repository.CollectionRequestRepository;
@@ -32,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -88,7 +90,9 @@ public class CollectionRequestService {
         CollectionRequest request = new CollectionRequest();
         request.setCitizen(citizen);
         request.setCouncil(council);
-        request.setWasteType(dto.wasteType());
+        List<WasteType> wasteTypes = resolveWasteTypes(dto);
+        request.setWasteTypes(new ArrayList<>(wasteTypes));
+        request.setWasteType(wasteTypes.get(0));
         request.setQuantityLabel(dto.quantityLabel().trim());
         request.setQuantityKgEstimate(dto.quantityKgEstimate());
         request.setAddressLine(dto.addressLine().trim());
@@ -619,8 +623,11 @@ public class CollectionRequestService {
     }
 
     private void validateCreateRequest(CreateRequestDto dto) {
-        if (dto == null || dto.wasteType() == null || dto.preferredDate() == null || dto.preferredSlot() == null) {
-            throw badRequest("Waste type, preferred date and preferred slot are required");
+        if (dto == null || dto.preferredDate() == null || dto.preferredSlot() == null) {
+            throw badRequest("Preferred date and preferred slot are required");
+        }
+        if (resolveWasteTypes(dto).isEmpty()) {
+            throw badRequest("At least one waste type is required");
         }
         if (isBlank(dto.quantityLabel()) || isBlank(dto.addressLine()) || isBlank(dto.contactPhone())) {
             throw badRequest("Quantity, address and contact phone are required");
@@ -632,6 +639,16 @@ public class CollectionRequestService {
             throw badRequest("Latitude and longitude are required");
         }
         validateCoordinates(dto.latitude(), dto.longitude(), true);
+    }
+
+    private List<WasteType> resolveWasteTypes(CreateRequestDto dto) {
+        if (dto.wasteTypes() != null && !dto.wasteTypes().isEmpty()) {
+            return dto.wasteTypes();
+        }
+        if (dto.wasteType() != null) {
+            return List.of(dto.wasteType());
+        }
+        return List.of();
     }
 
     private String requireCitizenCouncil(Citizen citizen) {

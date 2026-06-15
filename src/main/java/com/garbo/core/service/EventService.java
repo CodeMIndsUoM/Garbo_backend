@@ -11,6 +11,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -40,27 +41,9 @@ public class EventService {
     }
 
     private Event createEventInternal(EventCreateRequest request, String requesterEmail, boolean suggestedByCitizen) {
-        User requester = userRepository.findByEmail(requesterEmail)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User requester = UserLookup.requireUser(userRepository, requesterEmail);
+        String council = resolveCouncilForRequest(request, requesterEmail, requester);
 
-        String council;
-        if (councilAccessService.isSuperAdmin(requesterEmail)
-                || councilAccessService.resolveCouncilForEmail(requesterEmail).isPresent()) {
-            council = request.getCouncil();
-            if (council == null || council.isBlank()) {
-                council = councilAccessService.resolveCouncilForEmail(requesterEmail).orElse(null);
-            }
-            if (council == null || council.isBlank()) {
-                throw new RuntimeException("Council is required when creating an event");
-            }
-        } else {
-            Citizen citizenProfile = citizenRepository.findFirstByEmailIgnoreCase(requesterEmail)
-                    .orElseThrow(() -> new RuntimeException("Citizen profile not found"));
-            council = citizenProfile.getCouncil();
-            if (council == null || council.isBlank()) {
-                throw new RuntimeException("Citizen council is required before creating events");
-            }
-        }
         if (request.getTitle() == null || request.getTitle().isBlank()) {
             throw new RuntimeException("Event title is required");
         }
@@ -85,26 +68,63 @@ public class EventService {
         return eventRepository.save(event);
     }
 
+    private String resolveCouncilForRequest(EventCreateRequest request, String requesterEmail, User requester) {
+        Optional<Citizen> citizenOpt = UserLookup.findCitizen(citizenRepository, requesterEmail);
+        boolean isCitizen = citizenOpt.isPresent()
+                && !councilAccessService.isSuperAdmin(requesterEmail)
+                && !councilAccessService.isAdmin(requesterEmail);
+
+        if (isCitizen) {
+            String council = UserLookup.resolveCitizenCouncil(citizenOpt.get());
+            if (council == null || council.isBlank()) {
+                throw new RuntimeException("Citizen council is required before creating events");
+            }
+            return council;
+        }
+
+        String council = request.getCouncil();
+        if (council == null || council.isBlank()) {
+            council = councilAccessService.resolveCouncilForEmail(requesterEmail).orElse(null);
+        }
+        if (council == null || council.isBlank()) {
+            throw new RuntimeException("Council is required when creating an event");
+        }
+        return council.trim();
+    }
+
     public List<Event> getMyEvents(String citizenEmail) {
-        User citizen = userRepository.findByEmail(citizenEmail)
-                .orElseThrow(() -> new RuntimeException("Citizen not found"));
+        User citizen = UserLookup.requireUser(userRepository, citizenEmail);
         return eventRepository.findByOrganizerCitizenOrderByCreatedAtDesc(citizen);
     }
 
     public List<Event> getVisibleEvents(String requesterEmail) {
+        return getVisibleEvents(requesterEmail, null);
+    }
+
+    public List<Event> getVisibleEvents(String requesterEmail, String councilFromToken) {
         if (councilAccessService.isSuperAdmin(requesterEmail)) {
             return eventRepository.findAll().stream()
-                    .filter(event -> "ACTIVE".equalsIgnoreCase(event.getStatus())
-                            || "APPROVED".equalsIgnoreCase(event.getStatus()))
+                    .filter(this::isVisibleEventStatus)
                     .toList();
         }
         Optional<String> councilOpt = councilAccessService.resolveCouncilForEmail(requesterEmail);
+        if (councilOpt.isEmpty() && councilFromToken != null && !councilFromToken.isBlank()) {
+            councilOpt = Optional.of(councilFromToken.trim());
+        }
         if (councilOpt.isEmpty()) {
             return List.of();
         }
-        return eventRepository.findByCouncilIgnoreCaseAndStatusInOrderByEventDateAsc(
-                councilOpt.get(),
-                List.of("ACTIVE", "APPROVED"));
+        return eventRepository.findByCouncilIgnoreCaseOrderByEventDateAsc(councilOpt.get()).stream()
+                .filter(this::isVisibleEventStatus)
+                .toList();
+    }
+
+    private boolean isVisibleEventStatus(Event event) {
+        if (event.getStatus() == null) {
+            return false;
+        }
+        String status = event.getStatus().trim().toUpperCase(Locale.ROOT);
+        return status.equals("ACTIVE") || status.equals("APPROVED");
     }
 
     public Event enrollInEvent(Long eventId, String requesterEmail) {
@@ -127,7 +147,8 @@ public class EventService {
     public List<Event> getPendingSuggestions(String requesterEmail) {
         if (councilAccessService.isSuperAdmin(requesterEmail)) {
             return eventRepository.findAll().stream()
-                    .filter(event -> "PENDING_APPROVAL".equalsIgnoreCase(event.getStatus()))
+                    .filter(event -> event.getStatus() != null
+                            && "PENDING_APPROVAL".equalsIgnoreCase(event.getStatus().trim()))
                     .toList();
         }
         Optional<String> councilOpt = councilAccessService.resolveCouncilForEmail(requesterEmail);
