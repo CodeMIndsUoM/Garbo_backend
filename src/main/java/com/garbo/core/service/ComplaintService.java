@@ -8,6 +8,7 @@ import com.garbo.core.entity.User;
 import com.garbo.core.repository.CitizenRepository;
 import com.garbo.core.repository.ComplaintRepository;
 import com.garbo.core.repository.UserRepository;
+import com.garbo.core.service.notification.NotificationPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,16 +34,19 @@ public class ComplaintService {
     private final UserRepository userRepository;
     private final CitizenRepository citizenRepository;
     private final CouncilAccessService councilAccessService;
+    private final NotificationPublisher notificationPublisher;
 
     public ComplaintService(
             ComplaintRepository complaintRepository,
             UserRepository userRepository,
             CitizenRepository citizenRepository,
-            CouncilAccessService councilAccessService) {
+            CouncilAccessService councilAccessService,
+            NotificationPublisher notificationPublisher) {
         this.complaintRepository = complaintRepository;
         this.userRepository = userRepository;
         this.citizenRepository = citizenRepository;
         this.councilAccessService = councilAccessService;
+        this.notificationPublisher = notificationPublisher;
     }
 
     public Complaint createComplaint(ComplaintCreateRequest request, String citizenEmail) {
@@ -85,7 +89,9 @@ public class ComplaintService {
                         : "Unknown Location");
         complaint.setImageUrl(request.getImageUrl());
 
-        return complaintRepository.save(complaint);
+        Complaint saved = complaintRepository.save(complaint);
+        notificationPublisher.complaintSubmitted(saved);
+        return saved;
     }
 
     public List<Complaint> getComplaintsByCitizen(String email) {
@@ -173,7 +179,9 @@ public class ComplaintService {
         } else if ("REJECTED".equals(normalizedStatus) && complaint.getResolutionNotes() == null) {
             complaint.setResolutionNotes("Rejected by admin");
         }
-        return complaintRepository.save(complaint);
+        Complaint saved = complaintRepository.save(complaint);
+        notificationPublisher.complaintStatusUpdated(saved);
+        return saved;
     }
 
     private void assertAdminCanModerate(String requesterEmail) {

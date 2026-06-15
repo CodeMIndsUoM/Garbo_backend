@@ -7,6 +7,7 @@ import com.garbo.core.entity.User;
 import com.garbo.core.repository.CitizenRepository;
 import com.garbo.core.repository.EventRepository;
 import com.garbo.core.repository.UserRepository;
+import com.garbo.core.service.notification.NotificationPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -21,15 +22,18 @@ public class EventService {
     private final UserRepository userRepository;
     private final CitizenRepository citizenRepository;
     private final CouncilAccessService councilAccessService;
+    private final NotificationPublisher notificationPublisher;
 
     public EventService(EventRepository eventRepository,
             UserRepository userRepository,
             CitizenRepository citizenRepository,
-            CouncilAccessService councilAccessService) {
+            CouncilAccessService councilAccessService,
+            NotificationPublisher notificationPublisher) {
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
         this.citizenRepository = citizenRepository;
         this.councilAccessService = councilAccessService;
+        this.notificationPublisher = notificationPublisher;
     }
 
     public Event createEvent(EventCreateRequest request, String citizenEmail) {
@@ -65,7 +69,11 @@ public class EventService {
         event.setOrganizerCitizen(requester);
         event.setStatus(suggestedByCitizen ? "PENDING_APPROVAL" : "ACTIVE");
         event.setEnrolledCount(0);
-        return eventRepository.save(event);
+        Event saved = eventRepository.save(event);
+        if (suggestedByCitizen) {
+            notificationPublisher.eventSuggestionSubmitted(saved);
+        }
+        return saved;
     }
 
     private String resolveCouncilForRequest(EventCreateRequest request, String requesterEmail, User requester) {
@@ -167,7 +175,9 @@ public class EventService {
         }
         event.setStatus("APPROVED");
         event.setRejectionReason(null);
-        return eventRepository.save(event);
+        Event saved = eventRepository.save(event);
+        notificationPublisher.eventSuggestionResolved(saved, true);
+        return saved;
     }
 
     public Event rejectSuggestion(Long eventId, String reason, String requesterEmail) {
@@ -177,7 +187,9 @@ public class EventService {
         }
         event.setStatus("REJECTED");
         event.setRejectionReason(reason == null ? null : reason.trim());
-        return eventRepository.save(event);
+        Event saved = eventRepository.save(event);
+        notificationPublisher.eventSuggestionResolved(saved, false);
+        return saved;
     }
 
     private Event getVisibleEventById(Long eventId, String requesterEmail) {
