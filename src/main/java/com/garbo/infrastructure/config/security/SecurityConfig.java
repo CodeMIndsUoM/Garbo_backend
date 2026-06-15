@@ -88,6 +88,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").permitAll()
                         // allow websocket handshake + SockJS endpoints
                         .requestMatchers("/ws/**").permitAll()
+                        // health check for containers and load balancers
+                        .requestMatchers("/actuator/health").permitAll()
                         // TEMP: allow route-session testing without JWT
                         .requestMatchers("/api/route-sessions").permitAll()
                         .requestMatchers("/api/route-sessions/**").permitAll()
