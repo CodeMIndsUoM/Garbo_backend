@@ -27,7 +27,8 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
     @Query("SELECT b FROM Bin b")
     List<Bin> findAllValidBins();
 
-    List<Bin> findByAssignedToEmpId(Long empId);
+    @Query("SELECT b FROM Bin b LEFT JOIN FETCH b.assignedTo WHERE b.assignedTo.empId = :empId")
+    List<Bin> findByAssignedToEmpId(@Param("empId") Long empId);
     List<Bin> findByCouncilIgnoreCase(String council);
 
     @Query("SELECT b FROM Bin b")
@@ -70,6 +71,15 @@ public interface BinRepository extends JpaRepository<Bin, Long> {
     @Modifying
     @Query("UPDATE Bin b SET b.isAssigned = :isAssigned WHERE b.id = :id")
     void updateAssignedStatus(@Param("id") Long id, @Param("isAssigned") Boolean isAssigned);
+
+    @Transactional
+    @Modifying
+    @Query(value = """
+            UPDATE bins
+            SET status = 'empty', fill_level = 0, is_assigned = false, last_checked = NOW()
+            WHERE id = :binId
+            """, nativeQuery = true)
+    int resetAfterCollection(@Param("binId") Long binId);
 
     // ── Analytics — council filtered ──────────────────────────────────────────
 

@@ -25,7 +25,8 @@ public class ComplaintService {
             "APPROVED",
             "ACCEPTED",
             "REJECTED",
-            "IN_PROGRESS"
+            "IN_PROGRESS",
+            "ROUTED"
     );
 
     private final ComplaintRepository complaintRepository;
@@ -203,5 +204,43 @@ public class ComplaintService {
         complaint.setAssignedPersonnelId(personnelId);
         complaint.setStatus("IN_PROGRESS");
         return complaintRepository.save(complaint);
+    }
+
+    @Transactional
+    public void markComplaintsRouted(java.util.List<Long> complaintIds) {
+        if (complaintIds == null || complaintIds.isEmpty()) {
+            return;
+        }
+        for (Long id : complaintIds) {
+            if (id == null) {
+                continue;
+            }
+            complaintRepository.findById(id).ifPresent(complaint -> {
+                complaint.setStatus("ROUTED");
+                complaintRepository.save(complaint);
+            });
+        }
+    }
+
+    public double[] parseComplaintCoordinates(Complaint complaint) {
+        if (complaint == null || complaint.getLocation() == null) {
+            return null;
+        }
+        String value = complaint.getLocation().trim();
+        if (value.isBlank()) {
+            return null;
+        }
+        String[] parts = value.split(",");
+        if (parts.length < 2) {
+            return null;
+        }
+        try {
+            return new double[] {
+                    Double.parseDouble(parts[0].trim()),
+                    Double.parseDouble(parts[1].trim())
+            };
+        } catch (NumberFormatException ex) {
+            return null;
+        }
     }
 }

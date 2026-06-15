@@ -1,7 +1,9 @@
 package com.garbo.api.controller.field_mentor;
 
+import com.garbo.api.dto.BinAssignMentorRequest;
 import com.garbo.api.dto.BinLatestReportDTO;
 import com.garbo.api.dto.BinReportRequest;
+import com.garbo.api.dto.BinUpdateRequest;
 import com.garbo.api.dto.common.ApiResponse;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.service.CurrentUserService;
@@ -47,10 +49,10 @@ public class BinController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Bin>>> getBins(
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getBins(
             @RequestParam(value = "council", required = false) String council) {
         try {
-            return ResponseEntity.ok(ApiResponse.success(binService.getBins(council)));
+            return ResponseEntity.ok(ApiResponse.success(binService.getFormattedBinsForCouncil(council)));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(ApiResponse.error(e.getMessage(), "FETCH_FAILED"));
         }
@@ -118,6 +120,46 @@ public class BinController {
         }
     }
 
+    @PutMapping("/{binId}")
+    public ResponseEntity<ApiResponse<Bin>> updateBin(
+            @PathVariable Long binId,
+            @RequestBody BinUpdateRequest request) {
+        try {
+            Bin updated = binService.updateBinForCurrentUser(binId, request);
+            return ResponseEntity.ok(ApiResponse.success(updated));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "BIN_UPDATE_FAILED"));
+        }
+    }
+
+    @PutMapping("/{binId}/assign-mentor")
+    public ResponseEntity<ApiResponse<Bin>> assignMentor(
+            @PathVariable Long binId,
+            @RequestBody BinAssignMentorRequest request) {
+        try {
+            Long mentorEmpId = request != null ? request.getMentorEmpId() : null;
+            Bin updated = binService.assignMentorToBin(binId, mentorEmpId);
+            return ResponseEntity.ok(ApiResponse.success(updated));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "MENTOR_ASSIGN_FAILED"));
+        }
+    }
+
+    @PostMapping("/{binId}/admin-collect")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> adminCollect(@PathVariable Long binId) {
+        try {
+            binService.adminCollectBin(binId);
+            Map<String, Object> data = new HashMap<>();
+            data.put("id", binId);
+            data.put("status", "empty");
+            data.put("fillLevel", 0);
+            data.put("collected", true);
+            return ResponseEntity.ok(ApiResponse.success(data));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage(), "ADMIN_COLLECT_FAILED"));
+        }
+    }
+
     // Primary field mentor report endpoint used by Flutter (multipart + optional photo).
     @PostMapping(value = "/{binId}/report", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('FIELD_MENTOR')")
@@ -167,6 +209,8 @@ public class BinController {
             data.put("status", updatedBin.getStatus());
             data.put("fillLevel", updatedBin.getFillLevel());
             data.put("lastChecked", updatedBin.getLastChecked());
+            data.put("discrepancy", result.discrepancy());
+            data.put("previousStatus", result.previousStatus());
 
             return ResponseEntity.ok(ApiResponse.success(data));
         } catch (Exception e) {

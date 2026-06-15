@@ -16,6 +16,9 @@ public class RouteSessionCreateRequestDTO {
     private double depotLng;
     private List<Long> selectedBinIds;
 
+    /** Optional complaint IDs to inject as ad-hoc route stops (virtual bins). */
+    private List<Long> complaintIds;
+
     // ── Team assignment fields ───────────────────────────────────────────────
     private Long vehicleId;
     private Long driverId;

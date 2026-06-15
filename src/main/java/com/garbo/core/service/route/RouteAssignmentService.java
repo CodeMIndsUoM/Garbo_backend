@@ -6,6 +6,7 @@ import com.garbo.api.dto.RouteSessionSnapshotDTO;
 import com.garbo.core.entity.*;
 import com.garbo.core.repository.*;
 import com.garbo.infrastructure.websocket.RouteCollectionBroadcaster;
+import com.garbo.infrastructure.websocket.TaskAlertBroadcaster;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,8 @@ public class RouteAssignmentService {
     private final BinRepository             binRepository;
     private final UserRepository            userRepository;
     private final RouteCollectionBroadcaster routeCollectionBroadcaster;
+    private final com.garbo.core.service.field_staff.BinService binService;
+    private final TaskAlertBroadcaster taskAlertBroadcaster;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -56,7 +59,9 @@ public class RouteAssignmentService {
         // Mark bins as assigned
         if (request.getSelectedBinIds() != null) {
             for (Long binId : request.getSelectedBinIds()) {
-                binRepository.updateAssignedStatus(binId, true);
+                if (binId != null && binId > 0) {
+                    binRepository.updateAssignedStatus(binId, true);
+                }
             }
         }
 
@@ -64,6 +69,13 @@ public class RouteAssignmentService {
                 sessionId,
                 snapshot.route != null ? getRouteMap(snapshot).size() : 0,
                 request.getUserId());
+
+        int binCount = request.getSelectedBinIds() != null ? request.getSelectedBinIds().size() : 0;
+        taskAlertBroadcaster.notifyCollectorRouteAssigned(
+                request.getUserId(),
+                sessionId.toString(),
+                binCount,
+                request.getVehicleId());
     }
 
     @Transactional
@@ -74,6 +86,9 @@ public class RouteAssignmentService {
                     int updated = binStopRepository.markCollected(stop.getId(), LocalDateTime.now());
                     if (updated > 0) {
                         log.info("Bin {} marked COLLECTED in session {}", binId, sessionId);
+                        if (binId != null && binId > 0) {
+                            binService.resetBinAfterCollection(binId);
+                        }
                         routeCollectionBroadcaster.broadcastBinStatusUpdate(sessionId, binId, "COLLECTED");
                         return true;
                     }
