@@ -23,6 +23,9 @@ cloudinary:
   api-key: ${CLOUDINARY_API_KEY:}
   api-secret: ${CLOUDINARY_API_SECRET:}
 
+jwt:
+  secret: ${JWT_SECRET:my_super_secret_key_my_super_secret_key}
+
 server:
   port: ${SERVER_PORT:8081}
 
@@ -30,14 +33,11 @@ logging:
   level:
     root: ${LOGGING_LEVEL_ROOT:INFO}
 
-# Bump latest-version when publishing a new mobile release (match pubspec.yaml version).
-garbo:
-  app:
-    android:
-      latest-version: ${GARBO_APP_ANDROID_VERSION:1.0.0}
-      store-url: ${GARBO_APP_ANDROID_STORE_URL:https://play.google.com/store/apps/details?id=com.garbo}
-      release-notes: ${GARBO_APP_ANDROID_RELEASE_NOTES:}
-    ios:
-      latest-version: ${GARBO_APP_IOS_VERSION:1.0.0}
-      store-url: ${GARBO_APP_IOS_STORE_URL:}
-      release-notes: ${GARBO_APP_IOS_RELEASE_NOTES:}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
