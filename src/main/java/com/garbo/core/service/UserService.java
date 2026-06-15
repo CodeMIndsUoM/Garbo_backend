@@ -272,6 +272,44 @@ public class UserService {
         userRepo.save(user);
     }
 
+    public void requestPasswordReset(String email) {
+        if (email == null || email.isBlank()) {
+            return;
+        }
+        String normalized = UserLookup.normalizeEmail(email);
+        Optional<User> found = userRepo.findFirstByEmailIgnoreCase(normalized);
+        if (found.isEmpty()) {
+            return;
+        }
+        User user = found.get();
+        String token = java.util.UUID.randomUUID().toString().replace("-", "");
+        user.setPasswordResetToken(token);
+        user.setPasswordResetExpiresAt(java.time.LocalDateTime.now().plusHours(1));
+        userRepo.save(user);
+        try {
+            emailService.sendPasswordResetEmail(user.getEmail(), token);
+        } catch (Exception ex) {
+            log.error("Failed to send password reset email to {}", user.getEmail(), ex);
+        }
+    }
+
+    public void resetPasswordWithToken(String token, String newPassword) {
+        if (token == null || token.isBlank() || newPassword == null || newPassword.isBlank()) {
+            throw new IllegalArgumentException("Token and new password are required");
+        }
+        User user = userRepo.findByPasswordResetToken(token.trim())
+                .orElseThrow(() -> new java.util.NoSuchElementException("Invalid or expired reset token"));
+        if (user.getPasswordResetExpiresAt() == null
+                || user.getPasswordResetExpiresAt().isBefore(java.time.LocalDateTime.now())) {
+            throw new IllegalArgumentException("Reset token has expired");
+        }
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetExpiresAt(null);
+        user.setMustChangePassword(false);
+        userRepo.save(user);
+    }
+
     private static final String PASSWORD_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*()-_";
 
     private String generateTemporaryPassword(int length) {

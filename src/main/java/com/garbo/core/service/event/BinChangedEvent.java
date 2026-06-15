@@ -15,13 +15,15 @@ public class BinChangedEvent {
     private final String notes;
     private final String photoUrl;
     private final String reporterName;
+    private final Boolean discrepancy;
+    private final String previousStatus;
 
     public BinChangedEvent(String changeType, Long binId) {
-        this(changeType, binId, null, null, null, null, null, null, null);
+        this(changeType, binId, null, null, null, null, null, null, null, null, null);
     }
 
     public BinChangedEvent(String changeType, Object id) {
-        this(changeType, parseLong(id), null, null, null, null, null, null, null);
+        this(changeType, parseLong(id), null, null, null, null, null, null, null, null, null);
     }
 
     public BinChangedEvent(
@@ -31,7 +33,7 @@ public class BinChangedEvent {
             Integer fillLevel,
             LocalDateTime lastChecked
     ) {
-        this(changeType, binId, status, fillLevel, lastChecked, null, null, null, null);
+        this(changeType, binId, status, fillLevel, lastChecked, null, null, null, null, null, null);
     }
 
     public BinChangedEvent(
@@ -45,6 +47,22 @@ public class BinChangedEvent {
             String photoUrl,
             String reporterName
     ) {
+        this(changeType, binId, status, fillLevel, lastChecked, reportId, notes, photoUrl, reporterName, null, null);
+    }
+
+    public BinChangedEvent(
+            String changeType,
+            Long binId,
+            String status,
+            Integer fillLevel,
+            LocalDateTime lastChecked,
+            Long reportId,
+            String notes,
+            String photoUrl,
+            String reporterName,
+            Boolean discrepancy,
+            String previousStatus
+    ) {
         this.changeType = changeType;
         this.binId = binId;
         this.status = status;
@@ -54,6 +72,8 @@ public class BinChangedEvent {
         this.notes = notes;
         this.photoUrl = photoUrl;
         this.reporterName = reporterName;
+        this.discrepancy = discrepancy;
+        this.previousStatus = previousStatus;
     }
 
     private static Long parseLong(Object id) {

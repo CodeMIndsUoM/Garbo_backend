@@ -56,4 +56,13 @@ public class CouncilBinUpdateMessage {
 
     @JsonProperty("reportedAt")
     private String reportedAt;
+
+    @JsonProperty("hasDiscrepancy")
+    private Boolean hasDiscrepancy;
+
+    @JsonProperty("discrepancy")
+    private Boolean discrepancy;
+
+    @JsonProperty("previousStatus")
+    private String previousStatus;
 }
