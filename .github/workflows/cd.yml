@@ -1,0 +1,54 @@
+name: CD
+
+# Deploy backend only (after full-stack deploy has run at least once).
+# Prefer Garbo-infra "Deploy Full Stack" workflow for coordinated deploys.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - devops/platform
+      - mergekth
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REGISTRY: 392202704441.dkr.ecr.ap-south-1.amazonaws.com
+  ECR_REPOSITORY: garbo-backend
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        run: |
+          TAG="${GITHUB_SHA}"
+          docker build --platform linux/amd64 \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$TAG" \
+            -t "$ECR_REGISTRY/$ECR_REPOSITORY:latest" .
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:$TAG"
+          docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/garbo
+            set -a && source .env.deploy && set +a
+            BACKEND_TAG=${{ github.sha }} FRONTEND_TAG=latest ./scripts/deploy.sh
