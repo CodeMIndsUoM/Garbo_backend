@@ -42,9 +42,10 @@ public class MonthlyReportController {
 
     // ── GET /api/admin/reports ────────────────────────────────────────────────
     @GetMapping
-    public ResponseEntity<?> getAllReports() {
+    public ResponseEntity<?> getAllReports(
+            @RequestParam(required = false) String councilId) {
         try {
-            List<MonthlyReportSummaryDTO> reports = reportService.getAllReports();
+            List<MonthlyReportSummaryDTO> reports = reportService.getAllReports(councilId);
             return ResponseEntity.ok(reports);
         } catch (Exception e) {
             log.error("Failed to fetch reports list", e);

@@ -25,6 +25,10 @@ public class MonthlyReport {
     @Column(nullable = false)
     private String title;
 
+    /** Council display name when report is scoped; null for legacy/global reports. */
+    @Column
+    private String council;
+
     @Column(name = "period_start", nullable = false)
     private LocalDate periodStart;
 

@@ -4,6 +4,7 @@ package com.garbo.core.repository;
 import com.garbo.core.entity.MonthlyReport;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -17,6 +18,14 @@ public interface MonthlyReportRepository extends JpaRepository<MonthlyReport, Lo
      * All reports ordered by newest first — used for the reports list page.
      */
     List<MonthlyReport> findAllByOrderByCreatedAtDesc();
+
+    @Query("""
+            SELECT r FROM MonthlyReport r
+            WHERE r.council = :council
+               OR (r.council IS NULL AND r.title LIKE CONCAT('% — ', :council, ' — %'))
+            ORDER BY r.createdAt DESC
+            """)
+    List<MonthlyReport> findScopedByCouncilOrderByCreatedAtDesc(@Param("council") String council);
 
     /**
      * Check if a report already exists for a given period_start
