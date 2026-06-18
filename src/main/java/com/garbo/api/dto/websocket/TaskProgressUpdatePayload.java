@@ -43,6 +43,9 @@ public class TaskProgressUpdatePayload {
         @JsonProperty("taskDescription")
         private String taskDescription;
 
+        @JsonProperty("availablePoints")
+        private double availablePoints;
+
         @JsonProperty("currentProgress")
         private double currentProgress;
 

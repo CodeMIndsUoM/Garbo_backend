@@ -3,6 +3,7 @@ package com.garbo.api.controller;
 import com.garbo.api.dto.staff.StaffCreateRequest;
 
 import com.garbo.api.dto.staff.StaffListDto;
+import com.garbo.api.dto.staff.StaffUpdateRequest;
 import com.garbo.core.service.AdminStaffService;
 import com.garbo.core.service.CurrentUserService;
 import org.springframework.http.ResponseEntity;
@@ -103,6 +104,39 @@ public class AdminStaffController {
         resp.put("success", true);
         resp.put("data", list);
         return ResponseEntity.ok(resp);
+    }
+
+    @PutMapping("/field-mentors/{empId}")
+    public ResponseEntity<?> updateFieldMentor(
+            @PathVariable Long empId,
+            @RequestBody StaffUpdateRequest req) {
+        return updateStaffResponse(true, empId, req);
+    }
+
+    @PutMapping("/bin-collectors/{empId}")
+    public ResponseEntity<?> updateBinCollector(
+            @PathVariable Long empId,
+            @RequestBody StaffUpdateRequest req) {
+        return updateStaffResponse(false, empId, req);
+    }
+
+    private ResponseEntity<?> updateStaffResponse(boolean mentor, Long empId, StaffUpdateRequest req) {
+        String role = CurrentUserService.getCurrentRole().orElse("");
+        if (!"admin".equals(role) && !"superadmin".equals(role)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
+        }
+        String council = resolveManageCouncil(role);
+        if ("admin".equals(role) && council == null) {
+            return ResponseEntity.status(400)
+                    .body(Map.of("success", false, "message", "Admin has no council assigned"));
+        }
+        var updatedOpt = mentor
+                ? adminStaffService.updateFieldMentor(empId, req, council)
+                : adminStaffService.updateBinCollector(empId, req, council);
+        if (updatedOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(Map.of("success", false, "message", "Staff member not found"));
+        }
+        return ResponseEntity.ok(Map.of("success", true, "data", updatedOpt.get()));
     }
 
     private String resolveCreateCouncil(String role, StaffCreateRequest req) {

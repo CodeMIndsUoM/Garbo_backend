@@ -1,7 +1,5 @@
 package com.garbo.core.service;
 
-import com.garbo.api.dto.websocket.TaskProgressUpdatePayload;
-import com.garbo.api.dto.websocket.WebSocketMessage;
 import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.BinCollector;
 import com.garbo.core.entity.User;
@@ -9,14 +7,12 @@ import com.garbo.core.entity.UserTaskProgress;
 import com.garbo.core.repository.BinCollectorRepository;
 import com.garbo.core.repository.BinRepository;
 import com.garbo.core.repository.UserRepository;
-import com.garbo.infrastructure.websocket.WebSocketSessionManager;
+import com.garbo.infrastructure.websocket.TaskProgressBroadcaster;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -39,7 +35,7 @@ public class BinCollectionRealtimeService {
     private UserTaskProgressService userTaskProgressService;
 
     @Autowired
-    private WebSocketSessionManager webSocketSessionManager;
+    private TaskProgressBroadcaster taskProgressBroadcaster;
 
     @Transactional
     public BinCollectionResult processBinCollected(
@@ -75,7 +71,12 @@ public class BinCollectionRealtimeService {
                 sessionId
         );
 
-        broadcastTaskProgressUpdate(userId, binId, collector.getCompletedCollections(), updatedTasks);
+        taskProgressBroadcaster.broadcastTaskProgressUpdate(
+                userId,
+                binId,
+                collector.getCompletedCollections(),
+                updatedTasks
+        );
 
         return new BinCollectionResult(
                 userId,
@@ -84,43 +85,6 @@ public class BinCollectionRealtimeService {
                 resolvedPriority,
                 resolvedBasePoints,
                 updatedTasks.size()
-        );
-    }
-
-    private void broadcastTaskProgressUpdate(
-            Long userId,
-            Long binId,
-            int totalBinsCollected,
-            List<UserTaskProgress> updatedTasks
-    ) {
-        List<TaskProgressUpdatePayload.TaskProgressItem> taskItems = new ArrayList<>();
-        for (UserTaskProgress progress : updatedTasks) {
-            taskItems.add(new TaskProgressUpdatePayload.TaskProgressItem(
-                    progress.getTask().getId(),
-                    progress.getTask().getCode(),
-                    progress.getTask().getTitle(),
-                    progress.getTask().getDescription(),
-                    progress.getCurrentProgress(),
-                    progress.getTargetProgress(),
-                    progress.isCompleted(),
-                    progress.getCompletedAt() != null
-                            ? progress.getCompletedAt().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-                            : null,
-                    progress.getPointsEarned()
-            ));
-        }
-
-        TaskProgressUpdatePayload payload = new TaskProgressUpdatePayload(
-                userId,
-                binId,
-                totalBinsCollected,
-                System.currentTimeMillis(),
-                taskItems
-        );
-
-        webSocketSessionManager.sendToUser(
-                userId,
-                new WebSocketMessage<>("TASK_PROGRESS_UPDATE", userId, payload)
         );
     }
 

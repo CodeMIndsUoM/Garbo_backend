@@ -2,9 +2,12 @@ package com.garbo.api.controller;
 
 import com.garbo.infrastructure.config.security.CustomUserDetailsService;
 import com.garbo.infrastructure.config.security.JwtUtil;
+import com.garbo.core.service.UserLookup;
 import com.garbo.core.service.UserService;
 import com.garbo.core.service.CitizenService;
 import com.garbo.api.dto.CitizenRegisterRequest;
+import com.garbo.api.dto.ForgotPasswordRequest;
+import com.garbo.api.dto.ResetPasswordRequest;
 import com.garbo.core.entity.AdminNew;
 import com.garbo.core.entity.BinCollector;
 import com.garbo.core.entity.Citizen;
@@ -45,6 +48,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, String> request) {
         String email = request.get("email");
+        if (email == null || email.isBlank()) {
+            email = request.get("username");
+        }
+        email = UserLookup.normalizeEmail(email);
         String password = request.get("password");
 
         System.out.println("AuthController.login called for email=" + email);
@@ -70,8 +77,17 @@ public class AuthController {
                     .findFirst()
                     .map(auth -> auth.getAuthority().replace("ROLE_", "").trim().toLowerCase())
                     .orElse("unknown");
-            // Generate JWT
-            String token = jwtUtil.generateToken(email, role);
+
+            java.util.Optional<User> userOpt = userService.getByEmail(email);
+
+            // Generate JWT (embed council for citizens so event filtering works immediately after login)
+            String councilForToken = null;
+            if (userOpt.isPresent() && userOpt.get() instanceof Citizen citizenForToken) {
+                if (citizenForToken.getCouncil() != null && !citizenForToken.getCouncil().isBlank()) {
+                    councilForToken = citizenForToken.getCouncil();
+                }
+            }
+            String token = jwtUtil.generateToken(email, role, councilForToken);
 
             // Prepare response (use Object values so booleans remain booleans)
             Map<String, Object> response = new HashMap<>();
@@ -80,7 +96,6 @@ public class AuthController {
             response.put("email", email);
 
             // Fetch user entity to include mustChangePassword flag and user info
-            java.util.Optional<User> userOpt = userService.getByEmail(email);
             boolean mustChange = false;
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
@@ -197,5 +212,39 @@ public class AuthController {
         Map<String, String> response = new HashMap<>();
         response.put("message", "Token is valid");
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        String email = request != null ? request.getEmail() : null;
+        if (email != null && !email.isBlank()) {
+            userService.requestPasswordReset(email.trim());
+        }
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "If an account exists for that email, reset instructions have been sent."));
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordRequest request) {
+        if (request == null || request.getToken() == null || request.getNewPassword() == null) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Token and new password are required"));
+        }
+        try {
+            userService.resetPasswordWithToken(request.getToken(), request.getNewPassword());
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Password reset successfully"));
+        } catch (java.util.NoSuchElementException ex) {
+            return ResponseEntity.status(404).body(Map.of(
+                    "success", false,
+                    "message", "Invalid or expired reset token"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", ex.getMessage()));
+        }
     }
 }

@@ -41,7 +41,7 @@ public class CitizenService {
             throw new IllegalArgumentException("Full name is required");
         }
 
-        String email = request.getEmail().trim();
+        String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
         if (citizenRepository.findFirstByEmailIgnoreCase(email).isPresent()) {
             throw new IllegalArgumentException("An account with this email already exists");
         }

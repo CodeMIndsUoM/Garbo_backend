@@ -56,7 +56,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     @Query(value = """
         SELECT
             COUNT(*) FILTER (WHERE status = 'PENDING')  AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'ACCEPTED') AS accepted_count
+            COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'APPROVED')) AS accepted_count
         FROM complaints
         WHERE created_at >= CURRENT_DATE
     """, nativeQuery = true)
@@ -66,7 +66,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
         SELECT
             'Today'                                         AS label,
             COUNT(*) FILTER (WHERE status = 'PENDING')     AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'ACCEPTED')    AS accepted_count
+            COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'APPROVED'))    AS accepted_count
         FROM complaints
         WHERE created_at >= CURRENT_DATE
     """, nativeQuery = true)
@@ -76,7 +76,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
         SELECT
             TO_CHAR(created_at, 'Dy')                      AS label,
             COUNT(*) FILTER (WHERE status = 'PENDING')     AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'ACCEPTED')    AS accepted_count
+            COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'APPROVED'))    AS accepted_count
         FROM complaints
         WHERE created_at >= :startDate
         GROUP BY TO_CHAR(created_at, 'Dy'), DATE_TRUNC('day', created_at)
@@ -88,7 +88,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
         SELECT
             TO_CHAR(created_at, 'Mon DD')                  AS label,
             COUNT(*) FILTER (WHERE status = 'PENDING')     AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'ACCEPTED')    AS accepted_count
+            COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'APPROVED'))    AS accepted_count
         FROM complaints
         WHERE created_at >= :startDate
         GROUP BY TO_CHAR(created_at, 'Mon DD'), DATE_TRUNC('day', created_at)
@@ -102,7 +102,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
     @Query(value = """
         SELECT
             COUNT(*) FILTER (WHERE status = 'PENDING')  AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'ACCEPTED') AS accepted_count
+            COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'APPROVED')) AS accepted_count
         FROM complaints
         WHERE created_at >= CURRENT_DATE
           AND LOWER(council) = LOWER(:council)
@@ -113,7 +113,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
         SELECT
             'Today'                                         AS label,
             COUNT(*) FILTER (WHERE status = 'PENDING')     AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'ACCEPTED')    AS accepted_count
+            COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'APPROVED'))    AS accepted_count
         FROM complaints
         WHERE created_at >= CURRENT_DATE
           AND LOWER(council) = LOWER(:council)
@@ -124,7 +124,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
         SELECT
             TO_CHAR(created_at, 'Dy')                      AS label,
             COUNT(*) FILTER (WHERE status = 'PENDING')     AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'ACCEPTED')    AS accepted_count
+            COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'APPROVED'))    AS accepted_count
         FROM complaints
         WHERE created_at >= :startDate
           AND LOWER(council) = LOWER(:council)
@@ -138,7 +138,7 @@ public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
         SELECT
             TO_CHAR(created_at, 'Mon DD')                  AS label,
             COUNT(*) FILTER (WHERE status = 'PENDING')     AS pending_count,
-            COUNT(*) FILTER (WHERE status = 'ACCEPTED')    AS accepted_count
+            COUNT(*) FILTER (WHERE status IN ('ACCEPTED', 'APPROVED'))    AS accepted_count
         FROM complaints
         WHERE created_at >= :startDate
           AND LOWER(council) = LOWER(:council)

@@ -22,4 +22,6 @@ public class BinLatestReportDTO {
     private String photoUrl;
     private String reporterName;
     private LocalDateTime reportedAt;
+    private Boolean discrepancy;
+    private String previousStatus;
 }

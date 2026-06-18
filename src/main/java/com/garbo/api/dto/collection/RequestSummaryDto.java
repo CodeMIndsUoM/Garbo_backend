@@ -7,6 +7,7 @@ import com.garbo.core.enums.WasteType;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 public record RequestSummaryDto(
         Long id,
@@ -14,6 +15,7 @@ public record RequestSummaryDto(
         String citizenName,
         String council,
         WasteType wasteType,
+        List<WasteType> wasteTypes,
         String quantityLabel,
         Double quantityKgEstimate,
         String addressLine,
@@ -37,6 +39,7 @@ public record RequestSummaryDto(
                 r.getCitizen() != null ? r.getCitizen().getEmpName() : null,
                 r.getCouncil(),
                 r.getWasteType(),
+                r.getWasteTypes() == null ? List.of() : List.copyOf(r.getWasteTypes()),
                 r.getQuantityLabel(),
                 r.getQuantityKgEstimate(),
                 r.getAddressLine(),

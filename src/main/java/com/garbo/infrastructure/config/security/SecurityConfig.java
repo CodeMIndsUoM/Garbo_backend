@@ -88,6 +88,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").permitAll()
                         // allow websocket handshake + SockJS endpoints
                         .requestMatchers("/ws/**").permitAll()
+                        // health check for containers and load balancers
+                        .requestMatchers("/actuator/health").permitAll()
                         // TEMP: allow route-session testing without JWT
                         .requestMatchers("/api/route-sessions").permitAll()
                         .requestMatchers("/api/route-sessions/**").permitAll()
@@ -115,6 +117,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/thirdparty-register/**").permitAll()
                         // public council list + citizen registration
                         .requestMatchers(HttpMethod.GET, "/api/councils").permitAll()
+                        // mobile app version check (public, no JWT)
+                        .requestMatchers(HttpMethod.GET, "/api/app/version").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                         // validate token endpoint requires authentication
                         .requestMatchers(HttpMethod.GET, "/api/auth/validate").authenticated()

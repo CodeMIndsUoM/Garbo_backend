@@ -115,6 +115,14 @@ public interface RouteBinStopRepository extends JpaRepository<RouteBinStop, Long
     """)
     List<RouteBinStop> findPendingBySessionId(@Param("sessionId") java.util.UUID sessionId);
 
+    @Query("""
+        SELECT s FROM RouteBinStop s
+        JOIN FETCH s.vehicleRoute vr
+        WHERE s.binId = :binId
+          AND s.status = 'PENDING'
+    """)
+    List<RouteBinStop> findPendingStopsByBinId(@Param("binId") Long binId);
+
     @Transactional
     @Modifying
     @Query("DELETE FROM RouteBinStop s WHERE s.vehicleRoute.id IN (SELECT vr.id FROM RouteVehicleRoute vr WHERE vr.sessionId = :sessionId)")

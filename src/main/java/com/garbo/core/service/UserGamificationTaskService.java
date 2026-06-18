@@ -45,12 +45,16 @@ public class UserGamificationTaskService {
             if (progress != null && resetDailyProgressIfNeeded(task, progress)) {
                 progress = userTaskProgressRepository.save(progress);
             }
-                double targetProgress = task.getTargetProgress() != null && task.getTargetProgress() > 0
-                    ? task.getTargetProgress()
-                    : 1.0;
+            double targetProgress = progress != null && progress.getTargetProgress() > 0
+                    ? progress.getTargetProgress()
+                    : (task.getTargetProgress() != null && task.getTargetProgress() > 0
+                            ? task.getTargetProgress()
+                            : 1.0);
             double currentProgress = progress != null ? progress.getCurrentProgress() : 0.0;
             boolean isCompleted = progress != null && progress.isCompleted();
             double pointsEarned = progress != null ? progress.getPointsEarned() : 0.0;
+            double availablePoints = task.getBasePoints();
+            boolean isNew = progress == null || (currentProgress <= 0 && !isCompleted);
             LocalDateTime completedAt = progress != null ? progress.getCompletedAt() : null;
 
             result.add(new UserGamificationTaskProgressResponse(
@@ -59,9 +63,11 @@ public class UserGamificationTaskService {
                     task.getCode(),
                     task.getTitle(),
                     task.getDescription(),
+                    availablePoints,
                     currentProgress,
                     targetProgress,
                     isCompleted,
+                    isNew,
                     completedAt != null ? completedAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME) : null,
                     pointsEarned
             ));
@@ -115,6 +121,7 @@ public class UserGamificationTaskService {
         return "ACTIVE_BIN_DAILY".equals(taskType)
                 || "DAILY_ACTIVE_BINS".equals(taskType)
                 || "ACTIVE_BINS_DAILY".equals(taskType)
+                || "DAILY_BIN_REPORT".equals(taskType)
                 || code.contains("DAILY");
     }
 }
