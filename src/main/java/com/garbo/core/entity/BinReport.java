@@ -45,6 +45,12 @@ public class BinReport {
     @Column(name = "reported_at", nullable = false, updatable = false)
     private LocalDateTime reportedAt;
 
+    @Column(nullable = false)
+    private boolean discrepancy = false;
+
+    @Column(name = "previous_status", length = 20)
+    private String previousStatus;
+
     @PrePersist
     protected void onCreate() {
         if (reportedAt == null) {

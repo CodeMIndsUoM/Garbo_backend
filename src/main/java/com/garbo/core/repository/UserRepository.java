@@ -9,9 +9,9 @@ import com.garbo.core.entity.User;
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
 
-    // Derived query (keeps existing behavior)
     Optional<User> findFirstByEmailAndPasswordOrderByEmpIdAsc(String email, String password);
 
-    // Find by email case-insensitive
     Optional<User> findFirstByEmailIgnoreCase(String email);
+
+    Optional<User> findByPasswordResetToken(String token);
 }

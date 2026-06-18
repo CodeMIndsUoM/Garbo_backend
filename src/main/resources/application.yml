@@ -15,10 +15,16 @@ spring:
   flyway:
     enabled: ${SPRING_FLYWAY_ENABLED:false}
 
+firebase:
+  enabled: ${FIREBASE_ENABLED:false}
+
 cloudinary:
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}
   api-key: ${CLOUDINARY_API_KEY:}
   api-secret: ${CLOUDINARY_API_SECRET:}
+
+jwt:
+  secret: ${JWT_SECRET:my_super_secret_key_my_super_secret_key}
 
 server:
   port: ${SERVER_PORT:8081}
@@ -26,3 +32,12 @@ server:
 logging:
   level:
     root: ${LOGGING_LEVEL_ROOT:INFO}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

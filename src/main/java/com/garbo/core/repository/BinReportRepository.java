@@ -22,6 +22,19 @@ public interface BinReportRepository extends JpaRepository<BinReport, Long> {
 
     Optional<BinReport> findFirstByBin_IdOrderByReportedAtDesc(Long binId);
 
+    /** Active discrepancies: latest report per bin is flagged, with mentor-reported status. */
+    @Query("""
+        SELECT r.bin.id, r.status, r.fillLevel, r.previousStatus, rep.empName
+        FROM BinReport r
+        LEFT JOIN r.reporter rep
+        WHERE r.bin.id IN :binIds
+          AND r.discrepancy = true
+          AND r.reportedAt = (
+              SELECT MAX(r2.reportedAt) FROM BinReport r2 WHERE r2.bin.id = r.bin.id
+          )
+        """)
+    List<Object[]> findActiveDiscrepancyDetails(@Param("binIds") List<Long> binIds);
+
     @Modifying
     @Query("DELETE FROM BinReport r WHERE r.bin.id = :binId")
     int deleteByBinId(@Param("binId") Long binId);

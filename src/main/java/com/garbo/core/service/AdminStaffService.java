@@ -1,6 +1,7 @@
 package com.garbo.core.service;
 
 import com.garbo.api.dto.staff.StaffCreateRequest;
+import com.garbo.api.dto.staff.StaffUpdateRequest;
 import com.garbo.api.dto.staff.UserSummaryDto;
 import com.garbo.api.dto.staff.StaffListDto;
 import com.garbo.core.entity.BinCollector;
@@ -142,6 +143,47 @@ public class AdminStaffService {
         }
 
         return out;
+    }
+
+    public Optional<UserSummaryDto> updateFieldMentor(Long empId, StaffUpdateRequest req, String adminCouncil) {
+        return fieldMentorRepository.findById(empId)
+                .flatMap(mentor -> applyStaffUpdate(mentor, req, adminCouncil));
+    }
+
+    public Optional<UserSummaryDto> updateBinCollector(Long empId, StaffUpdateRequest req, String adminCouncil) {
+        return binCollectorRepository.findById(empId)
+                .flatMap(collector -> applyStaffUpdate(collector, req, adminCouncil));
+    }
+
+    private Optional<UserSummaryDto> applyStaffUpdate(User user, StaffUpdateRequest req, String adminCouncil) {
+        if (req == null || !canManageInternalUser(user, adminCouncil)) {
+            return Optional.empty();
+        }
+        if (req.getFullName() != null && !req.getFullName().isBlank()) {
+            user.setEmpName(req.getFullName().trim());
+        }
+        if (req.getContactNumber() != null) {
+            user.setPhone(req.getContactNumber().trim());
+        }
+        if (adminCouncil == null && req.getCouncil() != null && !req.getCouncil().isBlank()) {
+            if (user instanceof FieldMentor mentor) {
+                mentor.setAssignedCouncil(req.getCouncil().trim());
+            } else if (user instanceof BinCollector collector) {
+                collector.setAssignedCouncil(req.getCouncil().trim());
+            }
+        }
+        if (Boolean.TRUE.equals(req.getResetPassword())) {
+            String temp = generateTemporaryPassword(12);
+            user.setPassword(passwordEncoder.encode(temp));
+            user.setMustChangePassword(true);
+            try {
+                emailService.sendAdminCredentials(user.getEmail(), temp);
+            } catch (Exception ex) {
+                log.error("Failed to email reset password to {}", user.getEmail(), ex);
+            }
+        }
+        User saved = userRepository.save(user);
+        return Optional.of(mapToDto(saved));
     }
 
     private StaffListDto mapToListDto(User u) {

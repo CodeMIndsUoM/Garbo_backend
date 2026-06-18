@@ -2,6 +2,8 @@
 
 Spring Boot backend for the Garbo Smart Waste Management System.
 
+> CD: push to `devops/platform` deploys to AWS EC2 via GitHub Actions.
+
 ## Overview
 
 This service provides:

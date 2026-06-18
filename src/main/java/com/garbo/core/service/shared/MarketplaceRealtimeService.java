@@ -6,6 +6,7 @@ import com.garbo.core.entity.CollectionRequest;
 import com.garbo.core.entity.ThirdPartyCollector;
 import com.garbo.core.enums.RegistrationStatus;
 import com.garbo.core.repository.ThirdPartyCollectorRepository;
+import com.garbo.core.service.notification.NotificationPublisher;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -21,12 +22,15 @@ public class MarketplaceRealtimeService {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final ThirdPartyCollectorRepository collectorRepository;
+    private final NotificationPublisher notificationPublisher;
 
     public MarketplaceRealtimeService(
             SimpMessagingTemplate messagingTemplate,
-            ThirdPartyCollectorRepository collectorRepository) {
+            ThirdPartyCollectorRepository collectorRepository,
+            NotificationPublisher notificationPublisher) {
         this.messagingTemplate = messagingTemplate;
         this.collectorRepository = collectorRepository;
+        this.notificationPublisher = notificationPublisher;
     }
 
     public void publishRequestCreated(CollectionRequest request) {
@@ -36,6 +40,8 @@ public class MarketplaceRealtimeService {
         Long citizenId = request.getCitizen() != null ? request.getCitizen().getEmpId() : null;
         if (citizenId != null) {
             publishToUser(citizenId, "REQUEST_UPDATED", request.getId(), null, request.getStatus().name());
+            notificationPublisher.marketplaceRequestUpdated(
+                    citizenId, request.getId(), request.getStatus().name());
         }
         notifyCollectorsInCouncil(request.getCouncil(), request.getId(), null, request.getStatus().name());
     }
@@ -47,6 +53,8 @@ public class MarketplaceRealtimeService {
         Long citizenId = request.getCitizen() != null ? request.getCitizen().getEmpId() : null;
         if (citizenId != null) {
             publishToUser(citizenId, "REQUEST_UPDATED", request.getId(), null, request.getStatus().name());
+            notificationPublisher.marketplaceRequestUpdated(
+                    citizenId, request.getId(), request.getStatus().name());
         }
     }
 
@@ -63,11 +71,15 @@ public class MarketplaceRealtimeService {
         if (citizenId != null) {
             publishToUser(citizenId, "OFFER_UPDATED", requestId, offerId, status);
             publishToUser(citizenId, "REQUEST_UPDATED", requestId, offerId, request.getStatus().name());
+            notificationPublisher.marketplaceOfferUpdated(citizenId, requestId, offerId, status);
+            notificationPublisher.marketplaceRequestUpdated(
+                    citizenId, requestId, request.getStatus().name());
         }
 
         Long collectorId = offer.getCollector() != null ? offer.getCollector().getEmpId() : null;
         if (collectorId != null) {
             publishToUser(collectorId, "OFFER_UPDATED", requestId, offerId, status);
+            notificationPublisher.marketplaceOfferUpdated(collectorId, requestId, offerId, status);
         }
     }
 
@@ -84,6 +96,7 @@ public class MarketplaceRealtimeService {
                 continue;
             }
             publishToUser(collector.getEmpId(), "REQUEST_UPDATED", requestId, offerId, status);
+            notificationPublisher.marketplaceRequestUpdated(collector.getEmpId(), requestId, status);
         }
     }
 

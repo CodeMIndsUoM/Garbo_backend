@@ -1,5 +1,7 @@
 package com.garbo.infrastructure.config.security;
 
+import java.util.Locale;
+
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -22,7 +24,7 @@ public class CustomUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
 
-        User user = userRepository.findFirstByEmailIgnoreCase(email)
+        User user = userRepository.findFirstByEmailIgnoreCase(email.trim().toLowerCase(Locale.ROOT))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
         // Block third-party collectors whose registration is not yet approved

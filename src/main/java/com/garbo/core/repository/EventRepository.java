@@ -17,4 +17,6 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     List<Event> findByOrganizerCitizenOrderByCreatedAtDesc(User organizerCitizen);
 
     List<Event> findByCouncilIgnoreCaseAndStatusOrderByCreatedAtDesc(String council, String status);
+
+    List<Event> findByCouncilIgnoreCaseOrderByEventDateAsc(String council);
 }
