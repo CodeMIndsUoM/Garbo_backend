@@ -104,6 +104,7 @@ public class MonthlyReportGeneratorService {
         // ── 6. Persist ────────────────────────────────────────────────────────
         MonthlyReport entity = MonthlyReport.builder()
                 .title(title)
+                .council(filtered ? councilId : null)
                 .periodStart(periodStart)
                 .periodEnd(today)
                 .status("COMPLETED")
@@ -120,9 +121,12 @@ public class MonthlyReportGeneratorService {
     // ── LIST ──────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
-    public List<MonthlyReportSummaryDTO> getAllReports() {
-        return reportRepository.findAllByOrderByCreatedAtDesc()
-                .stream()
+    public List<MonthlyReportSummaryDTO> getAllReports(String councilId) {
+        boolean filtered = councilId != null && !councilId.isBlank();
+        List<MonthlyReport> rows = filtered
+                ? reportRepository.findScopedByCouncilOrderByCreatedAtDesc(councilId)
+                : reportRepository.findAllByOrderByCreatedAtDesc();
+        return rows.stream()
                 .map(this::toSummary)
                 .collect(Collectors.toList());
     }
@@ -191,6 +195,7 @@ public class MonthlyReportGeneratorService {
         return MonthlyReportSummaryDTO.builder()
                 .id(e.getId())
                 .title(e.getTitle())
+                .council(e.getCouncil())
                 .periodStart(e.getPeriodStart())
                 .periodEnd(e.getPeriodEnd())
                 .status(e.getStatus())

@@ -9,9 +9,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class Main {
     public static void main(String[] args) {
-        // Must load before Spring starts — native libs fail on Docker until explicitly loaded.
+        SpringApplication.run(Main.class);
         Loader.loadNativeLibraries();
-        SpringApplication.run(Main.class, args);
+
     }
 }
 
