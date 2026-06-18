@@ -20,6 +20,7 @@ public class MonthlyReportSummaryDTO {
 
     private Long id;
     private String title;
+    private String council;
     private LocalDate periodStart;
     private LocalDate periodEnd;
     private String status;           // "COMPLETED" | "PROCESSING" | "FAILED"
