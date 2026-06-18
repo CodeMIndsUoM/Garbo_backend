@@ -15,12 +15,15 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Dev origins (adjust for production)
+        // Dev + production origins (browser sends Origin on HTTPS dashboard requests)
         config.setAllowedOriginPatterns(List.of(
                 "http://localhost:3000",
                 "http://localhost:3001",
                 "http://127.0.0.1:3000",
-                "http://127.0.0.1:3001"
+                "http://127.0.0.1:3001",
+                "https://garboadmin.duckdns.org",
+                "http://garboadmin.duckdns.org",
+                "http://13.233.77.40"
         ));
 
         config.addAllowedHeader("*");
