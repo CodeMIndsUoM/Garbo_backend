@@ -219,6 +219,17 @@ Request body:
 { "email": "user@example.com", "oldPassword": "old", "newPassword": "new" }
 ```
 
+## Monitoring & Exception Tracking (Sentry & Prometheus)
+
+### 1. Prometheus Metrics Scraping
+* The backend exposes system, JVM, and application-level metrics at `/actuator/prometheus` via Micrometer.
+* **Security Configuration**: Access to `/actuator/prometheus` is configured to `permitAll()` in the Spring Security filter chain to allow the Prometheus scraper to pull metrics without requiring authentication.
+
+### 2. Sentry Integration
+* **Sentry SDK**: Uses `sentry-spring-boot-starter-jakarta` for Jakarta/Spring Boot 3.x error logging.
+* **Configuration**: DSN details are loaded dynamically from `/garbo/prod/sentry-dsn` in the AWS Systems Manager (SSM) Parameter Store.
+* **Manual Verification**: A GET endpoint is exposed at `/api/app/test-sentry` to manually trigger an arithmetic exception and verify that errors are logged correctly in Sentry.
+
 ## Common troubleshooting
 
 ### Port already in use
