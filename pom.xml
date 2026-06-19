@@ -150,6 +150,18 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <requiresUnpack>
+                        <dependency>
+                            <groupId>com.google.ortools</groupId>
+                            <artifactId>ortools-java</artifactId>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.google.ortools</groupId>
+                            <artifactId>ortools-linux-x86-64</artifactId>
+                        </dependency>
+                    </requiresUnpack>
+                </configuration>
             </plugin>
         </plugins>
     </build>
