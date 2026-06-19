@@ -5,7 +5,6 @@ import com.garbo.core.entity.Bin;
 import com.garbo.core.entity.BinSuggestion;
 import com.garbo.core.entity.FieldMentor;
 import com.garbo.core.repository.BinSuggestionRepository;
-import com.garbo.core.repository.FieldMentorRepository;
 import com.garbo.core.repository.UserRepository;
 import com.garbo.core.service.field_staff.BinService;
 import com.garbo.core.service.notification.NotificationPublisher;
@@ -25,7 +24,6 @@ public class BinSuggestionService {
     private static final Set<String> ALLOWED_STATUSES = Set.of("PENDING", "APPROVED", "REJECTED");
 
     private final BinSuggestionRepository binSuggestionRepository;
-    private final FieldMentorRepository fieldMentorRepository;
     private final UserRepository userRepository;
     private final CouncilAccessService councilAccessService;
     private final BinService binService;
@@ -34,14 +32,12 @@ public class BinSuggestionService {
 
     public BinSuggestionService(
             BinSuggestionRepository binSuggestionRepository,
-            FieldMentorRepository fieldMentorRepository,
             UserRepository userRepository,
             CouncilAccessService councilAccessService,
             BinService binService,
             TaskAlertBroadcaster taskAlertBroadcaster,
             NotificationPublisher notificationPublisher) {
         this.binSuggestionRepository = binSuggestionRepository;
-        this.fieldMentorRepository = fieldMentorRepository;
         this.userRepository = userRepository;
         this.councilAccessService = councilAccessService;
         this.binService = binService;
