@@ -14,7 +14,7 @@ WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-       curl libstdc++6 \
+       curl libstdc++6 libgomp1 \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -r -u 1001 appuser
 
