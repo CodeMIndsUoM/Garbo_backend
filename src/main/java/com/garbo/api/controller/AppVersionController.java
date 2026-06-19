@@ -26,4 +26,9 @@ public class AppVersionController {
             @RequestParam(defaultValue = "android") String platform) {
         return ResponseEntity.ok(ApiResponse.success(appVersionService.getVersion(platform)));
     }
+
+    @GetMapping("/test-sentry")
+    public ResponseEntity<Void> testSentry() {
+        throw new RuntimeException("Sentry Backend Test Exception from Garbo System");
+    }
 }
