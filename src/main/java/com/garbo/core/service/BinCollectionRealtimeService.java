@@ -29,9 +29,6 @@ public class BinCollectionRealtimeService {
         private UserRepository userRepository;
 
     @Autowired
-    private LeaderboardService leaderboardService;
-
-    @Autowired
     private UserTaskProgressService userTaskProgressService;
 
     @Autowired

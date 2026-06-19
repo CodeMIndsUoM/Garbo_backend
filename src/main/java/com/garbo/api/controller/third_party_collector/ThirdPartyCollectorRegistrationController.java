@@ -4,7 +4,7 @@ import com.garbo.api.dto.thirdparty.ThirdPartyRegistrationRequest;
 import com.garbo.api.dto.thirdparty.ThirdPartySetPasswordRequest;
 import com.garbo.api.dto.common.ApiResponse;
 import com.garbo.core.entity.ThirdPartyCollector;
-import com.garbo.core.enums.RegistrationStatus;
+
 import com.garbo.core.service.third_party_collector.ThirdPartyCollectorRegistrationService;
 import com.garbo.infrastructure.storage.CloudinaryUploadService;
 import org.springframework.http.ResponseEntity;
