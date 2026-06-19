@@ -44,15 +44,15 @@ public class UserController {
     private CollectorPerformanceService collectorPerformanceService;
 
     private final UserService userService;
-    private final com.garbo.core.service.CurrentUserService currentUserService;
 
     private static final ObjectMapper MAPPER = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
-    public UserController(UserService userService, com.garbo.core.service.CurrentUserService currentUserService) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.currentUserService = currentUserService;
     }
+
+
 
     @PostMapping
     public ResponseEntity<?> createUser(@RequestBody Map<String, Object> payload) {
