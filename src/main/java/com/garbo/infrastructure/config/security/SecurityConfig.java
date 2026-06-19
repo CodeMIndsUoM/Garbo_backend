@@ -119,6 +119,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/councils").permitAll()
                         // mobile app version check (public, no JWT)
                         .requestMatchers(HttpMethod.GET, "/api/app/version").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/app/test-sentry").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                         // validate token endpoint requires authentication
                         .requestMatchers(HttpMethod.GET, "/api/auth/validate").authenticated()
