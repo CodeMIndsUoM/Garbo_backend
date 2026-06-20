@@ -20,7 +20,8 @@ spring:
         dialect: ${SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT:org.hibernate.dialect.PostgreSQLDialect}
 
   flyway:
-    enabled: ${SPRING_FLYWAY_ENABLED:false} # Disabled locally because you mentioned team members change DB manually and don't use flyway
+    enabled: ${SPRING_FLYWAY_ENABLED:true}
+    validate-on-migrate: false
 
 logging:
   level:
