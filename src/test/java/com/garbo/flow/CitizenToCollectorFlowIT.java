@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -159,6 +160,112 @@ class CitizenToCollectorFlowIT extends FlowTestBase {
         String offerStatus = objectMapper.readTree(withdrawResult.getResponse().getContentAsString())
                 .path("data").path("status").asText();
         assertThat(offerStatus).isEqualTo("WITHDRAWN");
+    }
+
+    // Flow: full offer lifecycle PENDING → ACCEPTED → IN_PROGRESS → COMPLETED → CONFIRMED.
+    @Test
+    void fullLifecycle_pendingToConfirmed() throws Exception {
+        var citizen = createCitizen(citizenRepository, passwordEncoder, "citizen5@garbo.test", "Colombo");
+        var collector = createCollector(collectorRepository, passwordEncoder, "collector5@garbo.test", "colombo");
+
+        String citizenToken = tokenFor(jwtUtil, citizen.getEmail(), citizen.getRole());
+        String collectorToken = tokenFor(jwtUtil, collector.getEmail(), collector.getRole());
+
+        // Step 1: Citizen creates request (status → OPEN)
+        Long requestId = createRequest(citizenToken, citizen.getEmpId());
+        assertThat(requestRepository.findById(requestId).orElseThrow().getStatus())
+                .isEqualTo(RequestStatus.OPEN);
+
+        // Step 2: Collector sends offer (offer status → PENDING)
+        Long offerId = createOffer(collectorToken, requestId);
+        String offerStatus = getOfferStatus(offerId);
+        assertThat(offerStatus).isEqualTo("PENDING");
+
+        // Step 3: Citizen accepts offer (offer → ACCEPTED, request → ASSIGNED)
+        MvcResult acceptResult = mockMvc.perform(post("/api/offers/{id}/accept", offerId)
+                .header("Authorization", citizenToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(extractStatus(acceptResult)).isEqualTo("ACCEPTED");
+        assertThat(requestRepository.findById(requestId).orElseThrow().getStatus())
+                .isEqualTo(RequestStatus.ASSIGNED);
+
+        // Step 4: Collector starts work (offer → IN_PROGRESS, request → IN_PROGRESS)
+        MvcResult startResult = mockMvc.perform(post("/api/offers/{id}/start", offerId)
+                .header("Authorization", collectorToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(extractStatus(startResult)).isEqualTo("IN_PROGRESS");
+        assertThat(requestRepository.findById(requestId).orElseThrow().getStatus())
+                .isEqualTo(RequestStatus.IN_PROGRESS);
+
+        // Step 5: Collector completes work with location proof (offer → COMPLETED, request → COMPLETED)
+        // PLASTIC waste type does not require weightKg, so we omit it.
+        MvcResult completeResult = mockMvc.perform(multipart("/api/offers/{id}/complete", offerId)
+                .param("latitude", "6.9271")
+                .param("longitude", "79.8612")
+                .param("notes", "All bags collected")
+                .header("Authorization", collectorToken))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(extractStatus(completeResult)).isEqualTo("COMPLETED");
+        assertThat(requestRepository.findById(requestId).orElseThrow().getStatus())
+                .isEqualTo(RequestStatus.COMPLETED);
+
+        // Step 6: Citizen confirms completion and submits rating (request → CONFIRMED)
+        Map<String, Object> confirmPayload = new HashMap<>();
+        confirmPayload.put("rating", 5);
+        confirmPayload.put("feedback", "Excellent service!");
+
+        MvcResult confirmResult = mockMvc.perform(post("/api/offers/{id}/confirm", offerId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", citizenToken)
+                .content(objectMapper.writeValueAsString(confirmPayload)))
+                .andExpect(status().isOk())
+                .andReturn();
+        assertThat(extractStatus(confirmResult)).isEqualTo("COMPLETED");
+        assertThat(requestRepository.findById(requestId).orElseThrow().getStatus())
+                .isEqualTo(RequestStatus.CONFIRMED);
+    }
+
+    // Flow: accepting one offer auto-rejects all other pending offers on the same request.
+    @Test
+    void acceptOffer_autoRejectsOtherPendingOffers() throws Exception {
+        var citizen = createCitizen(citizenRepository, passwordEncoder, "citizen6@garbo.test", "Colombo");
+        var collector1 = createCollector(collectorRepository, passwordEncoder, "collector6a@garbo.test", "colombo");
+        var collector2 = createCollector(collectorRepository, passwordEncoder, "collector6b@garbo.test", "colombo");
+
+        String citizenToken = tokenFor(jwtUtil, citizen.getEmail(), citizen.getRole());
+        String collector1Token = tokenFor(jwtUtil, collector1.getEmail(), collector1.getRole());
+        String collector2Token = tokenFor(jwtUtil, collector2.getEmail(), collector2.getRole());
+
+        Long requestId = createRequest(citizenToken, citizen.getEmpId());
+
+        // Two collectors send offers for the same request
+        Long offerId1 = createOffer(collector1Token, requestId);
+        Long offerId2 = createOffer(collector2Token, requestId);
+
+        // Citizen accepts offer 1
+        mockMvc.perform(post("/api/offers/{id}/accept", offerId1)
+                .header("Authorization", citizenToken))
+                .andExpect(status().isOk());
+
+        // Offer 1 should be ACCEPTED, offer 2 should be auto-REJECTED
+        assertThat(offerRepository.findById(offerId1).orElseThrow().getStatus().name())
+                .isEqualTo("ACCEPTED");
+        assertThat(offerRepository.findById(offerId2).orElseThrow().getStatus().name())
+                .isEqualTo("REJECTED");
+        assertThat(requestRepository.findById(requestId).orElseThrow().getStatus())
+                .isEqualTo(RequestStatus.ASSIGNED);
+    }
+
+    private String extractStatus(MvcResult result) throws Exception {
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("data").path("status").asText();
+    }
+
+    private String getOfferStatus(Long offerId) {
+        return offerRepository.findById(offerId).orElseThrow().getStatus().name();
     }
 
     private Long createRequest(String citizenToken, Long citizenId) throws Exception {
