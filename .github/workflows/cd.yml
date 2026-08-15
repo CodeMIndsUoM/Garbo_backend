@@ -16,7 +16,27 @@ env:
   EC2_INSTANCE_ID: i-0cc6c206c6c34456c
 
 jobs:
+  test:
+    name: Run Automated Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: maven
+
+      - name: Execute Maven Tests
+        run: mvn -B test
+
   build-and-deploy:
+    name: Build and Deploy to EC2
+    needs: test
     runs-on: ubuntu-latest
 
     steps:
@@ -82,3 +102,4 @@ jobs:
           done
           echo "Deploy timed out waiting for SSM command"
           exit 1
+
