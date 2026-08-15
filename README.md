@@ -219,6 +219,28 @@ Request body:
 { "email": "user@example.com", "oldPassword": "old", "newPassword": "new" }
 ```
 
+## Backend file-change audit logging
+
+For security and governance, backend file modification attempts are now audited.
+
+- Audit log file (default): `logs/backend_file_audit.log`
+- Event scope: sensitive local backend file write paths (upload and local fallback storage)
+- Captured context: timestamp, actor, IP address, request path, target file path, outcome, detail
+
+Override log destination if needed:
+
+```env
+AUDIT_FILE_CHANGE_LOG_PATH=logs/backend_file_audit.log
+```
+
+Or via application property:
+
+```yaml
+audit:
+	file-change:
+		log-path: logs/backend_file_audit.log
+```
+
 ## Monitoring & Exception Tracking (Sentry & Prometheus)
 
 ### 1. Prometheus Metrics Scraping

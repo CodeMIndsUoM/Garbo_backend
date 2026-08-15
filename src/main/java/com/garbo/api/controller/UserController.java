@@ -150,6 +150,9 @@ public class UserController {
     public ResponseEntity<?> uploadAvatar(
             @PathVariable Long userId,
             @RequestParam("photo") MultipartFile photo) {
+        if (!com.garbo.core.service.CurrentUserService.isCurrentUserOrAdmin(userId)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Access denied: unauthorized user"));
+        }
         try {
             Optional<User> updated = userService.uploadAvatar(userId, photo);
             if (updated.isEmpty()) {
@@ -166,6 +169,9 @@ public class UserController {
 
     @DeleteMapping("/{userId}/avatar")
     public ResponseEntity<?> removeAvatar(@PathVariable Long userId) {
+        if (!com.garbo.core.service.CurrentUserService.isCurrentUserOrAdmin(userId)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Access denied: unauthorized user"));
+        }
         try {
             Optional<User> updated = userService.removeAvatar(userId);
             if (updated.isEmpty()) {
@@ -180,6 +186,9 @@ public class UserController {
 
     @PutMapping("/{userId}")
     public ResponseEntity<?> updateUser(@PathVariable Long userId, @RequestBody User user) {
+        if (!com.garbo.core.service.CurrentUserService.isCurrentUserOrAdmin(userId)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Access denied: unauthorized user"));
+        }
         try {
             Optional<User> updated = userService.updateUser(userId, user);
             if (updated.isEmpty()) {
@@ -194,6 +203,9 @@ public class UserController {
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        if (!com.garbo.core.service.CurrentUserService.isCurrentUserOrAdmin(userId)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Access denied: unauthorized user"));
+        }
         try {
             boolean deleted = userService.deleteUser(userId);
             if (!deleted) {
@@ -208,6 +220,9 @@ public class UserController {
 
     @GetMapping("/{userId}/gamification-tasks")
     public ResponseEntity<?> getUserGamificationTasks(@PathVariable Long userId) {
+        if (!com.garbo.core.service.CurrentUserService.isCurrentUserOrAdmin(userId)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Access denied: unauthorized user"));
+        }
         try {
             Optional<User> userOpt = userService.getById(userId);
             if (userOpt.isEmpty()) {
@@ -229,6 +244,9 @@ public class UserController {
 
     @GetMapping("/{userId}/performance-stats")
     public ResponseEntity<?> getCollectorPerformanceStats(@PathVariable Long userId) {
+        if (!com.garbo.core.service.CurrentUserService.isCurrentUserOrAdmin(userId)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Access denied: unauthorized user"));
+        }
         try {
             return ResponseEntity.ok().body(Map.of(
                     "success", true,
