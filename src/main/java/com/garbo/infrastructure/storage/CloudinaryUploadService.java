@@ -4,6 +4,7 @@ package com.garbo.infrastructure.storage;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.garbo.api.exception.CollectionException;
+import com.garbo.common.logging.BackendFileAuditLogger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,14 +25,17 @@ public class CloudinaryUploadService {
     private final String cloudName;
     private final String apiKey;
     private final String apiSecret;
+    private final BackendFileAuditLogger backendFileAuditLogger;
 
     public CloudinaryUploadService(
             @Value("${cloudinary.cloud-name:}") String cloudName,
             @Value("${cloudinary.api-key:}") String apiKey,
-            @Value("${cloudinary.api-secret:}") String apiSecret) {
+            @Value("${cloudinary.api-secret:}") String apiSecret,
+            BackendFileAuditLogger backendFileAuditLogger) {
         this.cloudName = cloudName;
         this.apiKey = apiKey;
         this.apiSecret = apiSecret;
+        this.backendFileAuditLogger = backendFileAuditLogger;
     }
 
     public String uploadCompletionPhoto(MultipartFile file, Long offerId) {
@@ -189,16 +193,32 @@ public class CloudinaryUploadService {
     }
 
     private String saveLocally(MultipartFile file, String folder, String publicIdPrefix) {
+        Path target = null;
         try {
             String subFolder = folder.startsWith("garbo/") ? folder.substring("garbo/".length()) : folder;
             Path uploadDir = Path.of("uploads", subFolder);
             Files.createDirectories(uploadDir);
             String extension = extensionFromFilename(file.getOriginalFilename());
             String fileName = publicIdPrefix + UUID.randomUUID() + extension;
-            Path target = uploadDir.resolve(fileName);
+            target = uploadDir.resolve(fileName);
+            backendFileAuditLogger.logFileModificationAttempt(
+                "BACKEND_FILE_CHANGE_ATTEMPT",
+                target.toString(),
+                "ATTEMPT",
+                "Attempting local fallback image write");
             Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            backendFileAuditLogger.logFileModificationAttempt(
+                "BACKEND_FILE_CHANGE_ATTEMPT",
+                target.toString(),
+                "SUCCESS",
+                "Local fallback image write completed");
             return "uploads/" + subFolder + "/" + fileName;
         } catch (IOException ex) {
+            backendFileAuditLogger.logFileModificationAttempt(
+                "BACKEND_FILE_CHANGE_ATTEMPT",
+                target == null ? "uploads" : target.toString(),
+                "FAILED",
+                "Local fallback image write failed: " + ex.getClass().getSimpleName());
             throw new CollectionException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "Local image upload failed",
@@ -211,16 +231,32 @@ public class CloudinaryUploadService {
             String originalFilename,
             String folder,
             String publicIdPrefix) {
+        Path target = null;
         try {
             String subFolder = folder.startsWith("garbo/") ? folder.substring("garbo/".length()) : folder;
             Path uploadDir = Path.of("uploads", subFolder);
             Files.createDirectories(uploadDir);
             String extension = extensionFromFilename(originalFilename);
             String fileName = publicIdPrefix + UUID.randomUUID() + extension;
-            Path target = uploadDir.resolve(fileName);
+            target = uploadDir.resolve(fileName);
+            backendFileAuditLogger.logFileModificationAttempt(
+                "BACKEND_FILE_CHANGE_ATTEMPT",
+                target.toString(),
+                "ATTEMPT",
+                "Attempting local fallback byte write");
             Files.write(target, fileBytes);
+            backendFileAuditLogger.logFileModificationAttempt(
+                "BACKEND_FILE_CHANGE_ATTEMPT",
+                target.toString(),
+                "SUCCESS",
+                "Local fallback byte write completed");
             return "uploads/" + subFolder + "/" + fileName;
         } catch (IOException ex) {
+            backendFileAuditLogger.logFileModificationAttempt(
+                "BACKEND_FILE_CHANGE_ATTEMPT",
+                target == null ? "uploads" : target.toString(),
+                "FAILED",
+                "Local fallback byte write failed: " + ex.getClass().getSimpleName());
             throw new CollectionException(
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "Local image upload failed",
