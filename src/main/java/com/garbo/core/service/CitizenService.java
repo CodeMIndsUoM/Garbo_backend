@@ -5,6 +5,7 @@ import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.Council;
 import com.garbo.core.repository.CitizenRepository;
 import com.garbo.core.repository.CouncilRepository;
+import com.garbo.core.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -16,14 +17,17 @@ public class CitizenService {
 
     private final CitizenRepository citizenRepository;
     private final CouncilRepository councilRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     public CitizenService(
             CitizenRepository citizenRepository,
             CouncilRepository councilRepository,
+            UserRepository userRepository,
             PasswordEncoder passwordEncoder) {
         this.citizenRepository = citizenRepository;
         this.councilRepository = councilRepository;
+        this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -42,7 +46,7 @@ public class CitizenService {
         }
 
         String email = request.getEmail().trim().toLowerCase(java.util.Locale.ROOT);
-        if (citizenRepository.findFirstByEmailIgnoreCase(email).isPresent()) {
+        if (userRepository.findFirstByEmailIgnoreCase(email).isPresent()) {
             throw new IllegalArgumentException("An account with this email already exists");
         }
 

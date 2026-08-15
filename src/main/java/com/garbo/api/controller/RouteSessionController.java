@@ -5,7 +5,7 @@ import com.garbo.api.dto.AutoRoutePreviewResponseDTO;
 import com.garbo.api.dto.RouteAssignmentRequestDTO;
 import com.garbo.api.dto.RouteSessionSnapshotDTO;
 import com.garbo.core.service.route.AutoRouteService;
-import com.garbo.core.repository.RouteBinStopRepository;
+
 import com.garbo.core.entity.RouteVehicleRoute;
 import com.garbo.core.entity.RouteAssignment;
 import com.garbo.core.repository.RouteAssignmentRepository;
@@ -13,7 +13,7 @@ import com.garbo.core.repository.RouteVehicleRouteRepository;
 import com.garbo.core.repository.UserRepository;
 import com.garbo.core.entity.User;
 import com.garbo.core.entity.AdminNew;
-import com.garbo.core.entity.BinCollector;
+
 import com.garbo.core.service.route.RouteAssignmentService;
 import com.garbo.core.service.route.RouteSessionService;
 import com.garbo.core.service.CurrentUserService;

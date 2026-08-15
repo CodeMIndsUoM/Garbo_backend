@@ -2,7 +2,7 @@ package com.garbo.api.controller;
 
 import com.garbo.api.dto.common.ApiResponse;
 import com.garbo.core.entity.ThirdPartyCollector;
-import com.garbo.core.enums.RegistrationStatus;
+
 import com.garbo.core.service.CouncilAccessService;
 import com.garbo.core.service.CurrentUserService;
 import com.garbo.core.service.third_party_collector.ThirdPartyCollectorRegistrationService;

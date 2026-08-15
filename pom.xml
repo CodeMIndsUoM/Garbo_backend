@@ -27,6 +27,15 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.sentry</groupId>
+            <artifactId>sentry-spring-boot-starter-jakarta</artifactId>
+            <version>8.0.0</version>
+        </dependency>
+        <dependency>
             <groupId>com.google.ortools</groupId>
             <artifactId>ortools-java</artifactId>
             <version>9.12.4544</version>
@@ -150,6 +159,18 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <requiresUnpack>
+                        <dependency>
+                            <groupId>com.google.ortools</groupId>
+                            <artifactId>ortools-java</artifactId>
+                        </dependency>
+                        <dependency>
+                            <groupId>com.google.ortools</groupId>
+                            <artifactId>ortools-linux-x86-64</artifactId>
+                        </dependency>
+                    </requiresUnpack>
+                </configuration>
             </plugin>
         </plugins>
     </build>
