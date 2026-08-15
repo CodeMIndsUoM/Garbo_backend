@@ -281,6 +281,117 @@ If you see “No `Access-Control-Allow-Origin` header”, make sure:
 The Maven compiler plugin is configured with Lombok annotation processing in `pom.xml`.
 If your IDE still shows errors, enable annotation processing in the IDE settings.
 
+## Testing
+
+The backend has a layered test suite covering unit tests, controller slice tests, and end-to-end integration tests.
+
+### Test stack
+
+| Library | Purpose |
+|---------|---------|
+| **JUnit 5 (Jupiter)** | Test runner and assertions |
+| **Mockito** | Mocking dependencies in unit tests |
+| **Spring Boot Test** | `@SpringBootTest`, `@WebMvcTest`, `MockMvc` |
+| **Spring Security Test** | `@WithMockUser`, CSRF helpers |
+| **H2 Database** | In-memory PostgreSQL-compatible DB for integration tests |
+| **Testcontainers** | Real PostgreSQL container for repository tests (requires Docker) |
+
+### Test configuration
+
+Tests use the `test` profile which loads `src/test/resources/application-test.yml`:
+
+- **Database**: H2 in-memory with `MODE=PostgreSQL` (no external DB needed)
+- **Flyway**: Disabled (schema created by Hibernate `create-drop`)
+- **Logging**: `WARN` level only
+
+### Test categories
+
+#### 1. Unit tests (service layer)
+
+Located in `src/test/java/com/garbo/core/service/`.
+
+These test business logic in **isolation** without starting Spring. All dependencies are mocked with `@Mock` and the service under test is manually instantiated.
+
+| Test class | What it covers |
+|------------|---------------|
+| `RouteAssignmentServiceUnitTest` | Bin collection idempotency, route persistence, skip/pending status |
+| `RouteSessionServiceTest` | Route session optimization logic |
+| `NotificationServiceTest` | Notification dispatch logic |
+
+#### 2. Controller slice tests (API layer)
+
+Located in `src/test/java/com/garbo/api/controller/`.
+
+These use `@WebMvcTest` to test HTTP endpoints, request mapping, JSON serialization, and security authorization **without** starting the full application.
+
+| Test class | What it covers |
+|------------|---------------|
+| `RouteControllerTest` | Route optimization endpoint success/error responses |
+| `RouteSessionControllerTest` | Route session CRUD endpoints |
+
+#### 3. Flow integration tests (end-to-end)
+
+Located in `src/test/java/com/garbo/flow/`.
+
+These use `@SpringBootTest` with `MockMvc` to test **complete multi-step workflows** against a real Spring context and H2 database. Entities are created, API calls are chained, and state transitions are verified at each step.
+
+| Test class | What it covers |
+|------------|---------------|
+| `CitizenToCollectorFlowIT` | Full citizen ↔ collector request-offer workflow |
+
+**`CitizenToCollectorFlowIT` test cases:**
+
+| Test | Flow covered |
+|------|-------------|
+| `citizenCreatesRequest_collectorOffers_citizenAccepts` | Request → Offer → Accept (happy path) |
+| `citizenRejectsOffer_requestRemainsOpen` | Reject offer without closing the request |
+| `citizenCancelsRequest_rejectsPendingOffers` | Cancel request cascades to reject pending offers |
+| `collectorWithdrawsOffer_statusWithdrawn` | Collector withdraws their pending offer |
+| `fullLifecycle_pendingToConfirmed` | Complete lifecycle: OPEN → PENDING → ACCEPTED → IN_PROGRESS → COMPLETED → CONFIRMED |
+| `acceptOffer_autoRejectsOtherPendingOffers` | Accepting one offer auto-rejects all other pending offers |
+
+#### 4. Repository integration tests (requires Docker)
+
+Located in `src/test/java/com/garbo/repository/`.
+
+| Test class | What it covers |
+|------------|---------------|
+| `RepositoriesIntegrationTest` | Route assignment, vehicle route, and bin stop persistence against real PostgreSQL |
+
+> **Note**: This test uses Testcontainers and requires **Docker** to be running. It will fail with `IllegalStateException: Could not find a valid Docker environment` if Docker is not available.
+
+### Running tests
+
+**Run all tests** (skip `RepositoriesIntegrationTest` if Docker is not available):
+
+```bash
+mvn test -Dtest='!com.garbo.repository.RepositoriesIntegrationTest'
+```
+
+**Run all tests** (including Testcontainers — requires Docker):
+
+```bash
+mvn test
+```
+
+**Run a specific test class:**
+
+```bash
+mvn test -Dtest=CitizenToCollectorFlowIT
+```
+
+**Run a single test method:**
+
+```bash
+mvn test -Dtest='CitizenToCollectorFlowIT#fullLifecycle_pendingToConfirmed'
+```
+
+**Run only unit tests** (fastest, no Spring context):
+
+```bash
+mvn test -Dtest='RouteAssignmentServiceUnitTest,NotificationServiceTest,RouteSessionServiceTest'
+```
+
 ## Useful commands
 
 Compile:
