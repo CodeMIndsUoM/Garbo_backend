@@ -18,7 +18,7 @@ public class CurrentUserService {
     private static UserRepository userRepository;
 
     public CurrentUserService(UserRepository userRepository) {
-        this.userRepository = userRepository;
+        CurrentUserService.userRepository = userRepository;
     }
 
     public static Optional<String> getCurrentEmail() {

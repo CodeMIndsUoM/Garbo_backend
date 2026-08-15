@@ -54,9 +54,32 @@ public class RouteAssignmentService {
         saveRouteSession(sessionId, snapshot, request);
         saveAssignment(sessionId, request);
 
+        // Cache existing statuses and timestamps before deleting old route stops
+        Map<Long, String> existingStatuses = new java.util.HashMap<>();
+        Map<Long, LocalDateTime> existingCollectedAt = new java.util.HashMap<>();
+        try {
+            List<RouteVehicleRoute> existingRoutes = vehicleRouteRepository.findBySessionIdWithStops(sessionId);
+            if (existingRoutes != null) {
+                for (RouteVehicleRoute vr : existingRoutes) {
+                    if (vr.getBinStops() != null) {
+                        for (RouteBinStop stop : vr.getBinStops()) {
+                            if (stop.getBinId() != null) {
+                                existingStatuses.put(stop.getBinId(), stop.getStatus());
+                                if (stop.getCollectedAt() != null) {
+                                    existingCollectedAt.put(stop.getBinId(), stop.getCollectedAt());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to cache existing route statuses: {}", e.getMessage());
+        }
+
         binStopRepository.deleteBySessionId(sessionId);
         vehicleRouteRepository.deleteBySessionId(sessionId);
-        saveVehicleRoutes(sessionId, snapshot);
+        saveVehicleRoutes(sessionId, snapshot, existingStatuses, existingCollectedAt);
 
         // Mark bins as assigned
         if (request.getSelectedBinIds() != null) {
@@ -185,7 +208,9 @@ public class RouteAssignmentService {
         routeAssignmentRepository.save(assignment);
     }
 
-    private void saveVehicleRoutes(UUID sessionId, RouteSessionSnapshotDTO snapshot) {
+    private void saveVehicleRoutes(UUID sessionId, RouteSessionSnapshotDTO snapshot,
+                                   Map<Long, String> existingStatuses,
+                                   Map<Long, LocalDateTime> existingCollectedAt) {
         Map<String, Object> routesMap = getRouteMap(snapshot);
         for (Map.Entry<String, Object> entry : routesMap.entrySet()) {
             String vehicleKey = entry.getKey();
@@ -203,11 +228,22 @@ public class RouteAssignmentService {
                 RouteBinStop stop = new RouteBinStop();
                 stop.setVehicleRoute(vehicleRoute);
                 stop.setStopOrder(toInt(stopMap.get("stopOrder")));
-                stop.setBinId(toLong(stopMap.get("binId")));
+                Long binId = toLong(stopMap.get("binId"));
+                stop.setBinId(binId);
                 stop.setLat(toDouble(stopMap.get("lat")));
                 stop.setLng(toDouble(stopMap.get("lng")));
                 stop.setDurationFromPrevSeconds(toDouble(stopMap.get("durationFromPrevStopSeconds")));
-                stop.setStatus("PENDING");
+                
+                String status = "PENDING";
+                if (existingStatuses != null && existingStatuses.containsKey(binId)) {
+                    status = existingStatuses.get(binId);
+                }
+                stop.setStatus(status);
+                
+                if (existingCollectedAt != null && existingCollectedAt.containsKey(binId)) {
+                    stop.setCollectedAt(existingCollectedAt.get(binId));
+                }
+                
                 stops.add(stop);
             }
             binStopRepository.saveAll(stops);

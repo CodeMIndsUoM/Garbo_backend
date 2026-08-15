@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.garbo.core.entity.ThirdPartyCollector;
-import com.garbo.infrastructure.storage.CloudinaryUploadService;
 
 import java.util.Map;
 import java.util.List;
@@ -26,24 +25,17 @@ import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.multipart.MultipartFile;
 
-// Third-party collector flow:
-//   Collectors browse the open-request feed, send offers (via
-//   CollectionRequestController), and manage their own offers and active
-//   jobs through OfferController (start / complete / withdraw / cancel).
 @RestController
 @RequestMapping("/api/thirdpartycollectors")
 @PreAuthorize("hasRole('THIRD_PARTY_COLLECTOR')")
 public class ThirdPartyCollectorController {
     private final ThirdPartyCollectorService thirdPartyCollectorService;
     private final CollectionRequestService collectionRequestService;
-    private final CloudinaryUploadService cloudinaryUploadService;
 
     public ThirdPartyCollectorController(ThirdPartyCollectorService thirdPartyCollectorService,
-            CollectionRequestService collectionRequestService,
-            CloudinaryUploadService cloudinaryUploadService) {
+            CollectionRequestService collectionRequestService) {
         this.thirdPartyCollectorService = thirdPartyCollectorService;
         this.collectionRequestService = collectionRequestService;
-        this.cloudinaryUploadService = cloudinaryUploadService;
     }
 
     // Collector feed of OPEN citizen requests (optional geo query for proximity).

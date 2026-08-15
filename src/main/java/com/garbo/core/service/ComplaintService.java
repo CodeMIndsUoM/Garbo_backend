@@ -3,7 +3,6 @@ package com.garbo.core.service;
 import com.garbo.api.dto.ComplaintCreateRequest;
 import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.Complaint;
-import com.garbo.core.entity.Citizen;
 import com.garbo.core.entity.User;
 import com.garbo.core.repository.CitizenRepository;
 import com.garbo.core.repository.ComplaintRepository;
