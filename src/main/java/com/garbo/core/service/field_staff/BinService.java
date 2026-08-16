@@ -90,6 +90,9 @@ public class BinService {
     @Autowired
     private RouteCollectionBroadcaster routeCollectionBroadcaster;
 
+    @Autowired
+    private com.garbo.core.service.security.SystemIncidentService systemIncidentService;
+
     public BinService(BinRepository binRepository,
             BinReportRepository binReportRepository,
             FieldMentorRepository fieldMentorRepository,
@@ -458,6 +461,11 @@ public class BinService {
         }
 
         Bin saved = binRepository.save(payload);
+        systemIncidentService.logIncident(
+            "BIN_ADDITION",
+            saved.getId().toString(),
+            "Bin code " + saved.getBinCode() + " created in council " + saved.getCouncil()
+        );
         eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
         if (saved.getAssignedTo() != null) {
             taskAlertBroadcaster.notifyMentorBinAssigned(saved.getAssignedTo(), saved);
@@ -471,6 +479,11 @@ public class BinService {
         Bin bin = getBinWithCouncilAccess(id);
         binReportRepository.deleteByBinId(bin.getId());
         binRepository.deleteByIdNative(bin.getId());
+        systemIncidentService.logIncident(
+            "BIN_DELETION",
+            id.toString(),
+            "Bin deleted: code " + bin.getBinCode()
+        );
         eventPublisher.publishEvent(new BinChangedEvent("DELETED", id));
     }
 
@@ -480,7 +493,12 @@ public class BinService {
             return;
         }
         for (Long id : ids) {
-            getBinWithCouncilAccess(id);
+            Bin bin = getBinWithCouncilAccess(id);
+            systemIncidentService.logIncident(
+                "BIN_DELETION",
+                id.toString(),
+                "Batch bin deleted: code " + bin.getBinCode()
+            );
         }
         binReportRepository.deleteByBinIds(ids);
         binRepository.deleteAllByIds(ids);

@@ -46,6 +46,7 @@ class AdminStaffServiceTest {
                 passwordEncoder,
                 emailService
         );
+        adminStaffService.systemIncidentService = Mockito.mock(com.garbo.core.service.security.SystemIncidentService.class);
     }
 
     @Test

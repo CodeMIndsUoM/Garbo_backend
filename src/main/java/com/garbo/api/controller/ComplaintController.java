@@ -1,7 +1,6 @@
 package com.garbo.api.controller;
 
 import com.garbo.api.dto.ComplaintCreateRequest;
-import com.garbo.common.logging.BackendFileAuditLogger;
 import com.garbo.infrastructure.config.security.JwtUtil;
 import com.garbo.core.entity.Complaint;
 import com.garbo.core.service.ComplaintService;
@@ -32,9 +31,6 @@ public class ComplaintController {
     private ComplaintService complaintService;
     @Autowired
     private JwtUtil jwtUtil;
-
-    @Autowired
-    private BackendFileAuditLogger backendFileAuditLogger;
 
     private String resolveRequesterEmail(HttpServletRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -118,28 +114,13 @@ public class ComplaintController {
             }
             String fileName = "complaint-" + UUID.randomUUID() + extension;
             Path uploadDir = Path.of("uploads", "complaints");
-                Path target = uploadDir.resolve(fileName);
-                backendFileAuditLogger.logFileModificationAttempt(
-                    "BACKEND_FILE_CHANGE_ATTEMPT",
-                    target.toString(),
-                    "ATTEMPT",
-                    "Attempting to store complaint image");
+            Path target = uploadDir.resolve(fileName);
             Files.createDirectories(uploadDir);
             Files.copy(photo.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-                backendFileAuditLogger.logFileModificationAttempt(
-                    "BACKEND_FILE_CHANGE_ATTEMPT",
-                    target.toString(),
-                    "SUCCESS",
-                    "Complaint image stored");
             return ResponseEntity.ok(Map.of(
                     "photoUrl", target.toString(),
                     "message", "Image uploaded"));
         } catch (Exception e) {
-                backendFileAuditLogger.logFileModificationAttempt(
-                    "BACKEND_FILE_CHANGE_ATTEMPT",
-                    "uploads/complaints",
-                    "FAILED",
-                    "Complaint image storage failed: " + e.getClass().getSimpleName());
             return ResponseEntity.status(500).body(Map.of("error", "Failed to upload image"));
         }
     }

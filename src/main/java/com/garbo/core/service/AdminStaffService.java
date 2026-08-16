@@ -34,6 +34,9 @@ public class AdminStaffService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    com.garbo.core.service.security.SystemIncidentService systemIncidentService;
+
     public AdminStaffService(FieldMentorRepository fieldMentorRepository,
             BinCollectorRepository binCollectorRepository,
             UserRepository userRepository,
@@ -71,6 +74,11 @@ public class AdminStaffService {
         fm.setMustChangePassword(true);
 
         FieldMentor saved = fieldMentorRepository.save(fm);
+        systemIncidentService.logIncident(
+            "EMPLOYEE_ADDITION",
+            saved.getEmpId().toString(),
+            "Field Mentor created: " + saved.getEmpName() + " (" + saved.getEmail() + ") in council " + saved.getAssignedCouncil()
+        );
 
         AdminCreationLogger.log(saved.getEmail(), temp);
         try {
@@ -109,6 +117,11 @@ public class AdminStaffService {
         bc.setMustChangePassword(true);
 
         BinCollector saved = binCollectorRepository.save(bc);
+        systemIncidentService.logIncident(
+            "EMPLOYEE_ADDITION",
+            saved.getEmpId().toString(),
+            "Bin Collector created: " + saved.getEmpName() + " (" + saved.getEmail() + ") in council " + saved.getAssignedCouncil()
+        );
 
         AdminCreationLogger.log(saved.getEmail(), temp);
         try {
@@ -214,11 +227,21 @@ public class AdminStaffService {
         if (u instanceof FieldMentor mentor) {
             mentor.setAdminHidden(true);
             fieldMentorRepository.save(mentor);
+            systemIncidentService.logIncident(
+                "EMPLOYEE_DELETION",
+                id.toString(),
+                "Employee soft-deleted (hidden): " + mentor.getEmpName() + " (" + mentor.getEmail() + ")"
+            );
             return "HIDDEN";
         }
         if (u instanceof BinCollector collector) {
             collector.setAdminHidden(true);
             binCollectorRepository.save(collector);
+            systemIncidentService.logIncident(
+                "EMPLOYEE_DELETION",
+                id.toString(),
+                "Employee soft-deleted (hidden): " + collector.getEmpName() + " (" + collector.getEmail() + ")"
+            );
             return "HIDDEN";
         }
         return "NOT_INTERNAL";
@@ -237,6 +260,11 @@ public class AdminStaffService {
 
         try {
             userRepository.deleteById(id);
+            systemIncidentService.logIncident(
+                "EMPLOYEE_DELETION",
+                id.toString(),
+                "Employee deleted: " + u.getEmpName() + " (" + u.getEmail() + "), role: " + u.getRole()
+            );
             return "DELETED";
         } catch (org.springframework.dao.DataIntegrityViolationException ex) {
             log.error("Failed to delete user {} due to constraint", id, ex);

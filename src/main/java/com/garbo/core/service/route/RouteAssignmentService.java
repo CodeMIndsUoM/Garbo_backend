@@ -41,6 +41,7 @@ public class RouteAssignmentService {
     private final com.garbo.core.service.field_staff.BinService binService;
     private final TaskAlertBroadcaster taskAlertBroadcaster;
     private final NotificationPublisher notificationPublisher;
+    private final com.garbo.core.service.security.SystemIncidentService systemIncidentService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -86,6 +87,11 @@ public class RouteAssignmentService {
             for (Long binId : request.getSelectedBinIds()) {
                 if (binId != null && binId > 0) {
                     binRepository.updateAssignedStatus(binId, true);
+                    systemIncidentService.logIncident(
+                        "BIN_ASSIGNMENT",
+                        binId.toString(),
+                        "Bin ID " + binId + " marked as assigned for route session " + sessionId
+                    );
                 }
             }
         }
@@ -206,6 +212,17 @@ public class RouteAssignmentService {
         assignment.setDriver(driver);
         assignment.setCollectors(new ArrayList<>());
         routeAssignmentRepository.save(assignment);
+
+        systemIncidentService.logIncident(
+            "ROUTE_ASSIGNMENT",
+            sessionId.toString(),
+            "Route session " + sessionId + " assigned to driver " + driver.getEmpName() + " (ID " + driver.getEmpId() + ") and vehicle " + vehicle.getLicensePlate()
+        );
+        systemIncidentService.logIncident(
+            "VEHICLE_ASSIGNMENT",
+            vehicle.getId().toString(),
+            "Driver " + driver.getEmpName() + " (ID " + driver.getEmpId() + ") assigned to vehicle " + vehicle.getLicensePlate() + " for route session " + sessionId
+        );
     }
 
     private void saveVehicleRoutes(UUID sessionId, RouteSessionSnapshotDTO snapshot,
