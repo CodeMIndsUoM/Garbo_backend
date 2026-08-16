@@ -19,6 +19,9 @@ public class VehicleService {
     private final BinCollectorRepository binCollectorRepository;
     private final RouteAssignmentRepository routeAssignmentRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.garbo.core.service.security.SystemIncidentService systemIncidentService;
+
     public VehicleService(VehicleRepository vehicleRepository, BinCollectorRepository binCollectorRepository, RouteAssignmentRepository routeAssignmentRepository) {
         this.vehicleRepository = vehicleRepository;
         this.binCollectorRepository = binCollectorRepository;
@@ -55,7 +58,13 @@ public class VehicleService {
         payload.setUpdatedAt(now);
         normalizeVehicle(payload);
         validateDriver(payload.getAssignedDriverId());
-        return vehicleRepository.save(payload);
+        Vehicle saved = vehicleRepository.save(payload);
+        systemIncidentService.logIncident(
+            "VEHICLE_ASSIGNMENT",
+            saved.getId().toString(),
+            "Vehicle created: license plate " + saved.getLicensePlate() + ", driver ID: " + saved.getAssignedDriverId()
+        );
+        return saved;
     }
 
     public Vehicle update(Long id, Vehicle payload) {
@@ -78,6 +87,11 @@ public class VehicleService {
         validateDriver(existing.getAssignedDriverId());
         Vehicle saved = vehicleRepository.save(existing);
         populateDriverNames(List.of(saved));
+        systemIncidentService.logIncident(
+            "VEHICLE_ASSIGNMENT",
+            saved.getId().toString(),
+            "Vehicle updated: license plate " + saved.getLicensePlate() + ", driver ID: " + saved.getAssignedDriverId()
+        );
         return saved;
     }
 
@@ -97,6 +111,11 @@ public class VehicleService {
         }
         routeAssignmentRepository.deleteByVehicleId(id);
         vehicleRepository.deleteById(id);
+        systemIncidentService.logIncident(
+            "VEHICLE_ASSIGNMENT",
+            id.toString(),
+            "Vehicle deleted: ID " + id
+        );
     }
 
     private void validateDriver(Long driverId) {
