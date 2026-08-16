@@ -49,3 +49,17 @@ management:
 sentry:
   dsn: ${SENTRY_DSN:}
   traces-sample-rate: 1.0
+
+audit:
+  file-change:
+    log-path: ${AUDIT_FILE_CHANGE_LOG_PATH:logs/backend_file_audit.log}
+    alert-log-path: ${AUDIT_FILE_CHANGE_ALERT_LOG_PATH:logs/backend_file_audit_alerts.log}
+    max-bytes: ${AUDIT_FILE_CHANGE_MAX_BYTES:5242880}
+    max-archives: ${AUDIT_FILE_CHANGE_MAX_ARCHIVES:10}
+    retention-days: ${AUDIT_FILE_CHANGE_RETENTION_DAYS:30}
+    hmac-secret: ${AUDIT_FILE_CHANGE_HMAC_SECRET:change-me-in-prod}
+  integrity:
+    enabled: ${AUDIT_INTEGRITY_ENABLED:true}
+    scan-interval-ms: ${AUDIT_INTEGRITY_SCAN_INTERVAL_MS:300000}
+    max-files: ${AUDIT_INTEGRITY_MAX_FILES:1000}
+    monitored-paths: ${AUDIT_INTEGRITY_MONITORED_PATHS:pom.xml,Dockerfile,src/main/resources/application.yml,src/main/resources/application-local.yml,src/main/resources/application-prod.yml,scripts}
