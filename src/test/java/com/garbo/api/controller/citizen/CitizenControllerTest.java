@@ -38,10 +38,23 @@ public class CitizenControllerTest {
     private CollectionRequestService collectionRequestService;
 
     @MockBean
+    private com.garbo.core.repository.UserRepository userRepository;
+
+    @MockBean
     private CustomUserDetailsService customUserDetailsService;
 
     @MockBean
     private JwtUtil jwtUtil;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        new com.garbo.core.service.CurrentUserService(userRepository);
+        com.garbo.core.entity.User citizen = new com.garbo.core.entity.User();
+        citizen.setEmpId(1L);
+        citizen.setEmail("citizen@garbo.test");
+        citizen.setRole("CITIZEN");
+        when(userRepository.findFirstByEmailIgnoreCase(any())).thenReturn(java.util.Optional.of(citizen));
+    }
 
     @Test
     @WithMockUser(roles = "CITIZEN")
