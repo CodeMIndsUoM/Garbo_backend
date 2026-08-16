@@ -18,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.garbo.core.entity.ThirdPartyCollector;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 import java.util.List;
@@ -38,12 +40,19 @@ public class ThirdPartyCollectorController {
         this.collectionRequestService = collectionRequestService;
     }
 
+    private void enforceCollectorOwnership(Long collectorId) {
+        if (!com.garbo.core.service.CurrentUserService.isCurrentUserOrAdmin(collectorId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: You do not own this collector resource");
+        }
+    }
+
     // Collector feed of OPEN citizen requests (optional geo query for proximity).
     @GetMapping("/{collectorId}/feed")
     public ResponseEntity<ApiResponse<List<RequestSummaryDto>>> browseFeed(
             @PathVariable Long collectorId,
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng) {
+        enforceCollectorOwnership(collectorId);
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.browseFeed(collectorId, lat, lng)));
     }
 
@@ -52,6 +61,7 @@ public class ThirdPartyCollectorController {
     public ResponseEntity<ApiResponse<List<OfferDto>>> myOffers(
             @PathVariable Long collectorId,
             @RequestParam(required = false) OfferStatus status) {
+        enforceCollectorOwnership(collectorId);
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listMyOffers(collectorId, status)));
     }
 
@@ -60,6 +70,7 @@ public class ThirdPartyCollectorController {
     public ResponseEntity<ApiResponse<Map<String, Integer>>> hideMyOffers(
             @PathVariable Long collectorId,
             @RequestParam(required = false) List<OfferStatus> statuses) {
+        enforceCollectorOwnership(collectorId);
         int hiddenCount = collectionRequestService.hideOffersFromCollectorList(collectorId, statuses);
         return ResponseEntity.ok(ApiResponse.success(Map.of("hiddenCount", hiddenCount)));
     }
@@ -67,18 +78,21 @@ public class ThirdPartyCollectorController {
     // Collector jobs currently in ACCEPTED/IN_PROGRESS states.
     @GetMapping("/{collectorId}/active-jobs")
     public ResponseEntity<ApiResponse<List<OfferDto>>> activeJobs(@PathVariable Long collectorId) {
+        enforceCollectorOwnership(collectorId);
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listActiveJobs(collectorId)));
     }
 
     @GetMapping("/{collectorId}/dashboard")
     public ResponseEntity<ApiResponse<com.garbo.api.dto.collection.CollectorDashboardDto>> getDashboard(
             @PathVariable Long collectorId) {
+        enforceCollectorOwnership(collectorId);
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.getCollectorDashboard(collectorId)));
     }
 
     // Collector profile for app profile view/edit.
     @GetMapping("/{collectorId}/profile")
     public ResponseEntity<ApiResponse<ThirdPartyCollector>> getProfile(@PathVariable Long collectorId) {
+        enforceCollectorOwnership(collectorId);
         return thirdPartyCollectorService.getProfile(collectorId)
                 .map(collector -> ResponseEntity.ok(ApiResponse.success(collector)))
                 .orElse(ResponseEntity.notFound().build());
@@ -89,6 +103,7 @@ public class ThirdPartyCollectorController {
     public ResponseEntity<ApiResponse<ThirdPartyCollector>> updateProfile(
             @PathVariable Long collectorId,
             @RequestBody ThirdPartyCollector updatedDetails) {
+        enforceCollectorOwnership(collectorId);
         ThirdPartyCollector updated = thirdPartyCollectorService.updateProfile(collectorId, updatedDetails);
         return ResponseEntity.ok(ApiResponse.success(updated));
     }
@@ -97,12 +112,14 @@ public class ThirdPartyCollectorController {
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadAvatar(
             @PathVariable Long collectorId,
             @RequestParam("photo") MultipartFile photo) {
+        enforceCollectorOwnership(collectorId);
         ThirdPartyCollector updated = thirdPartyCollectorService.uploadAvatar(collectorId, photo);
         return ResponseEntity.ok(ApiResponse.success(Map.of("avatarUrl", updated.getAvatarUrl())));
     }
 
     @DeleteMapping("/{collectorId}/avatar")
     public ResponseEntity<ApiResponse<Map<String, String>>> removeAvatar(@PathVariable Long collectorId) {
+        enforceCollectorOwnership(collectorId);
         thirdPartyCollectorService.removeAvatar(collectorId);
         return ResponseEntity.ok(ApiResponse.success(Map.of("message", "Avatar removed")));
     }

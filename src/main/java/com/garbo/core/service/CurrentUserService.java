@@ -71,4 +71,20 @@ public class CurrentUserService {
         }
         return Optional.empty();
     }
+
+    public static boolean isCurrentUserOrAdmin(Long userId) {
+        if (userId == null) {
+            return false;
+        }
+        Optional<Long> currentEmpId = getCurrentEmpId();
+        if (currentEmpId.isPresent() && currentEmpId.get().equals(userId)) {
+            return true;
+        }
+        Optional<String> roleOpt = getCurrentRole();
+        if (roleOpt.isPresent()) {
+            String role = roleOpt.get();
+            return role.equalsIgnoreCase("admin") || role.equalsIgnoreCase("superadmin");
+        }
+        return false;
+    }
 }

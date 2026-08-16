@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -37,11 +38,18 @@ public class CitizenController {
         this.collectionRequestService = collectionRequestService;
     }
 
+    private void enforceCitizenOwnership(Long citizenId) {
+        if (!com.garbo.core.service.CurrentUserService.isCurrentUserOrAdmin(citizenId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: You do not own this citizen resource");
+        }
+    }
+
     // Creates a new citizen collection request; business rules stay in service.
     @PostMapping("/{citizenId}/collection-requests")
     public ResponseEntity<ApiResponse<RequestSummaryDto>> createCollectionRequest(
             @PathVariable Long citizenId,
             @Valid @RequestBody CreateRequestDto request) {
+        enforceCitizenOwnership(citizenId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(collectionRequestService.createRequest(citizenId, request)));
     }
@@ -51,6 +59,7 @@ public class CitizenController {
     public ResponseEntity<ApiResponse<List<RequestSummaryDto>>> listCollectionRequests(
             @PathVariable Long citizenId,
             @RequestParam(required = false) RequestStatus status) {
+        enforceCitizenOwnership(citizenId);
         return ResponseEntity.ok(ApiResponse.success(collectionRequestService.listCitizenRequests(citizenId, status)));
     }
 
@@ -59,6 +68,7 @@ public class CitizenController {
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadRequestPhoto(
             @PathVariable Long citizenId,
             @RequestParam("photo") MultipartFile photo) {
+        enforceCitizenOwnership(citizenId);
         String url = collectionRequestService.uploadCitizenRequestPhoto(citizenId, photo);
         return ResponseEntity.ok(ApiResponse.success(Map.of("photoUrl", url)));
     }
