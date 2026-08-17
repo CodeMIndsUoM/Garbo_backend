@@ -23,6 +23,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import com.garbo.infrastructure.storage.CloudinaryUploadService;
+
 @RestController
 @RequestMapping("/api/bin-suggestions")
 @CrossOrigin(origins = "*")
@@ -33,6 +35,9 @@ public class BinSuggestionController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private CloudinaryUploadService cloudinaryUploadService;
 
     private String resolveRequesterEmail(HttpServletRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -103,25 +108,10 @@ public class BinSuggestionController {
 
     @PostMapping("/upload-image")
     public ResponseEntity<Map<String, String>> uploadSuggestionImage(@RequestParam("photo") MultipartFile photo) {
-        try {
-            String original = StringUtils.cleanPath(
-                    photo.getOriginalFilename() == null ? "bin-suggestion.jpg" : photo.getOriginalFilename());
-            String extension = "";
-            int idx = original.lastIndexOf('.');
-            if (idx > -1) {
-                extension = original.substring(idx);
-            }
-            String fileName = "bin-suggestion-" + UUID.randomUUID() + extension;
-            Path uploadDir = Path.of("uploads", "bin-suggestions");
-            Path target = uploadDir.resolve(fileName);
-            Files.createDirectories(uploadDir);
-            Files.copy(photo.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-            return ResponseEntity.ok(Map.of(
-                    "photoUrl", target.toString(),
-                    "imageUrl", target.toString(),
-                    "message", "Image uploaded"));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", "Failed to upload image"));
-        }
+        String url = cloudinaryUploadService.uploadBinSuggestionPhoto(photo);
+        return ResponseEntity.ok(Map.of(
+                "photoUrl", url,
+                "imageUrl", url,
+                "message", "Image uploaded"));
     }
 }

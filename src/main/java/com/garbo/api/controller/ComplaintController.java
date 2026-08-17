@@ -22,6 +22,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
+import com.garbo.infrastructure.storage.CloudinaryUploadService;
+
 @RestController
 @RequestMapping("/api/complaints")
 @CrossOrigin(origins = "*")
@@ -31,6 +33,8 @@ public class ComplaintController {
     private ComplaintService complaintService;
     @Autowired
     private JwtUtil jwtUtil;
+    @Autowired
+    private CloudinaryUploadService cloudinaryUploadService;
 
     private String resolveRequesterEmail(HttpServletRequest request) {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -105,23 +109,10 @@ public class ComplaintController {
 
     @PostMapping("/upload-image")
     public ResponseEntity<Map<String, String>> uploadComplaintImage(@RequestParam("photo") MultipartFile photo) {
-        try {
-            String original = StringUtils.cleanPath(photo.getOriginalFilename() == null ? "complaint.jpg" : photo.getOriginalFilename());
-            String extension = "";
-            int idx = original.lastIndexOf('.');
-            if (idx > -1) {
-                extension = original.substring(idx);
-            }
-            String fileName = "complaint-" + UUID.randomUUID() + extension;
-            Path uploadDir = Path.of("uploads", "complaints");
-            Path target = uploadDir.resolve(fileName);
-            Files.createDirectories(uploadDir);
-            Files.copy(photo.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
-            return ResponseEntity.ok(Map.of(
-                    "photoUrl", target.toString(),
-                    "message", "Image uploaded"));
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("error", "Failed to upload image"));
-        }
+        String url = cloudinaryUploadService.uploadComplaintPhoto(photo);
+        return ResponseEntity.ok(Map.of(
+                "photoUrl", url,
+                "imageUrl", url,
+                "message", "Image uploaded"));
     }
 }

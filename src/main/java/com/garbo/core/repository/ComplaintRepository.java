@@ -4,15 +4,22 @@ import com.garbo.core.entity.Complaint;
 import com.garbo.core.entity.User;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface ComplaintRepository extends JpaRepository<Complaint, Long> {
+
+    @Transactional
+    @Modifying
+    @Query("UPDATE Complaint c SET c.imageUrl = :photoUrl WHERE c.id = :id")
+    int updatePhotoUrl(@Param("id") Long id, @Param("photoUrl") String photoUrl);
 
     // ── Basic finders ─────────────────────────────────────────────────────────
 
