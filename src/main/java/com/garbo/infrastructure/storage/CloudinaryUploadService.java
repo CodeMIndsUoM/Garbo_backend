@@ -4,6 +4,8 @@ package com.garbo.infrastructure.storage;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.garbo.api.exception.CollectionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,7 @@ import java.util.UUID;
 
 @Service
 public class CloudinaryUploadService {
+    private static final Logger log = LoggerFactory.getLogger(CloudinaryUploadService.class);
     private static final long MAX_FILE_BYTES = 10 * 1024 * 1024; // 10 MB
 
     private final String cloudName;
@@ -96,6 +99,48 @@ public class CloudinaryUploadService {
                 "Event image is required");
     }
 
+    public String uploadBinSuggestionPhoto(MultipartFile file) {
+        return uploadImage(
+                file,
+                "garbo/bin-suggestions",
+                "bin-suggestion-" + System.currentTimeMillis() + "-",
+                "Bin suggestion photo is required");
+    }
+
+    public String uploadBinSuggestionPhoto(
+            byte[] fileBytes,
+            String originalFilename,
+            String contentType) {
+        return uploadImageBytes(
+                fileBytes,
+                originalFilename,
+                contentType,
+                "garbo/bin-suggestions",
+                "bin-suggestion-" + System.currentTimeMillis() + "-",
+                "Bin suggestion photo is required");
+    }
+
+    public String uploadComplaintPhoto(MultipartFile file) {
+        return uploadImage(
+                file,
+                "garbo/complaints",
+                "complaint-" + System.currentTimeMillis() + "-",
+                "Complaint photo is required");
+    }
+
+    public String uploadComplaintPhoto(
+            byte[] fileBytes,
+            String originalFilename,
+            String contentType) {
+        return uploadImageBytes(
+                fileBytes,
+                originalFilename,
+                contentType,
+                "garbo/complaints",
+                "complaint-" + System.currentTimeMillis() + "-",
+                "Complaint photo is required");
+    }
+
     private String uploadImage(
             MultipartFile file,
             String folder,
@@ -122,18 +167,14 @@ public class CloudinaryUploadService {
                             "public_id", publicIdPrefix + System.currentTimeMillis()));
 
             Object secureUrl = result.get("secure_url");
-            if (secureUrl == null || secureUrl.toString().isBlank()) {
-                throw new CollectionException(
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Image upload failed: secure URL not returned",
-                        "UPLOAD_FAILED");
+            if (secureUrl != null && !secureUrl.toString().isBlank()) {
+                return secureUrl.toString();
             }
-            return secureUrl.toString();
-        } catch (IOException ex) {
-            throw new CollectionException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Image upload failed",
-                    "UPLOAD_FAILED");
+            log.warn("Cloudinary upload did not return a secure_url, falling back to local storage");
+            return saveLocally(file, folder, publicIdPrefix);
+        } catch (Exception ex) {
+            log.warn("Cloudinary upload failed ({}), falling back to local storage", ex.getMessage());
+            return saveLocally(file, folder, publicIdPrefix);
         }
     }
 
@@ -165,18 +206,14 @@ public class CloudinaryUploadService {
                             "public_id", publicIdPrefix + System.currentTimeMillis()));
 
             Object secureUrl = result.get("secure_url");
-            if (secureUrl == null || secureUrl.toString().isBlank()) {
-                throw new CollectionException(
-                        HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Image upload failed: secure URL not returned",
-                        "UPLOAD_FAILED");
+            if (secureUrl != null && !secureUrl.toString().isBlank()) {
+                return secureUrl.toString();
             }
-            return secureUrl.toString();
-        } catch (IOException ex) {
-            throw new CollectionException(
-                    HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Image upload failed",
-                    "UPLOAD_FAILED");
+            log.warn("Cloudinary byte upload did not return a secure_url, falling back to local storage");
+            return saveLocallyBytes(fileBytes, originalFilename, folder, publicIdPrefix);
+        } catch (Exception ex) {
+            log.warn("Cloudinary byte upload failed ({}), falling back to local storage", ex.getMessage());
+            return saveLocallyBytes(fileBytes, originalFilename, folder, publicIdPrefix);
         }
     }
 
