@@ -31,6 +31,9 @@ public class VehicleServiceTest {
     @Mock
     private RouteAssignmentRepository routeAssignmentRepository;
 
+    @Mock
+    private com.garbo.core.service.security.SystemIncidentService systemIncidentService;
+
     @InjectMocks
     private VehicleService vehicleService;
 
@@ -38,12 +41,14 @@ public class VehicleServiceTest {
 
     @BeforeEach
     void setUp() {
+        org.springframework.test.util.ReflectionTestUtils.setField(vehicleService, "systemIncidentService", systemIncidentService);
         validVehicle = new Vehicle();
         validVehicle.setId(1L);
         validVehicle.setLicensePlate("AB-1234");
         validVehicle.setAssignedCouncil("CouncilA");
         validVehicle.setStatus("available");
     }
+
 
     @Test
     void getAll_success() {

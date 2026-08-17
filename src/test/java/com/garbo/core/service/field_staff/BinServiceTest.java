@@ -94,7 +94,9 @@ public class BinServiceTest {
         org.springframework.test.util.ReflectionTestUtils.setField(binService, "routeBinStopRepository", routeBinStopRepository);
         org.springframework.test.util.ReflectionTestUtils.setField(binService, "zoneClusteringService", zoneClusteringService);
         org.springframework.test.util.ReflectionTestUtils.setField(binService, "binRepository", binRepository);
+        org.springframework.test.util.ReflectionTestUtils.setField(binService, "systemIncidentService", mock(com.garbo.core.service.security.SystemIncidentService.class));
     }
+
 
     @Test
     void reportBinStatus_success() {
