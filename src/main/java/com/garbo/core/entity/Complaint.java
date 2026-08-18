@@ -57,6 +57,15 @@ public class Complaint {
     @Column(name = "status")
     private String status;
 
+    @Column(name = "is_confirmed_true")
+    private Boolean isConfirmedTrue;
+
+    @Column(name = "field_staff_note", columnDefinition = "TEXT")
+    private String fieldStaffNote;
+
+    @Column(name = "field_staff_photo_url")
+    private String fieldStaffPhotoUrl;
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 

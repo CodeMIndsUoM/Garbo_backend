@@ -39,8 +39,7 @@ public class RouteSessionCreateRequestDTO {
      * Additional collectors are optional support labour.
      */
     public boolean hasValidTeam() {
-        return vehicleId != null
-                && driverId != null;
+        return driverId != null;
     }
 
     public int[] getValidatedCapacities() {

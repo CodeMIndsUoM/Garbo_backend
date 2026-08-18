@@ -11,6 +11,8 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
 
     List<Vehicle> findByAssignedCouncil(String assignedCouncil);
 
+    java.util.Optional<Vehicle> findFirstByAssignedDriverId(Long driverId);
+
     // ── Dashboard analytics ──────────────────────────────────────────────────
 
     long countByIsActiveTrue();

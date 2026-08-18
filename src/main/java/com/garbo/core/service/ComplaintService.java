@@ -7,6 +7,8 @@ import com.garbo.core.entity.User;
 import com.garbo.core.repository.CitizenRepository;
 import com.garbo.core.repository.ComplaintRepository;
 import com.garbo.core.repository.UserRepository;
+import com.garbo.core.repository.BinRepository;
+import com.garbo.core.entity.Bin;
 import com.garbo.core.service.notification.NotificationPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -34,18 +36,21 @@ public class ComplaintService {
     private final CitizenRepository citizenRepository;
     private final CouncilAccessService councilAccessService;
     private final NotificationPublisher notificationPublisher;
+    private final BinRepository binRepository;
 
     public ComplaintService(
             ComplaintRepository complaintRepository,
             UserRepository userRepository,
             CitizenRepository citizenRepository,
             CouncilAccessService councilAccessService,
-            NotificationPublisher notificationPublisher) {
+            NotificationPublisher notificationPublisher,
+            BinRepository binRepository) {
         this.complaintRepository = complaintRepository;
         this.userRepository = userRepository;
         this.citizenRepository = citizenRepository;
         this.councilAccessService = councilAccessService;
         this.notificationPublisher = notificationPublisher;
+        this.binRepository = binRepository;
     }
 
     public Complaint createComplaint(ComplaintCreateRequest request, String citizenEmail) {
@@ -108,6 +113,11 @@ public class ComplaintService {
             return List.of();
         }
         return complaintRepository.findByCitizenCouncil(councilOpt.get());
+    }
+
+    public List<Complaint> getAssignedComplaints(String email) {
+        User personnel = UserLookup.requireUser(userRepository, email);
+        return complaintRepository.findByAssignedTo(personnel);
     }
 
     public Complaint getComplaintById(Long id, String requesterEmail) {
@@ -204,13 +214,57 @@ public class ComplaintService {
         return normalized;
     }
 
+    @Transactional
     public Complaint assignComplaint(Long id, Long personnelId, String requesterEmail) {
         Complaint complaint = getComplaintById(id, requesterEmail);
         userRepository.findById(personnelId)
                 .orElseThrow(() -> new RuntimeException("Personnel not found"));
         complaint.setAssignedPersonnelId(personnelId);
         complaint.setStatus("IN_PROGRESS");
-        return complaintRepository.save(complaint);
+        Complaint saved = complaintRepository.save(complaint);
+        notificationPublisher.complaintStatusUpdated(saved);
+        notificationPublisher.complaintAssigned(saved);
+        return saved;
+    }
+
+    @Transactional
+    public void bulkAssignComplaints(java.util.List<Long> complaintIds, Long personnelId, String requesterEmail) {
+        if (complaintIds == null || complaintIds.isEmpty()) return;
+        userRepository.findById(personnelId)
+                .orElseThrow(() -> new RuntimeException("Personnel not found"));
+        for (Long id : complaintIds) {
+            Complaint complaint = getComplaintById(id, requesterEmail);
+            complaint.setAssignedPersonnelId(personnelId);
+            complaint.setStatus("IN_PROGRESS");
+            Complaint saved = complaintRepository.save(complaint);
+            notificationPublisher.complaintStatusUpdated(saved);
+            notificationPublisher.complaintAssigned(saved);
+        }
+    }
+
+    @Transactional
+    public Complaint confirmComplaint(Long id, Boolean isTrue, String note, String photoUrl, String personnelEmail) {
+        Complaint complaint = complaintRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Complaint not found"));
+        User personnel = UserLookup.requireUser(userRepository, personnelEmail);
+        
+        if (complaint.getAssignedPersonnelId() == null || !complaint.getAssignedPersonnelId().equals(personnel.getEmpId())) {
+            throw new AccessDeniedException("You are not assigned to this complaint");
+        }
+
+        complaint.setIsConfirmedTrue(isTrue);
+        if (note != null && !note.isBlank()) complaint.setFieldStaffNote(note);
+        if (photoUrl != null && !photoUrl.isBlank()) complaint.setFieldStaffPhotoUrl(photoUrl);
+
+        if (Boolean.TRUE.equals(isTrue)) {
+            complaint.setStatus("RESOLVED"); // Or some verified status
+        } else {
+            complaint.setStatus("REJECTED_BY_STAFF");
+        }
+
+        Complaint saved = complaintRepository.save(complaint);
+        notificationPublisher.complaintStatusUpdated(saved);
+        return saved;
     }
 
     @Transactional
@@ -248,6 +302,39 @@ public class ComplaintService {
             };
         } catch (NumberFormatException ex) {
             return null;
+        }
+    }
+
+    @Transactional
+    public void addToRoute(List<Long> complaintIds) {
+        List<Complaint> complaints = complaintRepository.findAllById(complaintIds);
+        for (Complaint c : complaints) {
+            c.setStatus("ADDED_TO_ROUTE");
+            complaintRepository.save(c);
+
+            // Create proxy bin for routing
+            Bin proxyBin = new Bin();
+            proxyBin.setBinCode("COMPLAINT-" + c.getId());
+            proxyBin.setCategory("Checkpoint");
+            proxyBin.setStatus("full");
+            proxyBin.setPriority("High");
+            proxyBin.setFillLevel(100);
+            proxyBin.setLocation(c.getLocation());
+            proxyBin.setCouncil(c.getCouncil());
+            
+            // Extract lat/lng
+            if (c.getLocation() != null && c.getLocation().contains(",")) {
+                String[] parts = c.getLocation().split(",");
+                if (parts.length == 2) {
+                    try {
+                        proxyBin.setLatitude(Double.parseDouble(parts[0].trim()));
+                        proxyBin.setLongitude(Double.parseDouble(parts[1].trim()));
+                    } catch (NumberFormatException e) {
+                        // ignore
+                    }
+                }
+            }
+            binRepository.save(proxyBin);
         }
     }
 }

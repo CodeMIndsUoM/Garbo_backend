@@ -30,6 +30,9 @@ public class BinCollectorController {
     private UserTaskProgressService userTaskProgressService;
 
     @Autowired
+    private com.garbo.core.service.route.RouteAssignmentService routeAssignmentService;
+
+    @Autowired
     private WebSocketSessionManager webSocketSessionManager;
     
     /**
@@ -110,6 +113,15 @@ public class BinCollectorController {
                     "COLLECTOR",
                     sessionId
                 );
+                
+                if (sessionId != null) {
+                    try {
+                        routeAssignmentService.completeRouteSession(java.util.UUID.fromString(sessionId));
+                    } catch (Exception e) {
+                        System.err.println("Failed to update route assignment completion status: " + e.getMessage());
+                    }
+                }
+                
                 broadcastTaskProgressUpdate(
                     collectorId,
                     collectedBins != null ? collectedBins : 0,
