@@ -408,8 +408,6 @@ public class BinService {
             validateCoordinatesInCouncil(council, latLng[0], latLng[1]);
         }
 
-        String generatedCode = generateNextBinCode(council);
-        payload.setBinCode(generatedCode);
         payload.setCouncil(council);
         payload.setLocation(latLng[0] + "," + latLng[1]);
         payload.setCoordinates(latLng[0] + "," + latLng[1]);
@@ -420,6 +418,9 @@ public class BinService {
         assignZoneIfMissing(payload, council);
 
         Bin saved = binRepository.save(payload);
+        // Use database-generated ID as the bin code
+        saved.setBinCode(String.valueOf(saved.getId()));
+        saved = binRepository.save(saved);
         eventPublisher.publishEvent(new BinChangedEvent("CREATED", saved.getId()));
         return saved;
     }
@@ -449,7 +450,6 @@ public class BinService {
         payload.setLocation(lat + "," + lng);
         payload.setCoordinates(lat + "," + lng);
         payload.setLastChecked(LocalDateTime.now());
-        payload.setBinCode(generateNextBinCode(council));
         normalizeCreateModel(payload);
         assignZoneIfMissing(payload, council);
 
@@ -461,6 +461,9 @@ public class BinService {
         }
 
         Bin saved = binRepository.save(payload);
+        // Use database-generated ID as the bin code
+        saved.setBinCode(String.valueOf(saved.getId()));
+        saved = binRepository.save(saved);
         systemIncidentService.logIncident(
             "BIN_ADDITION",
             saved.getId().toString(),

@@ -42,6 +42,7 @@ public class RouteAssignmentService {
     private final TaskAlertBroadcaster taskAlertBroadcaster;
     private final NotificationPublisher notificationPublisher;
     private final com.garbo.core.service.security.SystemIncidentService systemIncidentService;
+    private final com.garbo.core.repository.ComplaintRepository complaintRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -119,6 +120,20 @@ public class RouteAssignmentService {
                     if (updated > 0) {
                         log.info("Bin {} marked COLLECTED in session {}", binId, sessionId);
                         if (binId != null && binId > 0) {
+                            binRepository.findById(binId).ifPresent(bin -> {
+                                if (bin.getBinCode() != null && bin.getBinCode().startsWith("COMPLAINT-")) {
+                                    try {
+                                        Long complaintId = Long.parseLong(bin.getBinCode().replace("COMPLAINT-", ""));
+                                        complaintRepository.findById(complaintId).ifPresent(c -> {
+                                            c.setStatus("RESOLVED");
+                                            c.setResolutionNotes("Resolved by collection route");
+                                            complaintRepository.save(c);
+                                        });
+                                    } catch (Exception e) {
+                                        log.error("Failed to parse complaint ID from binCode: {}", bin.getBinCode());
+                                    }
+                                }
+                            });
                             binService.resetBinAfterCollection(binId);
                         }
                         routeCollectionBroadcaster.broadcastBinStatusUpdate(sessionId, binId, "COLLECTED");
@@ -170,10 +185,9 @@ public class RouteAssignmentService {
 
     public List<Vehicle> getAvailableVehicles(String council) {
         List<Vehicle> all = vehicleRepository.findAll();
-        List<Long> busyIds = routeAssignmentRepository.findBusyVehicleIds();
+        // Allow vehicles that are either "available" or already "on_route" (to allow same driver multi-route assignments)
         return all.stream()
-                .filter(v -> "available".equalsIgnoreCase(v.getStatus()))
-                .filter(v -> !busyIds.contains(v.getId()))
+                .filter(v -> "available".equalsIgnoreCase(v.getStatus()) || "on_route".equalsIgnoreCase(v.getStatus()))
                 .filter(v -> council == null || council.equalsIgnoreCase(v.getAssignedCouncil()))
                 .toList();
     }
@@ -198,14 +212,24 @@ public class RouteAssignmentService {
 
     private void saveAssignment(UUID sessionId, RouteAssignmentRequestDTO request) {
         routeAssignmentRepository.findBySessionId(sessionId).ifPresent(routeAssignmentRepository::delete);
-        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId()).orElseThrow();
+        
+        BinCollector driver = collectorRepository.findById(request.getDriverId()).orElseThrow();
+        
+        // Find if driver already has a vehicle assigned (on_route)
+        Vehicle vehicle = vehicleRepository.findFirstByAssignedDriverId(request.getDriverId())
+                .filter(v -> "on_route".equalsIgnoreCase(v.getStatus()))
+                .orElseGet(() -> {
+                    if (request.getVehicleId() == null) {
+                        throw new IllegalArgumentException("vehicleId is required when driver is not already assigned to a vehicle");
+                    }
+                    return vehicleRepository.findById(request.getVehicleId()).orElseThrow();
+                });
         
         // Automatically update vehicle status and sync driver
         vehicle.setStatus("on_route");
         vehicle.setAssignedDriverId(request.getDriverId());
         vehicleRepository.save(vehicle);
         
-        BinCollector driver = collectorRepository.findById(request.getDriverId()).orElseThrow();
         RouteAssignment assignment = new RouteAssignment();
         assignment.setSessionId(sessionId);
         assignment.setVehicle(vehicle);
@@ -223,6 +247,22 @@ public class RouteAssignmentService {
             vehicle.getId().toString(),
             "Driver " + driver.getEmpName() + " (ID " + driver.getEmpId() + ") assigned to vehicle " + vehicle.getLicensePlate() + " for route session " + sessionId
         );
+    }
+
+    @Transactional
+    public void completeRouteSession(UUID sessionId) {
+        routeSessionRepository.findById(sessionId).ifPresent(session -> {
+            session.setStatus("COMPLETED");
+            routeSessionRepository.save(session);
+        });
+
+        routeAssignmentRepository.findBySessionId(sessionId).ifPresent(assignment -> {
+            Vehicle vehicle = assignment.getVehicle();
+            if (vehicle != null) {
+                vehicle.setStatus("available");
+                vehicleRepository.save(vehicle);
+            }
+        });
     }
 
     private void saveVehicleRoutes(UUID sessionId, RouteSessionSnapshotDTO snapshot,

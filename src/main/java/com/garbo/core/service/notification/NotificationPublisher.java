@@ -206,6 +206,26 @@ public class NotificationPublisher {
         );
     }
 
+    public void complaintAssigned(Complaint complaint) {
+        if (complaint == null || complaint.getAssignedPersonnelId() == null) {
+            return;
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("complaintId", complaint.getId());
+        data.put("status", complaint.getStatus());
+        notificationService.notifyUser(
+                complaint.getAssignedPersonnelId(),
+                NotificationType.COMPLAINT_ASSIGNED,
+                NotificationContext.of(
+                        NotificationType.COMPLAINT_ASSIGNED,
+                        "Special Task Assigned",
+                        "You have been assigned a new special task: " + safe(complaint.getTitle()),
+                        data,
+                        "complaint-assigned-" + complaint.getId() + "-" + complaint.getAssignedPersonnelId()
+                )
+        );
+    }
+
     public void eventSuggestionSubmitted(Event event) {
         if (event == null || event.getCouncil() == null) {
             return;
