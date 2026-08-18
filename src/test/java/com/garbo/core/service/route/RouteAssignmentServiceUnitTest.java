@@ -43,6 +43,7 @@ public class RouteAssignmentServiceUnitTest {
     @Mock NotificationPublisher notificationPublisher;
     @Mock RouteCollectionBroadcaster routeCollectionBroadcaster;
     @Mock com.garbo.core.service.security.SystemIncidentService systemIncidentService;
+    @Mock com.garbo.core.repository.ComplaintRepository complaintRepository;
 
     RouteAssignmentService service;
 
@@ -62,7 +63,8 @@ public class RouteAssignmentServiceUnitTest {
                 binService,
                 taskAlertBroadcaster,
                 notificationPublisher,
-                systemIncidentService
+                systemIncidentService,
+                complaintRepository
         );
     }
 

@@ -65,6 +65,12 @@ public class ComplaintController {
         return ResponseEntity.ok(complaintService.getComplaintsByCitizen(email));
     }
 
+    @GetMapping("/assigned-to-me")
+    public ResponseEntity<List<Complaint>> getAssignedComplaints(HttpServletRequest request) {
+        String email = resolveRequesterEmail(request);
+        return ResponseEntity.ok(complaintService.getAssignedComplaints(email));
+    }
+
     @GetMapping
     public ResponseEntity<List<Complaint>> getAllComplaints(HttpServletRequest request) {
         String email = resolveRequesterEmail(request);
@@ -107,6 +113,37 @@ public class ComplaintController {
         return ResponseEntity.ok(complaintService.assignComplaint(id, personnelId, email));
     }
 
+    @PostMapping("/bulk-assign")
+    public ResponseEntity<Map<String, String>> bulkAssignComplaints(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        String email = resolveRequesterEmail(request);
+        
+        List<Integer> complaintIdsInt = (List<Integer>) body.get("complaintIds");
+        if (complaintIdsInt == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "complaintIds is required"));
+        }
+        
+        List<Long> complaintIds = complaintIdsInt.stream().map(Integer::longValue).toList();
+        
+        Number personnelIdNum = (Number) body.get("personnelId");
+        if (personnelIdNum == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "personnelId is required"));
+        }
+        Long personnelId = personnelIdNum.longValue();
+        
+        complaintService.bulkAssignComplaints(complaintIds, personnelId, email);
+        return ResponseEntity.ok(Map.of("message", "Complaints successfully assigned"));
+    }
+
+    @PostMapping("/{id}/confirm")
+    public ResponseEntity<Complaint> confirmComplaint(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
+        String email = resolveRequesterEmail(request);
+        Boolean isTrue = (Boolean) body.get("isTrue");
+        String note = (String) body.get("note");
+        String photoUrl = (String) body.get("photoUrl");
+        
+        return ResponseEntity.ok(complaintService.confirmComplaint(id, isTrue, note, photoUrl, email));
+    }
+
     @PostMapping("/upload-image")
     public ResponseEntity<Map<String, String>> uploadComplaintImage(@RequestParam("photo") MultipartFile photo) {
         String url = cloudinaryUploadService.uploadComplaintPhoto(photo);
@@ -114,5 +151,28 @@ public class ComplaintController {
                 "photoUrl", url,
                 "imageUrl", url,
                 "message", "Image uploaded"));
+    }
+
+    @PostMapping("/add-to-route")
+    public ResponseEntity<?> addToRoute(@RequestBody Map<String, Object> body) {
+        Object idsObj = body.get("complaintIds");
+        if (!(idsObj instanceof List)) {
+            return ResponseEntity.badRequest().body(Map.of("error", "complaintIds are required"));
+        }
+        
+        List<?> rawIds = (List<?>) idsObj;
+        List<Long> complaintIds = rawIds.stream()
+                .map(id -> Long.valueOf(id.toString()))
+                .toList();
+
+        if (complaintIds.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "complaintIds are required"));
+        }
+        try {
+            complaintService.addToRoute(complaintIds);
+            return ResponseEntity.ok(Map.of("message", "Complaints added to route successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 }
