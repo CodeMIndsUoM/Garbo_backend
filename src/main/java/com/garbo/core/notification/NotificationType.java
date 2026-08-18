@@ -11,6 +11,7 @@ public enum NotificationType {
     REGISTRATION_REJECTED("Registration rejected", "Your registration was not approved.", "HIGH"),
     COMPLAINT_SUBMITTED("New complaint", "A citizen submitted a new complaint.", "HIGH"),
     COMPLAINT_STATUS_UPDATED("Complaint update", "Your complaint status has changed.", "NORMAL"),
+    COMPLAINT_ASSIGNED("Special Task Assigned", "You have been assigned a new special task (complaint).", "HIGH"),
     BIN_SUGGESTION_SUBMITTED("New bin suggestion", "A field mentor suggested a new bin location.", "NORMAL"),
     BIN_DISCREPANCY_REPORTED("Bin discrepancy", "A status discrepancy was reported on a bin.", "HIGH"),
     EVENT_SUGGESTION_SUBMITTED("New event suggestion", "A citizen suggested a new community event.", "NORMAL"),

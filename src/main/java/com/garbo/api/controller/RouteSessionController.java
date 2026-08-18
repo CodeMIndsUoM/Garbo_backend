@@ -115,7 +115,7 @@ public class RouteSessionController {
                     if (council != null && !council.isBlank()) {
                         rows = assignmentRepository.findAllByCouncilWithStatus(council);
                     } else {
-                        rows = assignmentRepository.findAllWithStatus();
+                        rows = java.util.Collections.emptyList();
                     }
                 } else {
                     rows = assignmentRepository.findAllByUserIdWithStatus(userId);

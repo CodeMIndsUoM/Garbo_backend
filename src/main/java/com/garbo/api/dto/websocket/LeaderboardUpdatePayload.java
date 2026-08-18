@@ -47,6 +47,9 @@ public class LeaderboardUpdatePayload {
         @JsonProperty("role")
         private String role;  // "COLLECTOR" or "FIELD_MENTOR"
         
+        @JsonProperty("councilName")
+        private String councilName;
+
         @JsonProperty("rankChangeFromPrevious")
         private Integer rankChangeFromPrevious;  // null if first fetch, +1/-1 if moved up/down
     }

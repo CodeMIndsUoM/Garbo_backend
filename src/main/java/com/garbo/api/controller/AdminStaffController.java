@@ -199,6 +199,35 @@ public class AdminStaffController {
         };
     }
 
+    @PatchMapping("/{id}/on-duty")
+    public ResponseEntity<?> toggleOnDuty(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
+        String role = CurrentUserService.getCurrentRole().orElse("");
+        if (!"admin".equals(role) && !"superadmin".equals(role)) {
+            return ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
+        }
+
+        String council = resolveManageCouncil(role);
+        if ("admin".equals(role) && council == null) {
+            return ResponseEntity.status(400)
+                    .body(Map.of("success", false, "message", "Admin has no council assigned"));
+        }
+
+        Boolean onDuty = body.get("onDuty");
+        if (onDuty == null) {
+            return ResponseEntity.badRequest().body(Map.of("success", false, "message", "onDuty is required"));
+        }
+
+        String result = adminStaffService.toggleOnDuty(id, onDuty, council);
+        return switch (result) {
+            case "OK" -> ResponseEntity.ok(Map.of("success", true, "message", onDuty ? "On duty" : "Off duty"));
+            case "NOT_FOUND" -> ResponseEntity.status(404).body(Map.of("success", false, "message", "User not found"));
+            case "NOT_INTERNAL" ->
+                ResponseEntity.status(400).body(Map.of("success", false, "message", "User is not manageable staff"));
+            case "FORBIDDEN" -> ResponseEntity.status(403).body(Map.of("success", false, "message", "Forbidden"));
+            default -> ResponseEntity.status(500).body(Map.of("success", false, "message", "Unknown error"));
+        };
+    }
+
     private String resolveManageCouncil(String role) {
         if ("superadmin".equals(role)) {
             return null;

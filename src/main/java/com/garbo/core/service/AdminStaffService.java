@@ -314,6 +314,32 @@ public class AdminStaffService {
         return dto;
     }
 
+    /**
+     * Toggle the on-duty status for a field staff member (FieldMentor or BinCollector).
+     * Returns "OK" on success, "NOT_FOUND" if the user doesn't exist,
+     * "NOT_INTERNAL" if the user is not a manageable staff type.
+     */
+    public String toggleOnDuty(Long empId, boolean onDuty, String adminCouncil) {
+        var opt = userRepository.findById(empId);
+        if (opt.isEmpty()) {
+            return "NOT_FOUND";
+        }
+        User user = opt.get();
+        if (!canManageInternalUser(user, adminCouncil)) {
+            return "FORBIDDEN";
+        }
+        if (user instanceof FieldMentor mentor) {
+            mentor.setOnDuty(onDuty);
+            userRepository.save(mentor);
+        } else if (user instanceof BinCollector collector) {
+            collector.setOnDuty(onDuty);
+            userRepository.save(collector);
+        } else {
+            return "NOT_INTERNAL";
+        }
+        return "OK";
+    }
+
     private static final String PASSWORD_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*()-_";
 
     private String generateTemporaryPassword(int length) {
