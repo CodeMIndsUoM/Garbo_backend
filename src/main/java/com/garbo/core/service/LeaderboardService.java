@@ -199,10 +199,17 @@ public class LeaderboardService {
         List<LeaderboardUpdatePayload.LeaderboardEntryDto> topEntries = new ArrayList<>();
         int topLimit = Math.max(0, limit);
         int count = Math.min(topLimit, allEntries.size());
+        
+        int rank = 1;
+        double lastPoints = -1.0;
 
         for (int index = 0; index < count; index++) {
             LeaderboardEntryTemp entry = allEntries.get(index);
-            topEntries.add(toEntryDto(entry, index + 1));
+            if (entry.rewardPoints != lastPoints) {
+                rank = index + 1;
+            }
+            lastPoints = entry.rewardPoints;
+            topEntries.add(toEntryDto(entry, rank));
         }
 
         return topEntries;
@@ -367,6 +374,7 @@ public class LeaderboardService {
                 entry.name,
                 entry.rewardPoints,
                 entry.role,
+                entry.councilName,
                 null
         );
     }
@@ -402,12 +410,21 @@ public class LeaderboardService {
 
         Set<Long> activeUserIds = new HashSet<>();
         int rank = 1;
+        int actualIndex = 1;
+        double lastPoints = -1.0;
+        
         for (LeaderboardEntryTemp entry : allEntries) {
             if (!(entry.userEntity instanceof BinCollector collector)) {
                 continue;
             }
 
             activeUserIds.add(entry.userId);
+            
+            if (entry.rewardPoints != lastPoints) {
+                rank = actualIndex;
+            }
+            lastPoints = entry.rewardPoints;
+            actualIndex++;
 
             Leaderboard leaderboard = leaderboardRepository
                     .findFirstByUserIdAndRole(entry.userId, entry.role)
@@ -416,7 +433,7 @@ public class LeaderboardService {
             if (leaderboard.getVersion() == null) {
                 leaderboard.setVersion(0L);
             }
-            leaderboard.setRank(rank++);
+            leaderboard.setRank(rank);
             leaderboard.setUserId(entry.userId);
             leaderboard.setCollector(collector);
             leaderboard.setCollectorName(entry.name);
@@ -442,12 +459,14 @@ public class LeaderboardService {
      * Convert Leaderboard entity to DTO for WebSocket transmission.
      */
     private LeaderboardUpdatePayload.LeaderboardEntryDto convertToDto(Leaderboard leaderboard) {
+        String councilName = leaderboard.getCollector() != null ? leaderboard.getCollector().getAssignedCouncil() : null;
         return new LeaderboardUpdatePayload.LeaderboardEntryDto(
                 leaderboard.getRank(),
                 leaderboard.getUserId(),
                 leaderboard.getCollectorName(),
                 leaderboard.getRewardPoints(),
                 leaderboard.getRole(),
+                councilName,
                 null  // rankChangeFromPrevious will be calculated later
         );
     }
@@ -504,6 +523,7 @@ public class LeaderboardService {
         String role;
         double rewardPoints;
         Object userEntity;  // BinCollector or FieldMentor
+        String councilName;
         
         LeaderboardEntryTemp(Long userId, String name, String email, String role,
                            double rewardPoints, Object userEntity) {
@@ -513,6 +533,10 @@ public class LeaderboardService {
             this.role = role;
             this.rewardPoints = rewardPoints;
             this.userEntity = userEntity;
+            
+            if (userEntity instanceof BinCollector collector) {
+                this.councilName = collector.getAssignedCouncil();
+            }
         }
     }
 }
