@@ -1,4 +1,4 @@
-# ♻️ Garbo Backend (`Garbo_backend`)
+# Garbo Backend (`Garbo_backend`)
 
 [![Java](https://img.shields.io/badge/Java-17%20%7C%2021-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.0-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
@@ -12,7 +12,7 @@
 
 ---
 
-## 📌 Table of Contents
+## Table of Contents
 - [1. Problem Domain & Value Proposition](#1-problem-domain--value-proposition)
 - [2. System Architecture](#2-system-architecture)
   - [High-Level Architecture](#high-level-architecture)
@@ -200,30 +200,30 @@ graph LR
 
 ## 3. Key Feature Modules
 
-### 🏛️ 1. Multi-Council Governance & Multi-Tenancy
+### 1. Multi-Council Governance & Multi-Tenancy
 * **Role Hierarchy**: `SUPERADMIN`, `ADMIN` (Council-scoped), `FIELD_MENTOR`, `BIN_COLLECTOR`, `CITIZEN`, `THIRD_PARTY_COLLECTOR`.
 * **Council Scoping**: Automatic payload and repository filtering ensuring council administrators operate strictly within their municipality boundaries.
 * **Superadmin Governance**: Global council boundary management, council creation, cross-council analytics, and staff assignment.
 
-### 🗺️ 2. Dynamic Route Optimization & Fleet Dispatch
+### 2. Dynamic Route Optimization & Fleet Dispatch
 * **Algorithmic Vehicle Routing**: Integrates Google OR-Tools to solve Capacitated Vehicle Routing Problems (CVRP) with depot returns.
 * **Real-Road Distance Matrices**: Fetches actual road network travel times and geometry using OSRM.
 * **Live Route Sessions**: Tracks active driver collection sessions, bin stop completions, skipped bins with reasons, and remaining capacity in real-time.
 
-### 🚮 3. Citizen Engagement, Reporting & Gamification
-* **Incident & Complaint Reporting**: Photo upload with Cloudinary CDN integration, GPS coordinates, and status lifecycle (`PENDING` → `ASSIGNED` → `RESOLVED` → `REJECTED`).
+### 3. Citizen Engagement, Reporting & Gamification
+* **Incident & Complaint Reporting**: Photo upload with Cloudinary CDN integration, GPS coordinates, and status lifecycle (`PENDING` -> `ASSIGNED` -> `RESOLVED` -> `REJECTED`).
 * **Bin Location Suggestions**: Crowdsourced bin placement suggestions with community upvoting.
 * **Gamification Engine**: Configurable task families, automatic score awards upon verified green actions, and real-time council leaderboard ranking.
 
-### 📱 4. Field Mentors & Bin Telemetry Auditing
+### 4. Field Mentors & Bin Telemetry Auditing
 * **Bin Fill Level Telemetry**: Mentors report fill percentages, damage status, overflowing flags, and QR/RFID scan verification.
 * **Discrepancy Detection**: Automated anomaly detection comparing predicted sensor levels vs mentor physical audits.
 * **Duty Status Management**: Live duty toggles and location tracking for field mentors and collection laborers.
 
-### ♻️ 5. Third-Party Specialized Recycler Marketplace
+### 5. Third-Party Specialized Recycler Marketplace
 * **Specialized Collection Requests**: Citizens and commercial entities post requests for e-waste, scrap metal, organic bulk, or hazardous materials.
 * **Bidding & Offer Management**: Licensed 3rd-party collectors submit competitive quotes/offers.
-* **State Machine Lifecycle**: Strict transitions (`OPEN` → `PENDING` → `ACCEPTED` → `IN_PROGRESS` → `COMPLETED` → `CONFIRMED`) with auto-rejection of competing offers upon acceptance.
+* **State Machine Lifecycle**: Strict transitions (`OPEN` -> `PENDING` -> `ACCEPTED` -> `IN_PROGRESS` -> `COMPLETED` -> `CONFIRMED`) with auto-rejection of competing offers upon acceptance.
 
 ---
 
@@ -327,34 +327,34 @@ The database is managed with **Flyway** migration scripts located under `src/mai
 
 ## 7. API & Real-Time Endpoints
 
-### 🔐 Authentication & Accounts
+### Authentication & Accounts
 * `POST /api/auth/login` — Authenticate and receive JWT Bearer token + role context.
 * `POST /api/auth/register/citizen` — Self-service citizen registration.
 * `POST /api/auth/change-password` — Mandatory password update on first staff login.
 * `POST /api/auth/forgot-password` & `POST /api/auth/reset-password` — OTP-driven password recovery.
 
-### 🗺️ Route Optimization & Fleet Management
+### Route Optimization & Fleet Management
 * `POST /api/routes/auto/preview` — Generate algorithmic preview of collection routes using OR-Tools & OSRM.
 * `POST /api/routes/assignments` — Finalize and dispatch route assignments to drivers.
 * `GET /api/routes/vehicle/{vehicleId}` — Get active vehicle route details and ordered bin sequence.
 * `POST /api/route-sessions/start` & `POST /api/route-sessions/step` — Driver live navigation step tracking.
 
-### 🗑️ Bins, Telemetry & Field Staff
+### Bins, Telemetry & Field Staff
 * `GET /api/bins` — List all bins (filtered by council / zone).
 * `POST /api/field-mentor/bin-reports` — Submit physical audit report (fill level, overflow, damage, photo).
 * `GET /api/bin-suggestions` & `POST /api/bin-suggestions` — Crowdsourced citizen bin suggestions.
 
-### ♻️ 3rd-Party Collection Marketplace
+### 3rd-Party Collection Marketplace
 * `POST /api/collection-requests` — Create specialized waste collection request (e-waste, hazardous, bulk).
 * `POST /api/collection-requests/{id}/offers` — Submit quotation / bid from 3rd-party collector.
 * `POST /api/collection-offers/{offerId}/accept` — Accept offer (auto-rejects other pending bids).
 
-### 📊 Analytics & Reporting
+### Analytics & Reporting
 * `GET /api/analytics/dashboard` — High-level council summary (total collections, active fleet, complaint resolution rate).
 * `GET /api/admin/analytics/bins` — Hotspot analysis and high-frequency overflow bins.
 * `GET /api/admin/analytics/staff` — Staff duty tracking and collection speed performance metrics.
 
-### 📡 Real-Time WebSockets
+### Real-Time WebSockets
 * **Raw WebSocket**: `ws://localhost:8081/ws`
 * **STOMP Broker Endpoint**: `ws://localhost:8081/ws-stomp`
   * `/topic/bins/{councilId}` — Live bin fill-level updates.
@@ -468,6 +468,6 @@ docker run -p 8081:8081 --env-file .env garbo-backend:latest
 
 ---
 
-## 👥 Contributors & Maintainers
-Developed with ❤️ by the **CodeMinds UoM** Engineering Team.
+## Contributors & Maintainers
+Developed by the **CodeMinds UoM** Engineering Team.
 For inquiries, please contact the maintainers or open an issue on GitHub.
