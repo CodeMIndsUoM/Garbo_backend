@@ -5,10 +5,22 @@ on:
     branches:
       - mergekth
       - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.env.example'
+      - 'LICENSE'
   push:
     branches:
       - devops/**
       - mergekth
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.gitignore'
+      - '.env.example'
+      - 'LICENSE'
 
 jobs:
   build:
