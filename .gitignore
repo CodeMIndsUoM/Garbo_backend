@@ -1,24 +1,41 @@
+# ==============================================================================
+# Garbo Backend - Git Ignore Rules
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Maven & Build Artifacts
+# ------------------------------------------------------------------------------
 target/
+build/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+*.zip
+*.tar.gz
+*.rar
 .kotlin
 
+# ------------------------------------------------------------------------------
+# 2. IDEs & Code Editors
+# ------------------------------------------------------------------------------
 ### IntelliJ IDEA ###
-.idea/modules.xml
-.idea/jarRepositories.xml
-.idea/compiler.xml
-.idea/libraries/
+.idea/
 *.iws
 *.iml
 *.ipr
+out/
 
 ### Eclipse ###
 .apt_generated
 .classpath
 .factorypath
 .project
-.settings
+.settings/
 .springBeans
 .sts4-cache
 
@@ -28,27 +45,80 @@ target/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
+### VS Code & General Editors ###
 .vscode/
+*.sublime-project
+*.sublime-workspace
 
-### Mac OS ###
-.DS_Store
+# ------------------------------------------------------------------------------
+# 3. AI Agents & Assistant Scratches
+# ------------------------------------------------------------------------------
+.ai/
+.gemini/
+.cursor/
+.agents/
 
-### Logs ###
+# ------------------------------------------------------------------------------
+# 4. Logs, Diagnostics & Dumps
+# ------------------------------------------------------------------------------
 *.log
 logs/
 data/
+*.txt.bak
+*_log.txt
+*cd_log.txt
 backend_log.txt
 startup.log
 backend-err.log
 backend-out.log
 auth-attempt.log
+failed_backend_cd_log.txt
 
-### Env ###
+# ------------------------------------------------------------------------------
+# 5. Media, Runtime Uploads & Temp Files
+# ------------------------------------------------------------------------------
+uploads/
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
+*.orig
+
+# ------------------------------------------------------------------------------
+# 6. Database Binaries & Local Caches
+# ------------------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# ------------------------------------------------------------------------------
+# 7. Environment & Secrets Configuration
+# ------------------------------------------------------------------------------
 .env
 .env.*
 !.env.example
+
+# ------------------------------------------------------------------------------
+# 8. OS System Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ------------------------------------------------------------------------------
+# 9. Miscellaneous Package Managers
+# ------------------------------------------------------------------------------
+node_modules/
+package-lock.json
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
